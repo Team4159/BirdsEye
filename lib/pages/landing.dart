@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LandingPage extends StatelessWidget {
+  // TODO: Flesh out nice intro landing page
   const LandingPage({super.key});
 
   @override
@@ -14,14 +15,18 @@ class LandingPage extends StatelessWidget {
           children: [
             Card(
               child: ListTile(
-                  leading: const Image(
-                      image: AssetImage('assets/images/github.png')),
+                  leading: const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: Image(
+                          isAntiAlias: true,
+                          image: AssetImage('assets/images/github.png'))),
                   title: const Text('Sign In with Github'),
                   onTap: () => Supabase.instance.client.auth.signInWithOAuth(
                       Provider.github,
-                      authScreenLaunchMode:
-                          LaunchMode.externalNonBrowserApplication,
-                      redirectTo: kDebugMode ? Uri.base.toString() : null)),
-            ),
+                      authScreenLaunchMode: LaunchMode.platformDefault,
+                      redirectTo: kDebugMode
+                          ? "${Uri.base.scheme}://${Uri.base.authority}"
+                          : null)),
+            )
           ]));
 }

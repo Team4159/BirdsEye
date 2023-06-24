@@ -5,17 +5,27 @@ import 'package:stock/stock.dart';
 
 import '../main.dart' show prefs;
 
-final client = Client();
-
-Future _getJson(String path) => client
-    .get(Uri.https("www.thebluealliance.com", "/api/v3/$path",
-        {"X-TBA-Auth-Key": prefs.getString("tbaKey")}))
-    .then((resp) => resp.statusCode < 400
-        ? json.decode(resp.body)
-        : throw Exception(resp.body));
-
 class BlueAlliance {
-  static final tbaStock = Stock<({int season, String? event, String? match}),
+  static final client = Client();
+
+  static Future _getJson(String path, {String? key}) => client
+      .get(Uri.https("www.thebluealliance.com", "/api/v3/$path",
+          {"X-TBA-Auth-Key": key ?? prefs.getString("tbaKey")}))
+      .then((resp) => resp.statusCode < 400
+          ? json.decode(resp.body)
+          : throw Exception(resp.body));
+
+  static final Set<String> _keyCache = {};
+  static Future<bool> isKeyValid(String? key) => key == null || key.isEmpty
+      ? Future.value(false)
+      : _keyCache.contains(key)
+          ? Future.value(true)
+          : _getJson("status", key: key).then((_) {
+              _keyCache.add(key);
+              return true;
+            }).catchError((_) => false);
+
+  static final stock = Stock<({int season, String? event, String? match}),
           Map<String, String>>(
       sourceOfTruth: CachedSourceOfTruth(),
       fetcher: Fetcher.ofFuture((key) async {
@@ -57,5 +67,3 @@ class BlueAlliance {
         }
       }));
 }
-
-enum Errors { noTBAKey }
