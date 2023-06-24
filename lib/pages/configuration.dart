@@ -25,7 +25,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
             child: FutureBuilder(
                 future: Supabase.instance.client
                     .rpc("getavailableseasons")
-                    .then((resp) => List<int>.from(resp)..add(2022)),
+                    .then((resp) => List<int>.from(resp)..sort()),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return snapshot.hasError ||

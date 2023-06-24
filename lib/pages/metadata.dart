@@ -44,7 +44,22 @@ class MetadataPage extends StatelessWidget {
                     value == null || value.isEmpty ? "Required" : null,
                 onSaved: (String? value) => team = int.tryParse(value ?? ""),
               ),
-              const _TBAKeyField(),
+              TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                obscureText: true,
+                initialValue: prefs.getString("tbaKey"),
+                decoration: const InputDecoration(
+                    labelText: "TBA API Key", counterText: ""),
+                keyboardType: TextInputType.none,
+                maxLength: 64,
+                validator: (value) => value == null || value.isEmpty
+                    ? "Required"
+                    : value.length != 64
+                        ? "Wrong Length"
+                        : null,
+                onSaved: (String? value) =>
+                    prefs.setString("tbaKey", value ?? ""),
+              ),
               Expanded(
                   child: Align(
                       alignment: Alignment.bottomRight,
@@ -90,34 +105,6 @@ class MetadataPage extends StatelessWidget {
                           ])))
             ])));
   }
-}
-
-class _TBAKeyField extends StatefulWidget {
-  const _TBAKeyField();
-
-  @override
-  State<_TBAKeyField> createState() => _TBAKeyFieldState();
-}
-
-class _TBAKeyFieldState extends State<_TBAKeyField> {
-  String? errorText;
-
-  @override
-  Widget build(BuildContext context) => TextFormField(
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        obscureText: true,
-        initialValue: prefs.getString("tbaKey"),
-        decoration: InputDecoration(
-            labelText: "TBA API Key", counterText: "", errorText: errorText),
-        keyboardType: TextInputType.none,
-        maxLength: 64,
-        validator: (value) => value == null || value.isEmpty
-            ? "Required"
-            : value.length != 64
-                ? "Wrong Length"
-                : null,
-        onSaved: (String? value) => prefs.setString("tbaKey", value ?? ""),
-      );
 }
 
 class UserMetadata extends ChangeNotifier {
