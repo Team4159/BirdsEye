@@ -10,6 +10,8 @@ import '../main.dart' show RoutePaths, prefs;
 
 class MetadataPage extends StatelessWidget {
   final GlobalKey<FormState> _formKey = GlobalKey();
+  final _tbaFieldController =
+      TextEditingController(text: prefs.getString("tbaKey"));
   MetadataPage({super.key});
 
   @override
@@ -25,41 +27,39 @@ class MetadataPage extends StatelessWidget {
               Text("Modify User Info",
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleLarge),
-              TextFormField(
-                initialValue: UserMetadata.instance.name,
-                decoration: const InputDecoration(labelText: "Name"),
-                keyboardType: TextInputType.name,
-                validator: (value) =>
-                    value == null || value.isEmpty ? "Required" : null,
-                onSaved: (String? value) => name = value,
-              ),
-              TextFormField(
-                initialValue: UserMetadata.instance.team?.toString(),
-                decoration:
-                    const InputDecoration(labelText: "Team", counterText: ""),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                maxLength: 4,
-                validator: (value) =>
-                    value == null || value.isEmpty ? "Required" : null,
-                onSaved: (String? value) => team = int.tryParse(value ?? ""),
-              ),
-              TextFormField(
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                obscureText: true,
-                initialValue: prefs.getString("tbaKey"),
-                decoration: const InputDecoration(
-                    labelText: "TBA API Key", counterText: ""),
-                keyboardType: TextInputType.none,
-                maxLength: 64,
-                validator: (value) => value == null || value.isEmpty
-                    ? "Required"
-                    : value.length != 64
-                        ? "Wrong Length"
-                        : null,
-                onSaved: (String? value) =>
-                    prefs.setString("tbaKey", value ?? ""),
-              ),
+              ListenableBuilder(
+                  listenable: UserMetadata.instance,
+                  builder: (context, child) => TextFormField(
+                        initialValue: UserMetadata.instance.name,
+                        decoration: const InputDecoration(labelText: "Name"),
+                        keyboardType: TextInputType.name,
+                        validator: (value) =>
+                            value == null || value.isEmpty ? "Required" : null,
+                        onSaved: (String? value) => name = value,
+                      )),
+              ListenableBuilder(
+                  listenable: UserMetadata.instance,
+                  builder: (context, child) => TextFormField(
+                        initialValue: UserMetadata.instance.team?.toString(),
+                        decoration: const InputDecoration(
+                            labelText: "Team", counterText: ""),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        maxLength: 4,
+                        validator: (value) =>
+                            value == null || value.isEmpty ? "Required" : null,
+                        onSaved: (String? value) =>
+                            team = int.tryParse(value ?? ""),
+                      )),
+              TextField(
+                  obscureText: true,
+                  controller: _tbaFieldController,
+                  decoration: const InputDecoration(
+                      labelText: "TBA API Key", counterText: ""),
+                  keyboardType: TextInputType.none,
+                  maxLength: 64),
               Expanded(
                   child: Align(
                       alignment: Alignment.bottomRight,
@@ -70,14 +70,22 @@ class MetadataPage extends StatelessWidget {
                             OutlinedButton(
                                 onPressed: () {
                                   _formKey.currentState!.reset();
+                                  _tbaFieldController.text =
+                                      prefs.getString("tbaKey") ?? "";
                                   if (!_formKey.currentState!.validate())
-                                    return;
+                                    return UserMetadata.instance
+                                        .fetch()
+                                        .ignore();
                                   BlueAlliance.isKeyValid(
                                           prefs.getString("tbaKey"))
                                       .then((valid) => valid
                                           ? GoRouter.of(context).goNamed(
                                               RoutePaths.configuration.name)
-                                          : null);
+                                          : throw Exception("Invalid TBA Key!"))
+                                      .catchError((e) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(e.message)));
+                                  });
                                 },
                                 child: const Text("Cancel")),
                             const SizedBox(width: 8),
@@ -87,10 +95,12 @@ class MetadataPage extends StatelessWidget {
                                     return;
                                   _formKey.currentState!.save();
                                   BlueAlliance.isKeyValid(
-                                          prefs.getString("tbaKey"))
+                                          _tbaFieldController.text)
                                       .then((valid) {
                                     if (!valid)
                                       throw Exception("Invalid TBA Key!");
+                                    prefs.setString(
+                                        "tbaKey", _tbaFieldController.text);
                                     return UserMetadata.instance
                                         .update(name, team)
                                         .then((_) => GoRouter.of(context)
@@ -98,7 +108,7 @@ class MetadataPage extends StatelessWidget {
                                                 RoutePaths.configuration.name));
                                   }).catchError((e) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(e.toString())));
+                                        SnackBar(content: Text(e.message)));
                                   });
                                 },
                                 child: const Text("Submit"))
@@ -143,7 +153,7 @@ class UserMetadata extends ChangeNotifier {
         .then((_) => notifyListeners());
   }
 
-  void fetch() => Supabase.instance.client
+  Future<void> fetch() => Supabase.instance.client
           .from("users")
           .select<Map<String, dynamic>?>('name, team')
           .eq('id', id)

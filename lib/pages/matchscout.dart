@@ -75,7 +75,8 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                       SliverAppBar(
                           primary: false,
                           automaticallyImplyLeading: false,
-                          title: Text(section)),
+                          title: Text(section,
+                              style: Theme.of(context).textTheme.titleMedium)),
                       SliverGrid.count(
                           crossAxisCount: 2,
                           childAspectRatio: 3 / 1,
@@ -115,6 +116,8 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
   LinkedHashMap<String, MatchInfo>? _matches;
   LinkedHashMap<String, String>? _teams;
 
+  final GlobalKey<FormFieldState> _teamSelectorKey = GlobalKey();
+
   @override
   void initState() {
     BlueAlliance.stock.get((
@@ -143,7 +146,9 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
   }
 
   Future<void> _loadTeams() {
-    setState(() => _teams = team = null);
+    setState(() => team = null);
+    _teamSelectorKey.currentState?.reset();
+    setState(() => _teams = null);
     return (match != null
             ? BlueAlliance.stock.get((
                 season: Configuration.instance.season,
@@ -163,18 +168,18 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
   @override
   Widget build(BuildContext context) => Align(
       alignment: Alignment.topRight,
-      child: FractionallySizedBox(
-          widthFactor: 0.25,
+      child: ConstrainedBox(
+          constraints:
+              const BoxConstraints(maxWidth: 300, maxHeight: 72, minHeight: 72),
           child: Row(
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment
-                  .baseline, // FIXME nothing aligns correctly :(
-              textBaseline: TextBaseline.alphabetic,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Flexible(
-                    flex: 2,
+                    flex: 3,
                     child: TextField(
+                      textAlignVertical: TextAlignVertical.top,
                       controller:
                           TextEditingController(text: Configuration.event),
                       decoration: const InputDecoration(helperText: "Event"),
@@ -182,7 +187,7 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
                     )),
                 const Flexible(flex: 1, child: SizedBox(width: 12)),
                 Flexible(
-                    flex: 2,
+                    flex: 3,
                     child: _MatchField(_matches,
                         highestQual: (_matches?.values
                                 .where((element) =>
@@ -198,8 +203,10 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
                     })),
                 const Flexible(flex: 1, child: SizedBox(width: 12)),
                 Flexible(
-                    flex: 4,
+                    flex: 5,
                     child: DropdownButtonFormField(
+                        alignment: Alignment.bottomCenter,
+                        key: _teamSelectorKey,
                         value: team,
                         decoration: const InputDecoration(helperText: "Team"),
                         items: _teams == null
@@ -211,13 +218,15 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
                                       value: int.parse(team),
                                       child: ConstrainedBox(
                                           constraints: const BoxConstraints(
-                                              maxWidth: 110, minWidth: 100),
-                                          child: ListTile(
-                                              minVerticalPadding: 4,
-                                              title: Text(team),
-                                              trailing:
-                                                  generateRobotPositionChip(
-                                                      position))))
+                                              maxWidth: 90),
+                                          child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              children: [
+                                                Expanded(child: Text(team)),
+                                                generateRobotPositionChip(
+                                                    position)
+                                              ])))
                               ],
                         onChanged: (int? value) => team = value))
               ])));
@@ -244,6 +253,7 @@ class _MatchField extends FormField<MatchInfo> {
                       readOnly: validMatches == null || validMatches.isEmpty,
                       keyboardType: TextInputType.text,
                       textCapitalization: TextCapitalization.none,
+                      // textAlignVertical: TextAlignVertical.center,
                       enableInteractiveSelection: false,
                       selectionControls: EmptyTextSelectionControls(),
                       validator: (value) => value == null || value.isEmpty
@@ -265,54 +275,56 @@ class _MatchField extends FormField<MatchInfo> {
                   Align(
                       alignment: Alignment.topRight,
                       child: Column(
-                        // FIXME buttons don't show up in the right place
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                              onPressed: () {
-                                if ((validMatches != null &&
-                                        validMatches.isNotEmpty &&
-                                        state.value != null) &&
-                                    (highestQual == null ||
-                                        state.value!.index < highestQual)) {
-                                  state.didChange((
-                                    level: MatchLevel.qualification,
-                                    finalnum: null,
-                                    index: state.value!.index + 1
-                                  ));
-                                  if (onSubmitted != null)
-                                    // ignore: curly_braces_in_flow_control_structures
-                                    onSubmitted(
-                                        stringifyMatchInfo(state.value!));
-                                }
-                              },
-                              icon: const Icon(Icons.arrow_drop_up_rounded),
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero),
-                          IconButton(
-                              onPressed: () {
-                                if (validMatches != null &&
-                                    validMatches.isNotEmpty &&
-                                    state.value != null &&
-                                    state.value!.index > 1) {
-                                  state.didChange((
-                                    level: MatchLevel.qualification,
-                                    finalnum: null,
-                                    index: state.value!.index - 1
-                                  ));
-                                  if (onSubmitted != null)
-                                    // ignore: curly_braces_in_flow_control_structures
-                                    onSubmitted(
-                                        stringifyMatchInfo(state.value!));
-                                }
-                              },
-                              icon: const Icon(Icons.arrow_drop_down_rounded),
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero)
-                        ],
-                      ))
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                                onPressed: () {
+                                  if ((validMatches != null &&
+                                          validMatches.isNotEmpty &&
+                                          state.value != null) &&
+                                      (highestQual == null ||
+                                          state.value!.index < highestQual)) {
+                                    state.didChange((
+                                      level: MatchLevel.qualification,
+                                      finalnum: null,
+                                      index: state.value!.index + 1
+                                    ));
+                                    if (onSubmitted != null)
+                                      // ignore: curly_braces_in_flow_control_structures
+                                      onSubmitted(
+                                          stringifyMatchInfo(state.value!));
+                                  }
+                                },
+                                constraints:
+                                    const BoxConstraints(maxHeight: 20),
+                                icon: const Icon(Icons.arrow_drop_up_rounded),
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero),
+                            IconButton(
+                                onPressed: () {
+                                  if (validMatches != null &&
+                                      validMatches.isNotEmpty &&
+                                      state.value != null &&
+                                      state.value!.index > 1) {
+                                    state.didChange((
+                                      level: MatchLevel.qualification,
+                                      finalnum: null,
+                                      index: state.value!.index - 1
+                                    ));
+                                    if (onSubmitted != null)
+                                      // ignore: curly_braces_in_flow_control_structures
+                                      onSubmitted(
+                                          stringifyMatchInfo(state.value!));
+                                  }
+                                },
+                                constraints:
+                                    const BoxConstraints(maxHeight: 20),
+                                icon: const Icon(Icons.arrow_drop_down_rounded),
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero)
+                          ]))
                 ]));
 }
 

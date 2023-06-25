@@ -10,10 +10,24 @@ import './pages/metadata.dart';
 import './pages/pitscout.dart';
 
 const cardinalred = Color(0xffcf2e2e);
+final MaterialColor cardinalredmaterial =
+    MaterialColor(cardinalred.value, const {
+  50: Color(0xFFF9E6E6),
+  100: Color(0xFFF1C0C0),
+  200: Color(0xFFE79797),
+  300: Color(0xFFDD6D6D),
+  400: Color(0xFFD64D4D),
+  500: cardinalred,
+  600: Color(0xFFCA2929),
+  700: Color(0xFFC32323),
+  800: Color(0xFFBD1D1D),
+  900: Color(0xFFB21212),
+});
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   prefs = await SharedPreferences.getInstance();
   await Supabase.initialize(
+    debug: false,
     url: 'https://zcckkiwosxzupxblocff.supabase.co',
     anonKey: const String.fromEnvironment('SUPABASE_KEY',
         defaultValue:
@@ -24,12 +38,22 @@ void main() async {
       routerConfig: router,
       title: "Bird's Eye",
       themeMode: ThemeMode.system,
-      theme: ThemeData.light(useMaterial3: true),
-      darkTheme: ThemeData.localize(
-          // FIXME garbage coloring smh
-          ThemeData.dark(useMaterial3: true),
-          Typography.material2021(colorScheme: const ColorScheme.dark())
-              .geometryThemeFor(ScriptCategory.englishLike))));
+      theme: ThemeData.from(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: cardinalred),
+          textTheme:
+              Typography.englishLike2021.merge(Typography.blackHelsinki)),
+      darkTheme: ThemeData.from(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+              seedColor: cardinalred, brightness: Brightness.dark),
+          textTheme: Typography.englishLike2021
+              .merge(Typography.whiteHelsinki)
+              .copyWith(
+                  titleLarge: const TextStyle(
+                      inherit: true,
+                      fontFamily: "Verdana",
+                      fontWeight: FontWeight.bold)))));
 }
 
 late final SharedPreferences prefs;
@@ -105,9 +129,6 @@ class ScaffoldShell extends StatelessWidget {
   final Widget child;
   const ScaffoldShell(this.child, {super.key});
 
-  // static TextStyle _onPrimaryStyle(BuildContext context) =>
-  //     TextStyle(color: Theme.of(context).colorScheme.onPrimary); FIXME text contrast on Drawer Header is totally broken
-
   @override
   Widget build(BuildContext context) => Scaffold(
       drawer: Drawer(
@@ -116,6 +137,7 @@ class ScaffoldShell extends StatelessWidget {
             ListenableBuilder(
                 listenable: UserMetadata.instance,
                 builder: (context, child) => UserAccountsDrawerHeader(
+                    // FIXME horrible text contrast
                     currentAccountPicture: Icon(
                         UserMetadata.isAuthenticated
                             ? Icons.person

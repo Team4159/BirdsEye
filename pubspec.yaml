@@ -1,7 +1,7 @@
 name: birdseye
-description: A new Flutter project.
+description: FRC Scouting App
 publish_to: 'none'
-version: 0.1.0
+version: 2.0.1
 
 environment:
   sdk: '>=3.0.5 <4.0.0'
@@ -29,3 +29,13 @@ flutter:
     - family: HemiHead
       fonts:
         - asset: assets/fonts/hemi-head.otf
+    - family: Verdana
+      fonts:
+        - asset: assets/fonts/verdana.ttf
+        - asset: assets/fonts/verdanai.ttf
+          style: italic
+        - asset: assets/fonts/verdanab.ttf
+          weight: 700
+        - asset: assets/fonts/verdanaz.ttf
+          style: italic
+          weight: 700
