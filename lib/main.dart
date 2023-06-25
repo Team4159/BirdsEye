@@ -36,22 +36,28 @@ late final SharedPreferences prefs;
 
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
-enum RoutePaths { landing, metadata, configuration, matchscout, pitscout }
+enum RoutePaths {
+  landing,
+  metadata,
+  configuration,
+  scouting,
+  matchscout,
+  pitscout
+}
 
 final router = GoRouter(
     initialLocation: '/',
     routes: [
       GoRoute(
-        path: '/',
-        name: RoutePaths.landing.name,
-        pageBuilder: (context, state) =>
-            const MaterialPage(child: LandingPage(), name: "Sign In"),
-        redirect: (_, state) async => !UserMetadata.isAuthenticated
-            ? null
-            : state.namedLocation(await UserMetadata.instance.isValid
-                ? RoutePaths.configuration.name
-                : RoutePaths.metadata.name),
-      ),
+          path: '/',
+          name: RoutePaths.landing.name,
+          pageBuilder: (context, state) =>
+              const MaterialPage(child: LandingPage(), name: "Sign In"),
+          redirect: (_, state) async => !UserMetadata.isAuthenticated
+              ? null
+              : state.namedLocation(await UserMetadata.instance.isValid
+                  ? RoutePaths.configuration.name
+                  : RoutePaths.metadata.name)),
       GoRoute(
           path: '/account/data',
           name: RoutePaths.metadata.name,
@@ -74,13 +80,21 @@ final router = GoRouter(
                 path: '/scouting/match',
                 name: RoutePaths.matchscout.name,
                 pageBuilder: (context, state) => const MaterialPage(
-                    child: MatchScoutPage(), name: "Match Scouting")),
+                    child: MatchScoutPage(), name: "Match Scouting"),
+                redirect: (context, state) async =>
+                    await Configuration.instance.isValid
+                        ? null
+                        : state.namedLocation(RoutePaths.configuration.name)),
             GoRoute(
                 parentNavigatorKey: _shellNavigatorKey,
                 path: '/scouting/pit',
                 name: RoutePaths.pitscout.name,
                 pageBuilder: (context, state) => const MaterialPage(
-                    child: PitScoutPage(), name: "Pit Scouting"))
+                    child: PitScoutPage(), name: "Pit Scouting"),
+                redirect: (context, state) async =>
+                    await Configuration.instance.isValid
+                        ? null
+                        : state.namedLocation(RoutePaths.configuration.name))
           ])
     ],
     redirect: (context, state) => UserMetadata.isAuthenticated

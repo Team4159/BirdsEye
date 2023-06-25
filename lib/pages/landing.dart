@@ -8,7 +8,7 @@ class LandingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => FractionallySizedBox(
-      widthFactor: 0.5,
+      widthFactor: 0.4,
       child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,

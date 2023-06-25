@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../interfaces/bluealliance.dart';
-import '../main.dart' show prefs;
 import 'configuration.dart';
 
 Future<List<int>> pitScoutGetUnfilled() => BlueAlliance.stock
     .get((
       season: Configuration.instance.season,
-      event: prefs.getString('event'),
+      event: Configuration.event,
       match: "*"
     ))
     .then((data) => Set<int>.of(data.keys.map(int.parse)))
@@ -16,7 +15,7 @@ Future<List<int>> pitScoutGetUnfilled() => BlueAlliance.stock
       Set<int> filledteams = await Supabase.instance.client
           .from("${Configuration.instance.season}_pit")
           .select<List<Map<String, dynamic>>>("team")
-          .eq("event", prefs.getString('event'))
+          .eq("event", Configuration.event)
           .then((value) => value.map((e) => int.parse(e['team'])).toSet());
       return teams.difference(filledteams).toList()..sort();
     });

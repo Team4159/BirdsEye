@@ -88,7 +88,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                       List<MapEntry<String, String>> entries =
                           snapshot.data!.entries.toList();
                       int index = entries.indexWhere(
-                          (element) => element.key == prefs.getString('event'));
+                          (element) => element.key == Configuration.event);
                       if (!prefs.containsKey("event") || index < 0) {
                         prefs.setString("event", entries[index = 0].key);
                       }
@@ -157,4 +157,16 @@ class Configuration extends ChangeNotifier {
     _season = season;
     notifyListeners();
   }
+
+  static String? get event =>
+      prefs.containsKey("event") ? prefs.getString("event") : null;
+
+  Future<bool> get isValid async =>
+      event != null &&
+      await Supabase.instance.client
+          .rpc("getavailableseasons")
+          .then((resp) => resp.contains(season)) &&
+      await BlueAlliance.stock
+          .get((season: season, event: null, match: null)).then(
+              (value) => value.containsKey(event));
 }

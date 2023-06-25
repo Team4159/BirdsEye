@@ -5,10 +5,44 @@ import 'package:stock/stock.dart';
 
 import '../main.dart' show prefs;
 
-class BlueAlliance {
-  static final client = Client();
+final robotPositionPattern = RegExp(r'^(?<color>red|blue)(?<number>[1-3])$');
+final qualificationMatchInfoPattern = RegExp(r'^(?<level>qm)(?<index>\d+)$');
+final finalsMatchInfoPattern =
+    RegExp(r'^(?<level>qf|sf|f)(?<finalnum>\d{1,2})m(?<index>\d+)$');
 
-  static Future _getJson(String path, {String? key}) => client
+enum MatchLevel {
+  qualification(compLevel: "qm"),
+  quarterfinals(compLevel: "qf"),
+  semifinals(compLevel: "sf"),
+  finals(compLevel: "f");
+
+  final String compLevel;
+  const MatchLevel({required this.compLevel});
+  static fromCompLevel(String s) =>
+      MatchLevel.values.firstWhere((type) => type.compLevel == s);
+}
+
+typedef MatchInfo = ({MatchLevel level, int? finalnum, int index});
+MatchInfo? parseMatchInfo(String s) {
+  RegExpMatch? match = qualificationMatchInfoPattern.firstMatch(s) ??
+      finalsMatchInfoPattern.firstMatch(s);
+  if (match == null) return null;
+  return (
+    level: MatchLevel.fromCompLevel(match.namedGroup("level")!),
+    finalnum: match.groupNames.contains("finalnum")
+        ? int.tryParse(match.namedGroup("finalnum") ?? "")
+        : null,
+    index: int.parse(match.namedGroup("index")!)
+  );
+}
+
+String stringifyMatchInfo(MatchInfo m) =>
+    "${m.level.compLevel}${m.finalnum != null ? '${m.finalnum}m' : ''}${m.index}";
+
+class BlueAlliance {
+  static final _client = Client();
+
+  static Future _getJson(String path, {String? key}) => _client
       .get(Uri.https("www.thebluealliance.com", "/api/v3/$path",
           {"X-TBA-Auth-Key": key ?? prefs.getString("tbaKey")}))
       .then((resp) => resp.statusCode < 400

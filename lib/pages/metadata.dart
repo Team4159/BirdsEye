@@ -110,11 +110,10 @@ class MetadataPage extends StatelessWidget {
 class UserMetadata extends ChangeNotifier {
   static void initialize() =>
       Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-        if ({
-          AuthChangeEvent.mfaChallengeVerified,
-          AuthChangeEvent.passwordRecovery,
-          AuthChangeEvent.tokenRefreshed
-        }.contains(event.event)) return;
+        if (event.event
+            case AuthChangeEvent.mfaChallengeVerified ||
+                AuthChangeEvent.passwordRecovery ||
+                AuthChangeEvent.tokenRefreshed) return;
         if (event.event == AuthChangeEvent.signedIn) {
           UserMetadata.instance = UserMetadata();
         }
