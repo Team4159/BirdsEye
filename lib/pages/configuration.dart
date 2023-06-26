@@ -1,8 +1,8 @@
-import 'package:birdseye/interfaces/bluealliance.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../interfaces/bluealliance.dart';
 import '../main.dart' show prefs;
 
 class ConfigurationPage extends StatefulWidget {
@@ -163,9 +163,6 @@ class Configuration extends ChangeNotifier {
 
   Future<bool> get isValid async =>
       event != null &&
-      await Supabase.instance.client
-          .rpc("getavailableseasons")
-          .then((resp) => resp.contains(season)) &&
       await BlueAlliance.stock
           .get((season: season, event: null, match: null)).then(
               (value) => value.containsKey(event));

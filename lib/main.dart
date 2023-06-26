@@ -53,7 +53,11 @@ void main() async {
                   titleLarge: const TextStyle(
                       inherit: true,
                       fontFamily: "Verdana",
-                      fontWeight: FontWeight.bold)))));
+                      fontWeight: FontWeight.bold),
+                  headlineLarge: const TextStyle(
+                      fontFamily: "VarelaRound",
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 4)))));
 }
 
 late final SharedPreferences prefs;

@@ -10,9 +10,14 @@ class LandingPage extends StatelessWidget {
   Widget build(BuildContext context) => FractionallySizedBox(
       widthFactor: 0.4,
       child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Text("Sign In / Register",
+                style: Theme.of(context)
+                    .textTheme
+                    .displayMedium
+                    ?.copyWith(color: Colors.black)),
             Card(
               child: ListTile(
                   leading: const Padding(

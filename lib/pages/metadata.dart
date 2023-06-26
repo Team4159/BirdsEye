@@ -1,11 +1,9 @@
-// ignore_for_file: curly_braces_in_flow_control_structures
-
-import 'package:birdseye/interfaces/bluealliance.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../interfaces/bluealliance.dart';
 import '../main.dart' show RoutePaths, prefs;
 
 class MetadataPage extends StatelessWidget {
@@ -72,10 +70,11 @@ class MetadataPage extends StatelessWidget {
                                   _formKey.currentState!.reset();
                                   _tbaFieldController.text =
                                       prefs.getString("tbaKey") ?? "";
-                                  if (!_formKey.currentState!.validate())
+                                  if (!_formKey.currentState!.validate()) {
                                     return UserMetadata.instance
                                         .fetch()
                                         .ignore();
+                                  }
                                   BlueAlliance.isKeyValid(
                                           prefs.getString("tbaKey"))
                                       .then((valid) => valid
@@ -91,14 +90,16 @@ class MetadataPage extends StatelessWidget {
                             const SizedBox(width: 8),
                             FilledButton(
                                 onPressed: () {
-                                  if (!_formKey.currentState!.validate())
+                                  if (!_formKey.currentState!.validate()) {
                                     return;
+                                  }
                                   _formKey.currentState!.save();
                                   BlueAlliance.isKeyValid(
                                           _tbaFieldController.text)
                                       .then((valid) {
-                                    if (!valid)
+                                    if (!valid) {
                                       throw Exception("Invalid TBA Key!");
+                                    }
                                     prefs.setString(
                                         "tbaKey", _tbaFieldController.text);
                                     return UserMetadata.instance

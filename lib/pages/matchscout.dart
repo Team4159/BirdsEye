@@ -1,23 +1,26 @@
 import 'dart:collection';
 
-import 'package:birdseye/interfaces/bluealliance.dart';
-import 'package:birdseye/interfaces/supabase.dart';
-import 'package:birdseye/pages/configuration.dart';
 import 'package:flutter/material.dart';
+
+import '../interfaces/bluealliance.dart';
+import '../interfaces/supabase.dart';
+import 'configuration.dart';
 
 typedef MatchScoutQuestionSchema
     = Map<String, Map<String, MatchScoutQuestionTypes>>;
 
 enum MatchScoutQuestionTypes<T> {
   text<String>(sqlType: "text"),
-  counter<int>(sqlType: "int2"),
-  toggle<bool>(sqlType: "bool"),
-  slider<double>(sqlType: "float4");
+  counter<int>(sqlType: "smallint"), // int2
+  toggle<bool>(sqlType: "boolean"), // bool
+  slider<double>(sqlType: "real"), // float4
+  error<void>(sqlType: "any");
 
   final String sqlType;
   const MatchScoutQuestionTypes({required this.sqlType});
-  static fromSQLType(String s) =>
-      MatchScoutQuestionTypes.values.firstWhere((type) => type.sqlType == s);
+  static MatchScoutQuestionTypes fromSQLType(String s) =>
+      MatchScoutQuestionTypes.values.firstWhere((type) => type.sqlType == s,
+          orElse: () => MatchScoutQuestionTypes.error);
 }
 
 Chip generateRobotPositionChip(String position) {
@@ -31,7 +34,7 @@ Chip generateRobotPositionChip(String position) {
         "red": Color(0xffed1c24),
         "blue": Color(0xff0066b3)
       }[patternMatch.namedGroup("color")],
-      label: Text(patternMatch.namedGroup("number") ?? "0"));
+      label: Text(patternMatch.namedGroup("number")!));
 }
 
 class MatchScoutPage extends StatefulWidget {
@@ -49,8 +52,13 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
   Widget build(BuildContext context) => NestedScrollView(
       headerSliverBuilder: (context, _) => [
             const SliverAppBar(
-                primary: true, floating: true, title: Text("Match Scouting")),
-            SliverToBoxAdapter(child: _MatchScoutInfoFields(key: _infoKey))
+                primary: true,
+                floating: true,
+                snap: true,
+                title: Text("Match Scouting")),
+            SliverToBoxAdapter(
+                child: _MatchScoutInfoFields(
+                    key: _infoKey, onUpdate: () => setState(() {})))
           ],
       body: FutureBuilder(
           future: SupabaseInterface.matchSchema,
@@ -66,50 +74,89 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                           Text(snapshot.error.toString())
                         ])
                   : const Center(child: CircularProgressIndicator())
-              : Form(
-                  key: _formKey,
-                  child:
-                      CustomScrollView(cacheExtent: double.infinity, slivers: [
-                    for (var MapEntry(key: section, value: contents)
-                        in snapshot.data!.entries) ...[
-                      SliverAppBar(
-                          primary: false,
-                          automaticallyImplyLeading: false,
-                          title: Text(section,
-                              style: Theme.of(context).textTheme.titleMedium)),
-                      SliverGrid.count(
-                          crossAxisCount: 2,
-                          childAspectRatio: 3 / 1,
-                          children: [
-                            for (var MapEntry(key: field, value: type)
-                                in contents.entries)
-                              switch (type) {
-                                MatchScoutQuestionTypes.text => TextFormField(
-                                    maxLines: null,
-                                    expands: true,
-                                    decoration: InputDecoration(
-                                        labelText: field,
-                                        border: const OutlineInputBorder())),
-                                MatchScoutQuestionTypes.counter =>
-                                  CounterFormField(labelText: field),
-                                MatchScoutQuestionTypes.slider =>
-                                  RatingFormField(labelText: field),
-                                MatchScoutQuestionTypes.toggle =>
-                                  ToggleFormField(labelText: field),
-                              }
-                          ])
-                    ]
-                  ]))));
+              : AnimatedSlide(
+                  offset: (_infoKey.currentState?.isFilled ?? false)
+                      ? Offset.zero
+                      : const Offset(0, 1),
+                  curve: Curves.easeInOutCirc,
+                  duration: const Duration(seconds: 1),
+                  child: Form(
+                      key: _formKey,
+                      child: CustomScrollView(
+                          cacheExtent: double.infinity,
+                          slivers: [
+                            for (var MapEntry(key: section, value: contents)
+                                in snapshot.data!.entries) ...[
+                              SliverAppBar(
+                                  primary: false,
+                                  excludeHeaderSemantics: true,
+                                  automaticallyImplyLeading: false,
+                                  centerTitle: true,
+                                  title: Text(section,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineLarge,
+                                      textScaleFactor: 1.5)),
+                              SliverPadding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  sliver: SliverGrid.count(
+                                      crossAxisCount: 2,
+                                      childAspectRatio: 3 / 1,
+                                      mainAxisSpacing: 8,
+                                      crossAxisSpacing: 12,
+                                      children: [
+                                        for (var MapEntry(
+                                              key: field,
+                                              value: type
+                                            ) in contents.entries)
+                                          switch (type) {
+                                            MatchScoutQuestionTypes.text =>
+                                              TextFormField(
+                                                  maxLines: null,
+                                                  expands: true,
+                                                  decoration: InputDecoration(
+                                                      labelText: field,
+                                                      border:
+                                                          const OutlineInputBorder())),
+                                            MatchScoutQuestionTypes.counter =>
+                                              CounterFormField(
+                                                  labelText: field),
+                                            MatchScoutQuestionTypes.slider =>
+                                              RatingFormField(labelText: field),
+                                            MatchScoutQuestionTypes.toggle =>
+                                              ToggleFormField(labelText: field),
+                                            MatchScoutQuestionTypes.error =>
+                                              Material(
+                                                  type: MaterialType.button,
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .errorContainer,
+                                                  child: Center(
+                                                      child: Text(field)))
+                                          }
+                                      ]))
+                            ],
+                            SliverPadding(
+                                padding: const EdgeInsets.all(20),
+                                sliver: SliverToBoxAdapter(
+                                    child: FilledButton(
+                                        child: const Text("Submit"),
+                                        onPressed: () {
+                                          // TODO add submitting
+                                        })))
+                          ])))));
 }
 
 class _MatchScoutInfoFields extends StatefulWidget {
-  const _MatchScoutInfoFields({super.key});
+  final VoidCallback? onUpdate;
+  const _MatchScoutInfoFields({super.key, this.onUpdate});
 
   @override
   State<StatefulWidget> createState() => _MatchScoutInfoFieldsState();
 }
 
 class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
+  bool get isFilled => match != null && team != null;
   String? match;
   int? team;
 
@@ -146,6 +193,7 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
   }
 
   Future<void> _loadTeams() {
+    if (team != null && widget.onUpdate != null) widget.onUpdate!();
     setState(() => team = null);
     _teamSelectorKey.currentState?.reset();
     setState(() => _teams = null);
@@ -177,25 +225,29 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Flexible(
-                    flex: 3,
+                    flex: 2,
                     child: TextField(
                       textAlignVertical: TextAlignVertical.top,
                       controller:
                           TextEditingController(text: Configuration.event),
-                      decoration: const InputDecoration(helperText: "Event"),
+                      decoration: const InputDecoration(
+                          helperText: "Event",
+                          counter: Icon(Icons.edit_off_rounded,
+                              size: 11, color: Colors.grey)),
                       readOnly: true,
+                      canRequestFocus: false,
                     )),
                 const Flexible(flex: 1, child: SizedBox(width: 12)),
                 Flexible(
-                    flex: 3,
+                    flex: 4,
                     child: _MatchField(_matches,
                         highestQual: (_matches?.values
                                 .where((element) =>
                                     element.level == MatchLevel.qualification)
                                 .toList()
                               ?..sort((a, b) => b.index - a.index))
-                            ?.first
-                            .index,
+                            ?.firstOrNull
+                            ?.index,
                         controller: TextEditingController(),
                         onSubmitted: (String? value) {
                       match = value;
@@ -220,6 +272,8 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
                                           constraints: const BoxConstraints(
                                               maxWidth: 90),
                                           child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceEvenly,
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.center,
                                               children: [
@@ -228,12 +282,18 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
                                                     position)
                                               ])))
                               ],
-                        onChanged: (int? value) => team = value))
+                        onChanged: (int? value) {
+                          var t = team == null;
+                          team = value;
+                          if (t && match != null && widget.onUpdate != null) {
+                            widget.onUpdate!();
+                          }
+                        }))
               ])));
 }
 
 class _MatchField extends FormField<MatchInfo> {
-  // FIXME how does one fix a janky FormField extend (try fixing by using GlobalKey<FormFieldState>)
+  // FIXME this should not require a controller (try fixing by using GlobalKey<FormFieldState>)
   final LinkedHashMap<String, MatchInfo>? validMatches;
 
   _MatchField(this.validMatches,
@@ -241,7 +301,6 @@ class _MatchField extends FormField<MatchInfo> {
       Function(String?)? onSubmitted,
       required TextEditingController controller})
       : super(
-            initialValue: validMatches?.values.first,
             builder: (state) => Stack(fit: StackFit.passthrough, children: [
                   TextFormField(
                       autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -253,7 +312,7 @@ class _MatchField extends FormField<MatchInfo> {
                       readOnly: validMatches == null || validMatches.isEmpty,
                       keyboardType: TextInputType.text,
                       textCapitalization: TextCapitalization.none,
-                      // textAlignVertical: TextAlignVertical.center,
+                      showCursor: false,
                       enableInteractiveSelection: false,
                       selectionControls: EmptyTextSelectionControls(),
                       validator: (value) => value == null || value.isEmpty
@@ -262,7 +321,9 @@ class _MatchField extends FormField<MatchInfo> {
                               ? null
                               : "Invalid",
                       onFieldSubmitted: (String value) {
-                        var info = parseMatchInfo(value);
+                        var info = (validMatches?.containsKey(value) ?? false)
+                            ? parseMatchInfo(value)
+                            : null;
                         if (info == null) {
                           controller.text = state.value == null
                               ? ""
@@ -281,24 +342,25 @@ class _MatchField extends FormField<MatchInfo> {
                           children: [
                             IconButton(
                                 onPressed: () {
-                                  if ((validMatches != null &&
-                                          validMatches.isNotEmpty &&
-                                          state.value != null) &&
-                                      (highestQual == null ||
-                                          state.value!.index < highestQual)) {
+                                  if (validMatches != null &&
+                                      validMatches.isNotEmpty &&
+                                      state.value != null &&
+                                      highestQual != null &&
+                                      state.value!.index < highestQual) {
                                     state.didChange((
                                       level: MatchLevel.qualification,
                                       finalnum: null,
                                       index: state.value!.index + 1
                                     ));
-                                    if (onSubmitted != null)
-                                      // ignore: curly_braces_in_flow_control_structures
+                                    if (onSubmitted != null) {
                                       onSubmitted(
                                           stringifyMatchInfo(state.value!));
+                                    }
                                   }
                                 },
                                 constraints:
-                                    const BoxConstraints(maxHeight: 20),
+                                    const BoxConstraints(maxHeight: 22),
+                                iconSize: 28,
                                 icon: const Icon(Icons.arrow_drop_up_rounded),
                                 visualDensity: VisualDensity.compact,
                                 padding: EdgeInsets.zero),
@@ -307,20 +369,22 @@ class _MatchField extends FormField<MatchInfo> {
                                   if (validMatches != null &&
                                       validMatches.isNotEmpty &&
                                       state.value != null &&
+                                      highestQual != null &&
                                       state.value!.index > 1) {
                                     state.didChange((
                                       level: MatchLevel.qualification,
                                       finalnum: null,
                                       index: state.value!.index - 1
                                     ));
-                                    if (onSubmitted != null)
-                                      // ignore: curly_braces_in_flow_control_structures
+                                    if (onSubmitted != null) {
                                       onSubmitted(
                                           stringifyMatchInfo(state.value!));
+                                    }
                                   }
                                 },
                                 constraints:
-                                    const BoxConstraints(maxHeight: 20),
+                                    const BoxConstraints(maxHeight: 22),
+                                iconSize: 28,
                                 icon: const Icon(Icons.arrow_drop_down_rounded),
                                 visualDensity: VisualDensity.compact,
                                 padding: EdgeInsets.zero)
@@ -329,8 +393,62 @@ class _MatchField extends FormField<MatchInfo> {
 }
 
 class CounterFormField extends FormField<int> {
-  CounterFormField({super.key, String? labelText})
-      : super(builder: (state) => const Placeholder());
+  CounterFormField(
+      {super.key, super.onSaved, super.initialValue = 0, String? labelText})
+      : super(
+            builder: (FormFieldState<int> state) => Material(
+                type: MaterialType.button,
+                borderRadius: BorderRadius.circular(4),
+                color: Theme.of(state.context).colorScheme.primaryContainer,
+                child: InkWell(
+                    borderRadius: BorderRadius.circular(4),
+                    onTap: () => state.didChange(state.value! + 1),
+                    child: Flex(
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      direction: Axis.vertical,
+                      children: [
+                        const Flexible(flex: 1, child: SizedBox(width: 4)),
+                        Flexible(
+                            flex: 1,
+                            child: FittedBox(
+                                child: labelText != null
+                                    ? Text(labelText)
+                                    : null)),
+                        Flexible(
+                            flex: 2,
+                            child:
+                                FittedBox(child: Text(state.value.toString()))),
+                        Flexible(
+                            flex: 1,
+                            child: FittedBox(
+                                fit: BoxFit.fitHeight,
+                                alignment: Alignment.bottomRight,
+                                child: IconButton(
+                                  iconSize: 96,
+                                  icon: const Icon(Icons.remove),
+                                  color: Colors.white70,
+                                  visualDensity: VisualDensity.comfortable,
+                                  padding: const EdgeInsets.only(right: 16),
+                                  alignment: Alignment.center,
+                                  onPressed: () => state.value! > 0
+                                      ? state.didChange(state.value! - 1)
+                                      : null,
+                                )))
+                      ],
+                    ))));
+  static Color? getColor(BuildContext context, String? labelText) {
+    if (labelText == null) return null;
+    return switch (Configuration.instance.season) {
+      2023 => labelText.toLowerCase().startsWith("cone")
+          ? const Color(0xffccc000)
+          : labelText.toLowerCase().startsWith("cube")
+              ? const Color(0xffa000a0)
+              : null,
+      _ => null
+    };
+  }
 }
 
 class RatingFormField extends FormField<double> {

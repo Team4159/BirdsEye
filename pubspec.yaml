@@ -29,6 +29,9 @@ flutter:
     - family: HemiHead
       fonts:
         - asset: assets/fonts/hemi-head.otf
+    - family: VarelaRound
+      fonts:
+        - asset: assets/fonts/VarelaRound-Regular.ttf
     - family: Verdana
       fonts:
         - asset: assets/fonts/verdana.ttf

@@ -1,6 +1,7 @@
 import 'package:birdseye/pages/configuration.dart';
 import 'package:stock/stock.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../pages/matchscout.dart' hide MatchScoutPage;
 
 class SupabaseInterface {
@@ -9,7 +10,7 @@ class SupabaseInterface {
       .then((value) => value is DateTime)
       .catchError((_) => false);
 
-  static final Stock<int, MatchScoutQuestionSchema> stock =
+  static final Stock<int, MatchScoutQuestionSchema> matchscoutStock =
       Stock<int, MatchScoutQuestionSchema>(
           fetcher: Fetcher.ofFuture((key) => Supabase.instance.client.rpc(
                   'gettableschema',
@@ -24,7 +25,10 @@ class SupabaseInterface {
                   if (matchSchema[components.first] == null) {
                     matchSchema[components.first] = {};
                   }
-                  matchSchema[components.first]![components.sublist(1).join()] =
+                  matchSchema[components.first]![components
+                          .sublist(1)
+                          .map((s) => s[0].toUpperCase() + s.substring(1))
+                          .join(" ")] =
                       MatchScoutQuestionTypes.fromSQLType(sqltype);
                 }
                 return matchSchema;
@@ -33,6 +37,6 @@ class SupabaseInterface {
 
   static Future<MatchScoutQuestionSchema> get matchSchema async =>
       await canConnect
-          ? stock.fresh(Configuration.instance.season)
-          : stock.get(Configuration.instance.season);
+          ? matchscoutStock.fresh(Configuration.instance.season)
+          : matchscoutStock.get(Configuration.instance.season);
 }
