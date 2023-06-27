@@ -146,10 +146,8 @@ class UserMetadata extends ChangeNotifier {
     _team = team;
     return Supabase.instance.client
         .from("users")
-        .update(<String, dynamic>{
-          if (_name != null) "name": name,
-          if (_team != null) "team": team
-        })
+        .update(
+            {if (_name != null) "name": name, if (_team != null) "team": team})
         .eq("id", id)
         .then((_) => notifyListeners());
   }

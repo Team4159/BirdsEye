@@ -141,7 +141,7 @@ class ScaffoldShell extends StatelessWidget {
             ListenableBuilder(
                 listenable: UserMetadata.instance,
                 builder: (context, child) => UserAccountsDrawerHeader(
-                    // FIXME horrible text contrast
+                    // FIXME horrible text contrast & overall bad theming
                     currentAccountPicture: Icon(
                         UserMetadata.isAuthenticated
                             ? Icons.person
