@@ -28,6 +28,10 @@ class MetadataPage extends StatelessWidget {
               ListenableBuilder(
                   listenable: UserMetadata.instance,
                   builder: (context, child) => TextFormField(
+                        autofillHints: const [
+                          AutofillHints.name,
+                          AutofillHints.nickname
+                        ],
                         initialValue: UserMetadata.instance.name,
                         decoration: const InputDecoration(labelText: "Name"),
                         keyboardType: TextInputType.name,
@@ -142,6 +146,7 @@ class UserMetadata extends ChangeNotifier {
   int? get team => _team;
 
   Future<void> update(String? name, int? team) {
+    // FIXME never actually changes anything
     _name = name;
     _team = team;
     return Supabase.instance.client
