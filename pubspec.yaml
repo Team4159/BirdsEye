@@ -1,7 +1,7 @@
 name: birdseye
 description: FRC Scouting App
 publish_to: 'none'
-version: 2.0.2
+version: 2.0.3
 
 environment:
   sdk: '>=3.0.5 <4.0.0'
@@ -10,8 +10,10 @@ dependencies:
   carousel_slider: ^4.2.1
   flutter:
     sdk: flutter
-  go_router: ^8.2.0
+  flutter_swipe_action_cell: ^3.1.2
+  go_router: ^9.0.0
   http: ^1.0.0
+  localstore: ^1.3.5
   shared_preferences: ^2.1.2
   stock: ^1.0.1
   supabase_flutter: ^1.10.4

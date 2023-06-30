@@ -1,4 +1,5 @@
 import 'package:birdseye/pages/matchscout.dart';
+import 'package:birdseye/pages/savedresponses.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -70,7 +71,8 @@ enum RoutePaths {
   configuration,
   scouting,
   matchscout,
-  pitscout
+  pitscout,
+  savedresp
 }
 
 final router = GoRouter(
@@ -122,6 +124,16 @@ final router = GoRouter(
                 redirect: (context, state) async =>
                     await Configuration.instance.isValid
                         ? null
+                        : state.namedLocation(RoutePaths.configuration.name)),
+            GoRoute(
+                parentNavigatorKey: _shellNavigatorKey,
+                path: '/scouting/saved',
+                name: RoutePaths.savedresp.name,
+                pageBuilder: (context, state) => MaterialPage(
+                    child: SavedResponsesPage(), name: "Saved Responses"),
+                redirect: (context, state) async =>
+                    await Configuration.instance.isValid
+                        ? null
                         : state.namedLocation(RoutePaths.configuration.name))
           ])
     ],
@@ -136,7 +148,7 @@ class ScaffoldShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
       drawer: Drawer(
-          width: 200,
+          width: 250,
           child: Column(children: [
             ListenableBuilder(
                 listenable: UserMetadata.instance,
@@ -175,6 +187,12 @@ class ScaffoldShell extends StatelessWidget {
                 onTap: () => GoRouter.of(context)
                   ..pop()
                   ..goNamed(RoutePaths.pitscout.name)),
+            ListTile(
+                leading: const Icon(Icons.download_for_offline_rounded),
+                title: const Text("Saved Responses"),
+                onTap: () => GoRouter.of(context)
+                  ..pop()
+                  ..goNamed(RoutePaths.savedresp.name)),
             const Expanded(
                 child: Align(
                     alignment: Alignment.bottomLeft,

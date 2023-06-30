@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:birdseye/interfaces/localstore.dart';
+import 'package:birdseye/widgets/resetbutton.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -24,19 +26,13 @@ enum MatchScoutQuestionTypes<T> {
           orElse: () => MatchScoutQuestionTypes.error);
 }
 
-Chip generateRobotPositionChip(String position) {
-  RegExpMatch? patternMatch = robotPositionPattern.firstMatch(position);
-  if (patternMatch == null) throw Exception("Malformed Robot Position");
-  return Chip(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
-      labelPadding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
-      visualDensity: VisualDensity.compact,
-      backgroundColor: const {
-        "red": Color(0xffed1c24),
-        "blue": Color(0xff0066b3)
-      }[patternMatch.namedGroup("color")],
-      label: Text(patternMatch.namedGroup("number")!));
-}
+Future<void> submitInfo(Map<String, dynamic> data, {int? season}) async =>
+    await SupabaseInterface.canConnect
+        ? Supabase.instance.client
+            .from("${season ?? Configuration.instance.season}_match")
+            .insert(data)
+        : LocalStoreInterface.addMatch(
+            season ?? Configuration.instance.season, data);
 
 class MatchScoutPage extends StatefulWidget {
   const MatchScoutPage({super.key});
@@ -176,34 +172,47 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                             SliverPadding(
                                 padding: const EdgeInsets.all(20),
                                 sliver: SliverToBoxAdapter(
-                                    child: FilledButton(
-                                        child: const Text("Submit"),
-                                        onPressed: () {
-                                          _fields.clear();
-                                          _formKey.currentState!.save();
-                                          Supabase.instance.client
-                                              .from(
-                                                  "${Configuration.instance.season}_match")
-                                              .insert({
-                                            "event": Configuration.event,
-                                            "match":
-                                                _infoKey.currentState!.match,
-                                            "team": _infoKey.currentState!.team,
-                                            ..._fields
-                                          }).then((_) async {
-                                            _formKey.currentState!.reset();
-                                            await _scrollController.animateTo(0,
-                                                duration:
-                                                    const Duration(seconds: 1),
-                                                curve: Curves.easeOutBack);
-                                            _infoKey.currentState!.reset();
-                                          }).catchError((e) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(SnackBar(
-                                                    content:
-                                                        Text(e.toString())));
-                                          });
-                                        })))
+                                    child: Row(children: [
+                                  Expanded(
+                                      child: FilledButton(
+                                          child: const Text("Submit"),
+                                          onPressed: () {
+                                            _fields.clear();
+                                            _formKey.currentState!.save();
+                                            submitInfo({
+                                              "event": Configuration.event,
+                                              "match":
+                                                  _infoKey.currentState!.match,
+                                              "team":
+                                                  _infoKey.currentState!.team,
+                                              ..._fields
+                                            }).then((_) async {
+                                              _formKey.currentState!.reset();
+                                              await _scrollController.animateTo(
+                                                  0,
+                                                  duration: const Duration(
+                                                      seconds: 1),
+                                                  curve: Curves.easeOutBack);
+                                              _infoKey.currentState!.reset();
+                                            }).catchError((e) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(SnackBar(
+                                                      content:
+                                                          Text(e.toString())));
+                                            });
+                                          })),
+                                  const SizedBox(width: 10),
+                                  DeleteConfirmation(
+                                      context: context,
+                                      reset: () async {
+                                        _formKey.currentState!.reset();
+                                        await _scrollController.animateTo(0,
+                                            duration:
+                                                const Duration(seconds: 1),
+                                            curve: Curves.easeOutBack);
+                                        _infoKey.currentState!.reset();
+                                      })
+                                ])))
                           ])))));
 }
 
@@ -289,6 +298,20 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(e.toString())));
     });
+  }
+
+  static Chip _generateRobotPositionChip(String position) {
+    RegExpMatch? patternMatch = robotPositionPattern.firstMatch(position);
+    if (patternMatch == null) throw Exception("Malformed Robot Position");
+    return Chip(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+        labelPadding: const EdgeInsets.symmetric(horizontal: 3, vertical: 0),
+        visualDensity: VisualDensity.compact,
+        backgroundColor: const {
+          "red": Color(0xffed1c24),
+          "blue": Color(0xff0066b3)
+        }[patternMatch.namedGroup("color")],
+        label: Text(patternMatch.namedGroup("number")!));
   }
 
   @override
@@ -435,7 +458,7 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
                                                   CrossAxisAlignment.center,
                                               children: [
                                                 Expanded(child: Text(team)),
-                                                generateRobotPositionChip(
+                                                _generateRobotPositionChip(
                                                     position)
                                               ])))
                               ],

@@ -8,7 +8,7 @@ import '../pages/matchscout.dart' hide MatchScoutPage;
 class SupabaseInterface {
   static Future<bool> get canConnect => Supabase.instance.client
       .rpc('ping')
-      .then((value) => value is DateTime)
+      .then((_) => true)
       .catchError((_) => false);
 
   static final matchscoutStock = Stock<int, MatchScoutQuestionSchema>(
