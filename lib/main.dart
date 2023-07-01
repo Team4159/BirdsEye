@@ -1,29 +1,17 @@
-import 'package:birdseye/pages/matchscout.dart';
-import 'package:birdseye/pages/savedresponses.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import './interfaces/supabase.dart';
 import './pages/configuration.dart';
 import './pages/landing.dart';
+import './pages/matchscout.dart';
 import './pages/metadata.dart';
 import './pages/pitscout.dart';
+import './pages/savedresponses.dart';
 
 const cardinalred = Color(0xffcf2e2e);
-final MaterialColor cardinalredmaterial =
-    MaterialColor(cardinalred.value, const {
-  50: Color(0xFFF9E6E6),
-  100: Color(0xFFF1C0C0),
-  200: Color(0xFFE79797),
-  300: Color(0xFFDD6D6D),
-  400: Color(0xFFD64D4D),
-  500: cardinalred,
-  600: Color(0xFFCA2929),
-  700: Color(0xFFC32323),
-  800: Color(0xFFBD1D1D),
-  900: Color(0xFFB21212),
-});
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   prefs = await SharedPreferences.getInstance();
@@ -41,13 +29,85 @@ void main() async {
       themeMode: ThemeMode.system,
       theme: ThemeData.from(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: cardinalred),
-          textTheme:
-              Typography.englishLike2021.merge(Typography.blackHelsinki)),
+          colorScheme: const ColorScheme(
+            brightness: Brightness.light,
+            primary: Color(0xFFB91C21),
+            onPrimary: Color(0xFFFFFFFF),
+            primaryContainer: Color(0xFFFFDAD6),
+            onPrimaryContainer: Color(0xFF410003),
+            secondary: Color(0xFF5C53A7),
+            onSecondary: Color(0xFFFFFFFF),
+            secondaryContainer: Color(0xFFE4DFFF),
+            onSecondaryContainer: Color(0xFF170362),
+            tertiary: Color(0xFF006C4E),
+            onTertiary: Color(0xFFFFFFFF),
+            tertiaryContainer: Color(0xFF87F8C9),
+            onTertiaryContainer: Color(0xFF002115),
+            error: Color(0xFFBA1A1A),
+            errorContainer: Color(0xFFFFDAD6),
+            onError: Color(0xFFFFFFFF),
+            onErrorContainer: Color(0xFF410002),
+            background: Color(0xFFFFFBFF),
+            onBackground: Color(0xFF201A19),
+            surface: Color(0xFFFFFBFF),
+            onSurface: Color(0xFF201A19),
+            surfaceVariant: Color(0xFFF5DDDB),
+            onSurfaceVariant: Color(0xFF534342),
+            outline: Color(0xFF857371),
+            onInverseSurface: Color(0xFFFBEEEC),
+            inverseSurface: Color(0xFF362F2E),
+            inversePrimary: Color(0xFFFFB3AC),
+            shadow: Color(0xFF000000),
+            surfaceTint: Color(0xFFB91C21),
+            outlineVariant: Color(0xFFD8C2BF),
+            scrim: Color(0xFF000000),
+          ),
+          textTheme: Typography.englishLike2021
+              .merge(Typography.blackHelsinki)
+              .copyWith(
+                  titleLarge: const TextStyle(
+                      inherit: true,
+                      fontFamily: "Verdana",
+                      fontWeight: FontWeight.bold),
+                  headlineLarge: const TextStyle(
+                      fontFamily: "VarelaRound",
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 4))),
       darkTheme: ThemeData.from(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-              seedColor: cardinalred, brightness: Brightness.dark),
+          colorScheme: const ColorScheme(
+            brightness: Brightness.dark,
+            primary: Color(0xFFFFB3AC),
+            onPrimary: Color(0xFF680008),
+            primaryContainer: Color(0xFF930010),
+            onPrimaryContainer: Color(0xFFFFDAD6),
+            secondary: Color(0xFFC6BFFF),
+            onSecondary: Color(0xFF2D2276),
+            secondaryContainer: Color(0xFF443A8E),
+            onSecondaryContainer: Color(0xFFE4DFFF),
+            tertiary: Color(0xFF6ADBAE),
+            onTertiary: Color(0xFF003827),
+            tertiaryContainer: Color(0xFF00513A),
+            onTertiaryContainer: Color(0xFF87F8C9),
+            error: Color(0xFFFFB4AB),
+            errorContainer: Color(0xFF93000A),
+            onError: Color(0xFF690005),
+            onErrorContainer: Color(0xFFFFDAD6),
+            background: Color(0xFF201A19),
+            onBackground: Color(0xFFEDE0DE),
+            surface: Color(0xFF201A19),
+            onSurface: Color(0xFFEDE0DE),
+            surfaceVariant: Color(0xFF534342),
+            onSurfaceVariant: Color(0xFFD8C2BF),
+            outline: Color(0xFFA08C8A),
+            onInverseSurface: Color(0xFF201A19),
+            inverseSurface: Color(0xFFEDE0DE),
+            inversePrimary: Color(0xFFB91C21),
+            shadow: Color(0xFF000000),
+            surfaceTint: Color(0xFFFFB3AC),
+            outlineVariant: Color(0xFF534342),
+            scrim: Color(0xFF000000),
+          ),
           textTheme: Typography.englishLike2021
               .merge(Typography.whiteHelsinki)
               .copyWith(
@@ -93,7 +153,10 @@ final router = GoRouter(
           name: RoutePaths.metadata.name,
           pageBuilder: (context, state) => MaterialPage(
               child: Scaffold(body: SafeArea(child: MetadataPage())),
-              name: "Metadata")),
+              name: "Metadata"),
+          redirect: (_, state) async => await SupabaseInterface.canConnect
+              ? null
+              : state.namedLocation(RoutePaths.configuration.name)),
       ShellRoute(
           navigatorKey: _shellNavigatorKey,
           pageBuilder: (context, state, child) =>
@@ -139,7 +202,13 @@ final router = GoRouter(
     ],
     redirect: (context, state) => UserMetadata.isAuthenticated
         ? null
-        : state.namedLocation(RoutePaths.landing.name));
+        : state.namedLocation(RoutePaths.landing.name),
+    onException: (_, state, router) {
+      if (state.location.startsWith("access_token")) {
+        UserMetadata.instance.isValid.then((valid) => router.goNamed(
+            valid ? RoutePaths.configuration.name : RoutePaths.metadata.name));
+      }
+    });
 
 class ScaffoldShell extends StatelessWidget {
   final Widget child;
@@ -148,21 +217,28 @@ class ScaffoldShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
       drawer: Drawer(
-          width: 250,
+          width: 210,
           child: Column(children: [
             ListenableBuilder(
                 listenable: UserMetadata.instance,
                 builder: (context, child) => UserAccountsDrawerHeader(
-                    // FIXME horrible text contrast & overall bad theming
+                    decoration: Theme.of(context).brightness == Brightness.dark
+                        ? BoxDecoration(
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer)
+                        : null,
                     currentAccountPicture: Icon(
                         UserMetadata.isAuthenticated
                             ? Icons.person
                             : Icons.person_off_outlined,
                         size: 64),
-                    accountName: Text(UserMetadata.instance.name ?? "User"),
-                    accountEmail: Text(UserMetadata.instance.team != null
-                        ? "Team ${UserMetadata.instance.team}"
-                        : "No Team"))),
+                    accountName: Text(UserMetadata.instance.name ?? "User",
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                    accountEmail: Text(
+                        UserMetadata.instance.team != null
+                            ? "Team ${UserMetadata.instance.team}"
+                            : "No Team",
+                        style: const TextStyle(fontWeight: FontWeight.w300)))),
             ListTile(
                 leading: const Icon(Icons.app_registration_outlined),
                 title: const Text("Metadata"),
@@ -202,6 +278,7 @@ class ScaffoldShell extends StatelessWidget {
                             margin: EdgeInsets.zero,
                             child: Text(
                               "Bird's Eye",
+                              textAlign: TextAlign.center,
                               style: TextStyle(
                                   fontFamily: "HemiHead",
                                   fontSize: 32,

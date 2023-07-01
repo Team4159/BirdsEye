@@ -30,7 +30,7 @@ class SavedResponsesPage extends StatelessWidget {
                         : const Center(child: CircularProgressIndicator()))
                 : SliverPadding(
                     padding:
-                        const EdgeInsets.only(left: 12, right: 12, top: 12),
+                        const EdgeInsets.only(left: 12, right: 12, top: 24),
                     sliver: _RespAnimList(snapshot.data!)))
       ]),
       onRefresh: () => _list.sync());
@@ -68,14 +68,13 @@ class __RespAnimListState extends State<_RespAnimList> {
   @override
   Widget build(BuildContext context) => widget.dataList.isEmpty
       ? const SliverFillRemaining(
-          hasScrollBody: false,
           child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(Icons.article_outlined, size: 50, color: Colors.grey),
-                Text("No Saved Responses", style: TextStyle(color: Colors.grey))
-              ]))
+              Icon(Icons.article_outlined, size: 50, color: Colors.grey),
+              Text("No Saved Responses", style: TextStyle(color: Colors.grey))
+            ]))
       : SliverList.builder(
           itemCount: widget.dataList.length,
           itemBuilder: (context, i) {
@@ -109,16 +108,19 @@ class __RespAnimListState extends State<_RespAnimList> {
                         Map<String, dynamic>? data =
                             await LocalStoreInterface.get(id);
                         if (data == null) return handler(false);
-                        await (id.startsWith("match")
-                            ? matchscout.submitInfo(data,
-                                season: data.remove('season'))
-                            : id.startsWith("pit")
-                                ? pitscout.submitInfo(data,
-                                    season: data.remove('season'))
-                                : throw Exception(
-                                    "Invalid LocalStore ID: $id"));
-                        await handler(true);
-                        widget.dataList.remove(id);
+                        await Future.wait({
+                          widget.dataList.remove(id),
+                          handler(true),
+                          (id.startsWith("match")
+                              ? matchscout.submitInfo(data,
+                                  season: data.remove('season'))
+                              : id.startsWith("pit")
+                                  ? pitscout.submitInfo(data,
+                                      season: data.remove('season'))
+                                  : throw Exception(
+                                      "Invalid LocalStore ID: $id"))
+                        });
+                        await widget.dataList.sync();
                         setState(() {});
                       })
                 ],

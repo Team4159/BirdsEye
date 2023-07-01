@@ -7,31 +7,23 @@ class LandingPage extends StatelessWidget {
   const LandingPage({super.key});
 
   @override
-  Widget build(BuildContext context) => FractionallySizedBox(
-      widthFactor: 0.4,
-      child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text("Sign In / Register",
-                style: Theme.of(context)
-                    .textTheme
-                    .displayMedium
-                    ?.copyWith(color: Colors.black)),
-            Card(
-              child: ListTile(
-                  leading: const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Image(
-                          isAntiAlias: true,
-                          image: AssetImage('assets/images/github.png'))),
-                  title: const Text('Sign In with Github'),
-                  onTap: () => Supabase.instance.client.auth.signInWithOAuth(
-                      Provider.github,
-                      authScreenLaunchMode: LaunchMode.platformDefault,
-                      redirectTo: kDebugMode
-                          ? "${Uri.base.scheme}://${Uri.base.authority}"
-                          : null)),
-            )
-          ]));
+  Widget build(BuildContext context) => Scaffold(persistentFooterButtons: [
+        Card(
+          color: Colors.black,
+          child: ListTile(
+              leading: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Image(
+                      isAntiAlias: true,
+                      image: AssetImage('assets/images/github.png'))),
+              title: const Text('Sign In with Github',
+                  style: TextStyle(color: Colors.white)),
+              onTap: () => Supabase.instance.client.auth.signInWithOAuth(
+                  Provider.github,
+                  authScreenLaunchMode: LaunchMode.platformDefault,
+                  redirectTo: kDebugMode
+                      ? "${Uri.base.scheme}://${Uri.base.authority}"
+                      : null)),
+        )
+      ]);
 }

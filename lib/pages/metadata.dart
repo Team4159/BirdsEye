@@ -146,7 +146,6 @@ class UserMetadata extends ChangeNotifier {
   int? get team => _team;
 
   Future<void> update(String? name, int? team) {
-    // FIXME never actually changes anything
     _name = name;
     _team = team;
     return Supabase.instance.client

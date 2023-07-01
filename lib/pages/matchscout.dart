@@ -98,7 +98,8 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                                           .headlineLarge,
                                       textScaleFactor: 1.5)),
                               SliverPadding(
-                                  padding: const EdgeInsets.only(bottom: 12),
+                                  padding: const EdgeInsets.only(
+                                      bottom: 12, left: 6, right: 6),
                                   sliver: SliverGrid.count(
                                       crossAxisCount: 2,
                                       childAspectRatio: 3 / 1,
@@ -114,6 +115,10 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                                               TextFormField(
                                                   maxLines: null,
                                                   expands: true,
+                                                  style: TextStyle(
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .secondaryContainer),
                                                   decoration: InputDecoration(
                                                       labelText: field
                                                           .split("_")
@@ -121,6 +126,10 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                                                               s[0].toUpperCase() +
                                                               s.substring(1))
                                                           .join(" "),
+                                                      fillColor: Theme.of(
+                                                              context)
+                                                          .colorScheme
+                                                          .onSecondaryContainer,
                                                       labelStyle: null,
                                                       border:
                                                           const OutlineInputBorder()),
@@ -163,7 +172,7 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                                                       BorderRadius.circular(4),
                                                   color: Theme.of(context)
                                                       .colorScheme
-                                                      .primaryContainer,
+                                                      .errorContainer,
                                                   child: Center(
                                                       child: Text(field)))
                                           }
@@ -207,8 +216,8 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                                       reset: () async {
                                         _formKey.currentState!.reset();
                                         await _scrollController.animateTo(0,
-                                            duration:
-                                                const Duration(seconds: 1),
+                                            duration: const Duration(
+                                                milliseconds: 1500),
                                             curve: Curves.easeOutBack);
                                         _infoKey.currentState!.reset();
                                       })
@@ -480,7 +489,7 @@ class CounterFormField extends FormField<int> {
                 type: MaterialType.button,
                 borderRadius: BorderRadius.circular(4),
                 color: _getColor(labelText) ??
-                    Theme.of(state.context).colorScheme.primaryContainer,
+                    Theme.of(state.context).colorScheme.tertiaryContainer,
                 child: InkWell(
                     borderRadius: BorderRadius.circular(4),
                     onTap: () => state.didChange(state.value! + 1),
@@ -495,7 +504,14 @@ class CounterFormField extends FormField<int> {
                               flex: 1,
                               child: FittedBox(
                                   child: labelText != null
-                                      ? Text(labelText)
+                                      ? Text(labelText,
+                                          style: TextStyle(
+                                              color:
+                                                  _getColor(labelText) != null
+                                                      ? Colors.white
+                                                      : Theme.of(state.context)
+                                                          .colorScheme
+                                                          .onTertiaryContainer))
                                       : null)),
                           Flexible(
                               flex: 2,
@@ -506,17 +522,19 @@ class CounterFormField extends FormField<int> {
                               child: FittedBox(
                                   fit: BoxFit.fitHeight,
                                   alignment: Alignment.bottomRight,
-                                  child: IconButton(
-                                    iconSize: 96,
-                                    icon: const Icon(Icons.remove),
-                                    color: Colors.white70,
-                                    visualDensity: VisualDensity.comfortable,
-                                    padding: const EdgeInsets.only(right: 16),
-                                    alignment: Alignment.center,
-                                    onPressed: () => state.value! > 0
-                                        ? state.didChange(state.value! - 1)
-                                        : null,
-                                  )))
+                                  child: Padding(
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: IconButton(
+                                        iconSize: 128,
+                                        icon: const Icon(Icons.remove),
+                                        color: Colors.white70,
+                                        visualDensity:
+                                            VisualDensity.comfortable,
+                                        alignment: Alignment.center,
+                                        onPressed: () => state.value! > 0
+                                            ? state.didChange(state.value! - 1)
+                                            : null,
+                                      ))))
                         ]))));
   static Color? _getColor(String? labelText) {
     if (labelText == null) return null;
@@ -538,7 +556,7 @@ class RatingFormField extends FormField<double> {
             builder: (FormFieldState<double> state) => Material(
                 type: MaterialType.button,
                 borderRadius: BorderRadius.circular(4),
-                color: Theme.of(state.context).colorScheme.primaryContainer,
+                color: Theme.of(state.context).colorScheme.secondaryContainer,
                 child: Flex(
                   mainAxisSize: MainAxisSize.max,
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -549,7 +567,13 @@ class RatingFormField extends FormField<double> {
                     Flexible(
                         flex: 1,
                         child: FittedBox(
-                            child: labelText != null ? Text(labelText) : null)),
+                            child: labelText != null
+                                ? Text(labelText,
+                                    style: TextStyle(
+                                        color: Theme.of(state.context)
+                                            .colorScheme
+                                            .onSecondaryContainer))
+                                : null)),
                     Flexible(
                         flex: 2,
                         child: FittedBox(
@@ -601,7 +625,13 @@ class ToggleFormField extends FormField<bool> {
                             flex: 1,
                             child: FittedBox(
                                 child: labelText != null
-                                    ? Text(labelText)
+                                    ? Text(labelText,
+                                        style: TextStyle(
+                                            color: state.value!
+                                                ? Theme.of(state.context)
+                                                    .colorScheme
+                                                    .onSecondaryContainer
+                                                : Colors.white))
                                     : null)),
                         Flexible(
                             flex: 2,

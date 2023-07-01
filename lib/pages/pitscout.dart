@@ -242,7 +242,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                   borderRadius: BorderRadius.circular(4),
                                   color: Theme.of(context)
                                       .colorScheme
-                                      .primaryContainer,
+                                      .secondaryContainer,
                                   child: Padding(
                                       padding: const EdgeInsets.all(24),
                                       child: Column(
@@ -263,10 +263,23 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                     TextInputType.multiline,
                                                 maxLines: null,
                                                 maxLength: 65535,
-                                                decoration:
-                                                    const InputDecoration(
-                                                        hintText: "Type answer",
-                                                        counterText: ""))
+                                                style: TextStyle(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSecondaryContainer),
+                                                cursorColor: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSecondaryContainer,
+                                                decoration: InputDecoration(
+                                                    hintText: "Type answer",
+                                                    counterText: "",
+                                                    focusedBorder:
+                                                        UnderlineInputBorder(
+                                                            borderSide: BorderSide(
+                                                                color: Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .onSecondaryContainer))))
                                           ]))))),
                     SliverPadding(
                         padding: const EdgeInsets.all(20),
