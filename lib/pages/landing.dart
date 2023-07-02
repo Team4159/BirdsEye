@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LandingPage extends StatelessWidget {
-  // TODO: Flesh out nice intro landing page
   const LandingPage({super.key});
 
   @override
