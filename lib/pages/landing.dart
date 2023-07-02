@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -20,9 +19,7 @@ class LandingPage extends StatelessWidget {
               onTap: () => Supabase.instance.client.auth.signInWithOAuth(
                   Provider.github,
                   authScreenLaunchMode: LaunchMode.platformDefault,
-                  redirectTo: kDebugMode
-                      ? "${Uri.base.scheme}://${Uri.base.authority}"
-                      : null)),
+                  redirectTo: "${Uri.base.scheme}://${Uri.base.authority}")),
         )
       ]);
 }

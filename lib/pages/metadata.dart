@@ -14,6 +14,7 @@ class MetadataPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    UserMetadata.instance.fetch();
     String? name;
     int? team;
     return Padding(
@@ -132,7 +133,11 @@ class UserMetadata extends ChangeNotifier {
         if (event.event == AuthChangeEvent.signedIn) {
           UserMetadata.instance = UserMetadata();
         }
-        UserMetadata.instance.fetch();
+        if (event.event == AuthChangeEvent.signedOut) {
+          UserMetadata.instance._name = UserMetadata.instance._team = null;
+        } else {
+          UserMetadata.instance.fetch();
+        }
       });
   static late UserMetadata instance;
   static bool get isAuthenticated =>

@@ -111,30 +111,36 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                                               value: type
                                             ) in contents.entries)
                                           switch (type) {
-                                            MatchScoutQuestionTypes.text =>
-                                              TextFormField(
-                                                  maxLines: null,
-                                                  expands: true,
-                                                  style: TextStyle(
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .secondaryContainer),
-                                                  decoration: InputDecoration(
-                                                      labelText: field
-                                                          .split("_")
-                                                          .map((s) =>
-                                                              s[0].toUpperCase() +
-                                                              s.substring(1))
-                                                          .join(" "),
-                                                      fillColor: Theme.of(
-                                                              context)
-                                                          .colorScheme
-                                                          .onSecondaryContainer,
-                                                      labelStyle: null,
-                                                      border:
-                                                          const OutlineInputBorder()),
-                                                  onSaved: (i) => _fields[
-                                                      "${section}_$field"] = i),
+                                            MatchScoutQuestionTypes.text => TextFormField(
+                                                maxLines: null,
+                                                expands: true,
+                                                style: TextStyle(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSecondaryContainer),
+                                                cursorColor: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSecondaryContainer,
+                                                decoration: InputDecoration(
+                                                    labelText: field
+                                                        .split("_")
+                                                        .map((s) =>
+                                                            s[0].toUpperCase() +
+                                                            s.substring(1))
+                                                        .join(" "),
+                                                    filled: true,
+                                                    fillColor: Theme.of(context)
+                                                        .colorScheme
+                                                        .secondaryContainer
+                                                        .withAlpha(75),
+                                                    labelStyle: TextStyle(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSecondaryContainer,
+                                                        fontWeight: FontWeight.w500),
+                                                    enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).colorScheme.secondaryContainer, width: 3)),
+                                                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).colorScheme.secondaryContainer, width: 2))),
+                                                onSaved: (i) => _fields["${section}_$field"] = i),
                                             MatchScoutQuestionTypes.counter =>
                                               CounterFormField(
                                                   labelText: field

@@ -217,7 +217,7 @@ class ScaffoldShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
       drawer: Drawer(
-          width: 210,
+          width: 225,
           child: Column(children: [
             ListenableBuilder(
                 listenable: UserMetadata.instance,
@@ -238,7 +238,30 @@ class ScaffoldShell extends StatelessWidget {
                         UserMetadata.instance.team != null
                             ? "Team ${UserMetadata.instance.team}"
                             : "No Team",
-                        style: const TextStyle(fontWeight: FontWeight.w300)))),
+                        style: const TextStyle(fontWeight: FontWeight.w300)),
+                    arrowColor: Colors.transparent,
+                    onDetailsPressed: () => showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => AlertDialog(
+                              title: const Text("Sign Out"),
+                              content: const Text(
+                                  "Are you sure you want to sign out?"),
+                              actions: [
+                                OutlinedButton(
+                                    onPressed: () => GoRouter.of(context).pop(),
+                                    child: const Text("Cancel")),
+                                FilledButton(
+                                    onPressed: () {
+                                      Supabase.instance.client.auth
+                                          .signOut()
+                                          .then((_) => GoRouter.of(context)
+                                              .goNamed(
+                                                  RoutePaths.landing.name));
+                                    },
+                                    child: const Text("Confirm"))
+                              ],
+                            )))),
             ListTile(
                 leading: const Icon(Icons.app_registration_outlined),
                 title: const Text("Metadata"),
@@ -278,6 +301,7 @@ class ScaffoldShell extends StatelessWidget {
                             margin: EdgeInsets.zero,
                             child: Text(
                               "Bird's Eye",
+                              overflow: TextOverflow.visible,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   fontFamily: "HemiHead",
