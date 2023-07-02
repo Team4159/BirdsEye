@@ -102,7 +102,11 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                                       bottom: 12, left: 6, right: 6),
                                   sliver: SliverGrid.count(
                                       crossAxisCount: 2,
-                                      childAspectRatio: 3 / 1,
+                                      childAspectRatio:
+                                          MediaQuery.of(context).size.width >
+                                                  450
+                                              ? 3
+                                              : 2,
                                       mainAxisSpacing: 8,
                                       crossAxisSpacing: 12,
                                       children: [
@@ -499,49 +503,47 @@ class CounterFormField extends FormField<int> {
                 child: InkWell(
                     borderRadius: BorderRadius.circular(4),
                     onTap: () => state.didChange(state.value! + 1),
-                    child: Flex(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        direction: Axis.vertical,
-                        children: [
-                          const Flexible(flex: 1, child: SizedBox(width: 4)),
-                          Flexible(
-                              flex: 1,
-                              child: FittedBox(
-                                  child: labelText != null
-                                      ? Text(labelText,
-                                          style: TextStyle(
-                                              color:
-                                                  _getColor(labelText) != null
-                                                      ? Colors.white
-                                                      : Theme.of(state.context)
-                                                          .colorScheme
-                                                          .onTertiaryContainer))
-                                      : null)),
-                          Flexible(
-                              flex: 2,
-                              child: FittedBox(
-                                  child: Text(state.value.toString()))),
-                          Flexible(
-                              flex: 1,
-                              child: FittedBox(
-                                  fit: BoxFit.fitHeight,
-                                  alignment: Alignment.bottomRight,
-                                  child: Padding(
-                                      padding: const EdgeInsets.only(right: 16),
-                                      child: IconButton(
-                                        iconSize: 128,
-                                        icon: const Icon(Icons.remove),
-                                        color: Colors.white70,
-                                        visualDensity:
-                                            VisualDensity.comfortable,
-                                        alignment: Alignment.center,
-                                        onPressed: () => state.value! > 0
-                                            ? state.didChange(state.value! - 1)
-                                            : null,
-                                      ))))
-                        ]))));
+                    child: Stack(fit: StackFit.passthrough, children: [
+                      Column(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Expanded(flex: 1, child: SizedBox()),
+                            Expanded(
+                                flex: 3,
+                                child: FittedBox(
+                                    child: labelText != null
+                                        ? Text(labelText,
+                                            style: TextStyle(
+                                                color: _getColor(labelText) !=
+                                                        null
+                                                    ? Colors.white
+                                                    : Theme.of(state.context)
+                                                        .colorScheme
+                                                        .onTertiaryContainer))
+                                        : null)),
+                            Expanded(
+                                flex: 5,
+                                child: FittedBox(
+                                    child: Text(state.value.toString()))),
+                            const Expanded(flex: 1, child: SizedBox()),
+                          ]),
+                      FractionallySizedBox(
+                          widthFactor: 0.25,
+                          alignment: Alignment.bottomRight,
+                          child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.bottomRight,
+                              child: IconButton(
+                                iconSize: 64,
+                                icon: const Icon(Icons.remove),
+                                color: Colors.white70,
+                                onPressed: () => state.value! > 0
+                                    ? state.didChange(state.value! - 1)
+                                    : null,
+                              )))
+                    ]))));
   static Color? _getColor(String? labelText) {
     if (labelText == null) return null;
     return switch (Configuration.instance.season) {
@@ -563,46 +565,44 @@ class RatingFormField extends FormField<double> {
                 type: MaterialType.button,
                 borderRadius: BorderRadius.circular(4),
                 color: Theme.of(state.context).colorScheme.secondaryContainer,
-                child: Flex(
-                  mainAxisSize: MainAxisSize.max,
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  direction: Axis.vertical,
-                  children: [
-                    const Flexible(flex: 1, child: SizedBox(width: 4)),
-                    Flexible(
-                        flex: 1,
-                        child: FittedBox(
-                            child: labelText != null
-                                ? Text(labelText,
-                                    style: TextStyle(
-                                        color: Theme.of(state.context)
-                                            .colorScheme
-                                            .onSecondaryContainer))
-                                : null)),
-                    Flexible(
-                        flex: 2,
-                        child: FittedBox(
-                            child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.max,
-                                children: List.generate(
-                                    5,
-                                    (index) => IconButton(
-                                        onPressed: () =>
-                                            state.didChange(index / 5 + 1 / 5),
-                                        iconSize: 36,
-                                        tooltip: _labels[index],
-                                        icon:
-                                            index + 1 <= (state.value ?? -1) * 5
-                                                ? const Icon(Icons.star_rounded,
-                                                    color: Colors.yellow)
-                                                : const Icon(
-                                                    Icons.star_border_rounded,
-                                                    color: Colors.grey)))))),
-                    const Flexible(flex: 1, child: SizedBox(width: 4))
-                  ],
-                )));
+                child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Expanded(flex: 1, child: SizedBox(width: 4)),
+                      Expanded(
+                          flex: 3,
+                          child: FittedBox(
+                              child: labelText != null
+                                  ? Text(labelText,
+                                      style: TextStyle(
+                                          color: Theme.of(state.context)
+                                              .colorScheme
+                                              .onSecondaryContainer))
+                                  : null)),
+                      Expanded(
+                          flex: 5,
+                          child: FittedBox(
+                              child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.max,
+                                  children: List.generate(
+                                      5,
+                                      (index) => IconButton(
+                                          onPressed: () => state
+                                              .didChange(index / 5 + 1 / 5),
+                                          iconSize: 36,
+                                          tooltip: _labels[index],
+                                          icon: index + 1 <=
+                                                  (state.value ?? -1) * 5
+                                              ? const Icon(Icons.star_rounded,
+                                                  color: Colors.yellow)
+                                              : const Icon(
+                                                  Icons.star_border_rounded,
+                                                  color: Colors.grey)))))),
+                      const Expanded(flex: 1, child: SizedBox(width: 4)),
+                    ])));
 
   static final List<String> _labels = ["poor", "bad", "okay", "good", "pro"];
 }
@@ -620,30 +620,28 @@ class ToggleFormField extends FormField<bool> {
                 child: InkWell(
                     borderRadius: BorderRadius.circular(4),
                     onTap: () => state.didChange(!state.value!),
-                    child: Flex(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      direction: Axis.vertical,
-                      children: [
-                        const Flexible(flex: 1, child: SizedBox(width: 4)),
-                        Flexible(
-                            flex: 1,
-                            child: FittedBox(
-                                child: labelText != null
-                                    ? Text(labelText,
-                                        style: TextStyle(
-                                            color: state.value!
-                                                ? Theme.of(state.context)
-                                                    .colorScheme
-                                                    .onSecondaryContainer
-                                                : Colors.white))
-                                    : null)),
-                        Flexible(
-                            flex: 2,
-                            child:
-                                FittedBox(child: Text(state.value.toString()))),
-                        const Flexible(flex: 1, child: SizedBox(width: 4))
-                      ],
-                    ))));
+                    child: Column(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Expanded(flex: 1, child: SizedBox(width: 4)),
+                          Expanded(
+                              flex: 3,
+                              child: FittedBox(
+                                  child: labelText != null
+                                      ? Text(labelText,
+                                          style: TextStyle(
+                                              color: state.value!
+                                                  ? Theme.of(state.context)
+                                                      .colorScheme
+                                                      .onSecondaryContainer
+                                                  : Colors.white))
+                                      : null)),
+                          Expanded(
+                              flex: 5,
+                              child: FittedBox(
+                                  child: Text(state.value.toString()))),
+                          const Expanded(flex: 1, child: SizedBox(width: 4)),
+                        ]))));
 }
