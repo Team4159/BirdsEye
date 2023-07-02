@@ -1,7 +1,7 @@
-import 'package:birdseye/pages/configuration.dart';
 import 'package:stock/stock.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../pages/configuration.dart';
 import '../pages/matchscout.dart' hide MatchScoutPage;
 
 // "Aren't supabase functions all over the code?" Yes, but here are the ones that require big think
@@ -10,6 +10,28 @@ class SupabaseInterface {
       .rpc('ping')
       .then((_) => true)
       .catchError((_) => false);
+
+  static Future<void> setSession({String? match, int? team}) =>
+      Supabase.instance.client.from("sessions").upsert({
+        "season": Configuration.instance.season,
+        "event": Configuration.event,
+        "match": match,
+        "team": team
+      }).then((_) {});
+
+  static Future<void> clearSession() =>
+      Supabase.instance.client.from("sessions").delete();
+
+  static Future<Map<int, int>> getSessions({required String match}) => Supabase
+      .instance.client
+      .from("sessions")
+      .select<List<Map<String, dynamic>>>("team")
+      .eq("season", Configuration.instance.season)
+      .eq("event", Configuration.event)
+      .eq("match", match)
+      .then((resp) => resp.map((e) => e['team'] as int).toList())
+      .then((sessions) => Map.fromEntries(sessions.toSet().map(
+          (team) => MapEntry(team, sessions.where((t) => t == team).length))));
 
   static final matchscoutStock = Stock<int, MatchScoutQuestionSchema>(
       fetcher: Fetcher.ofFuture((key) => Supabase.instance.client.rpc(

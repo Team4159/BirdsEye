@@ -1,13 +1,13 @@
 import 'dart:collection';
 
-import 'package:birdseye/interfaces/localstore.dart';
-import 'package:birdseye/widgets/resetbutton.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../interfaces/bluealliance.dart';
+import '../interfaces/localstore.dart';
 import '../interfaces/supabase.dart';
-import 'configuration.dart';
+import '../widgets/resetbutton.dart';
+import './configuration.dart';
 
 typedef MatchScoutQuestionSchema
     = Map<String, Map<String, MatchScoutQuestionTypes>>;
@@ -48,6 +48,12 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
   final ScrollController _scrollController = ScrollController();
 
   @override
+  void dispose() {
+    SupabaseInterface.setSession();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => NestedScrollView(
       controller: _scrollController,
       headerSliverBuilder: (context, _) => [
@@ -58,7 +64,13 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                 title: Text("Match Scouting")),
             SliverToBoxAdapter(
                 child: _MatchScoutInfoFields(
-                    key: _infoKey, onUpdate: () => setState(() {})))
+                    key: _infoKey,
+                    onUpdate: () {
+                      SupabaseInterface.setSession(
+                          match: _infoKey.currentState!.match,
+                          team: _infoKey.currentState!.team);
+                      setState(() {});
+                    }))
           ],
       body: FutureBuilder(
           future: SupabaseInterface.matchSchema,
@@ -249,7 +261,7 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
   int? team;
 
   LinkedHashMap<String, MatchInfo>? _matches;
-  LinkedHashMap<String, String>? _teams;
+  LinkedHashMap<int, String>? _teams;
 
   int? _highestQual;
   final GlobalKey<FormFieldState> _teamSelectorKey = GlobalKey();
@@ -303,15 +315,30 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
     setState(() => team = null);
     _teamSelectorKey.currentState?.reset();
     setState(() => _teams = null);
-    return (match != null
-            ? BlueAlliance.stock.get((
-                season: Configuration.instance.season,
-                event: Configuration.event,
-                match: match
-              )).then((value) => setState(() => _teams =
-                LinkedHashMap.fromEntries(value.entries.toList()
-                  ..sort((a, b) => a.value.compareTo(b.value)))))
-            : Future.error("No Match Code!"))
+
+    return SupabaseInterface.getSessions(match: match!)
+        .then((sessions) => BlueAlliance.stock
+            .get((
+              season: Configuration.instance.season,
+              event: Configuration.event,
+              match: match!
+            ))
+            .then((value) => LinkedHashMap.fromEntries((value.entries.toList()
+                  ..sort((a, b) => a.value.compareTo(b.value)))
+                .map((e) => MapEntry(int.parse(e.key),
+                    "${sessions.containsKey(e.key) ? '${sessions[e.key]}|' : ''}${e.value}"))))
+            .then((data) {
+              int t = (sessions.entries.toList().cast<MapEntry<int, dynamic>>()
+                    ..sort((a, b) => a.value - b.value))
+                  .firstWhere((element) => data.containsKey(element),
+                      orElse: () => data.entries.first)
+                  .key;
+              setState(() {
+                _teams = data;
+                team = t;
+              });
+              if (widget.onUpdate != null) widget.onUpdate!();
+            }))
         .catchError((e) {
       setState(() => _teams = team = null);
       ScaffoldMessenger.of(context)
@@ -319,8 +346,10 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
     });
   }
 
+  static final _robotPositionPattern =
+      RegExp(r'^(?:(?<count>\d+)|)?(?<color>red|blue)(?<number>[1-3])$');
   static Chip _generateRobotPositionChip(String position) {
-    RegExpMatch? patternMatch = robotPositionPattern.firstMatch(position);
+    RegExpMatch? patternMatch = _robotPositionPattern.firstMatch(position);
     if (patternMatch == null) throw Exception("Malformed Robot Position");
     return Chip(
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
@@ -329,7 +358,9 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
         backgroundColor: const {
           "red": Color(0xffed1c24),
           "blue": Color(0xff0066b3)
-        }[patternMatch.namedGroup("color")],
+        }[patternMatch.namedGroup("color")]!
+            .withOpacity(1 /
+                (int.tryParse(patternMatch.namedGroup("count") ?? "") ?? 1)),
         label: Text(patternMatch.namedGroup("number")!));
   }
 
@@ -466,7 +497,7 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
                                 for (var MapEntry(key: team, value: position)
                                     in _teams!.entries)
                                   DropdownMenuItem(
-                                      value: int.parse(team),
+                                      value: team,
                                       child: ConstrainedBox(
                                           constraints: const BoxConstraints(
                                               maxWidth: 90),
@@ -476,13 +507,15 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.center,
                                               children: [
-                                                Expanded(child: Text(team)),
+                                                Expanded(
+                                                    child:
+                                                        Text(team.toString())),
                                                 _generateRobotPositionChip(
                                                     position)
                                               ])))
                               ],
                         onChanged: (int? value) {
-                          var t = team == null;
+                          var t = team != value;
                           team = value;
                           if (t && match != null && widget.onUpdate != null) {
                             widget.onUpdate!();

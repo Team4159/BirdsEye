@@ -1,13 +1,13 @@
-import 'package:birdseye/interfaces/supabase.dart';
-import 'package:birdseye/pages/metadata.dart';
-import 'package:birdseye/widgets/resetbutton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import './configuration.dart';
+import './metadata.dart';
 import '../interfaces/bluealliance.dart';
 import '../interfaces/localstore.dart';
-import 'configuration.dart';
+import '../interfaces/supabase.dart';
+import '../widgets/resetbutton.dart';
 
 Future<List<int>> pitScoutGetUnfilled() => BlueAlliance.stock
     .get((

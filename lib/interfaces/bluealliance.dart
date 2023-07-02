@@ -5,7 +5,6 @@ import 'package:stock/stock.dart';
 
 import '../main.dart' show prefs;
 
-final robotPositionPattern = RegExp(r'^(?<color>red|blue)(?<number>[1-3])$');
 final qualificationMatchInfoPattern = RegExp(r'^(?<level>qm)(?<index>\d+)$');
 final finalsMatchInfoPattern =
     RegExp(r'^(?<level>qf|sf|f)(?<finalnum>\d{1,2})m(?<index>\d+)$');

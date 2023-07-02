@@ -1,5 +1,7 @@
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../interfaces/bluealliance.dart';
@@ -14,6 +16,19 @@ class ConfigurationPage extends StatefulWidget {
 
 class _ConfigurationPageState extends State<ConfigurationPage> {
   final _eventCarouselController = CarouselController();
+
+  @override
+  void initState() {
+    SystemChrome.setPreferredOrientations(
+        [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations([]);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) =>
@@ -106,7 +121,9 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                                             .adaptivePlatformDensity,
                                         title: Text(
                                           enumeratedEntry.value.value,
-                                          overflow: TextOverflow.fade,
+                                          overflow: kIsWeb
+                                              ? TextOverflow.ellipsis
+                                              : TextOverflow.fade,
                                           softWrap: false,
                                           maxLines: 1,
                                           style: Theme.of(context)

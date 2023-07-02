@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../interfaces/bluealliance.dart';
+import '../interfaces/supabase.dart';
 import '../main.dart' show RoutePaths, prefs;
 
 class MetadataPage extends StatelessWidget {
@@ -134,6 +135,7 @@ class UserMetadata extends ChangeNotifier {
           UserMetadata.instance = UserMetadata();
         }
         if (event.event == AuthChangeEvent.signedOut) {
+          SupabaseInterface.clearSession();
           UserMetadata.instance._name = UserMetadata.instance._team = null;
         } else {
           UserMetadata.instance.fetch();

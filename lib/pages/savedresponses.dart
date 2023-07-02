@@ -1,8 +1,9 @@
-import 'package:birdseye/interfaces/localstore.dart';
-import 'package:birdseye/pages/matchscout.dart' as matchscout;
-import 'package:birdseye/pages/pitscout.dart' as pitscout;
 import 'package:flutter/material.dart';
 import 'package:flutter_swipe_action_cell/core/cell.dart';
+
+import './matchscout.dart' as matchscout;
+import './pitscout.dart' as pitscout;
+import '../interfaces/localstore.dart';
 
 class SavedResponsesPage extends StatelessWidget {
   final _list = _WrappedList([]);
