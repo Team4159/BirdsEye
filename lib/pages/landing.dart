@@ -18,7 +18,7 @@ class LandingPage extends StatelessWidget {
                   style: TextStyle(color: Colors.white)),
               onTap: () => Supabase.instance.client.auth.signInWithOAuth(
                   Provider.github,
-                  authScreenLaunchMode: LaunchMode.platformDefault,
+                  authScreenLaunchMode: LaunchMode.externalApplication,
                   redirectTo: "${Uri.base.scheme}://${Uri.base.authority}")),
         )
       ]);

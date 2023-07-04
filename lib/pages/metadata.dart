@@ -131,9 +131,6 @@ class UserMetadata extends ChangeNotifier {
             case AuthChangeEvent.mfaChallengeVerified ||
                 AuthChangeEvent.passwordRecovery ||
                 AuthChangeEvent.tokenRefreshed) return;
-        if (event.event == AuthChangeEvent.signedIn) {
-          UserMetadata.instance = UserMetadata();
-        }
         if (event.event == AuthChangeEvent.signedOut) {
           SupabaseInterface.clearSession();
           UserMetadata.instance._name = UserMetadata.instance._team = null;
@@ -141,7 +138,7 @@ class UserMetadata extends ChangeNotifier {
           UserMetadata.instance.fetch();
         }
       });
-  static late UserMetadata instance;
+  static UserMetadata instance = UserMetadata();
   static bool get isAuthenticated =>
       Supabase.instance.client.auth.currentUser != null;
 

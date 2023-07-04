@@ -32,7 +32,7 @@ class SavedResponsesPage extends StatelessWidget {
                 : SliverPadding(
                     padding:
                         const EdgeInsets.only(left: 12, right: 12, top: 24),
-                    sliver: _RespAnimList(snapshot.data!)))
+                    sliver: _RespList(snapshot.data!)))
       ]),
       onRefresh: () => _list.sync());
 }
@@ -57,15 +57,15 @@ class _WrappedList {
       });
 }
 
-class _RespAnimList extends StatefulWidget {
+class _RespList extends StatefulWidget {
   final _WrappedList dataList;
-  const _RespAnimList(this.dataList);
+  const _RespList(this.dataList);
 
   @override
-  State<_RespAnimList> createState() => __RespAnimListState();
+  State<_RespList> createState() => _RespListState();
 }
 
-class __RespAnimListState extends State<_RespAnimList> {
+class _RespListState extends State<_RespList> {
   @override
   Widget build(BuildContext context) => widget.dataList.isEmpty
       ? const SliverFillRemaining(

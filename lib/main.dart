@@ -145,9 +145,10 @@ final router = GoRouter(
               const MaterialPage(child: LandingPage(), name: "Sign In"),
           redirect: (_, state) async => !UserMetadata.isAuthenticated
               ? null
-              : state.namedLocation(await UserMetadata.instance.isValid
-                  ? RoutePaths.configuration.name
-                  : RoutePaths.metadata.name)),
+              : UserMetadata.instance.isValid.then((valid) =>
+                  state.namedLocation(valid
+                      ? RoutePaths.configuration.name
+                      : RoutePaths.metadata.name))),
       GoRoute(
           path: '/account/data',
           name: RoutePaths.metadata.name,

@@ -104,6 +104,7 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
                                   excludeHeaderSemantics: true,
                                   automaticallyImplyLeading: false,
                                   centerTitle: true,
+                                  stretch: false,
                                   title: Text(section,
                                       style: Theme.of(context)
                                           .textTheme
