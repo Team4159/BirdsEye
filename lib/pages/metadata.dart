@@ -13,6 +13,47 @@ class MetadataPage extends StatelessWidget {
       TextEditingController(text: prefs.getString("tbaKey"));
   MetadataPage({super.key});
 
+  static Dialog _tbaInfoDialog(BuildContext context) => Dialog(
+      child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Text.rich(TextSpan(children: [
+            TextSpan(
+                text: "Getting a TheBlueAlliance API Key\n\n",
+                style: Theme.of(context).textTheme.titleLarge),
+            const TextSpan(text: "Visit the account page ("),
+            WidgetSpan(
+                child: TextButton(
+              style: const ButtonStyle(
+                  padding: MaterialStatePropertyAll(EdgeInsets.zero),
+                  minimumSize: MaterialStatePropertyAll(Size(0, 20))),
+              onPressed: () => Clipboard.setData(const ClipboardData(
+                  text: "https://www.thebluealliance.com/account")),
+              child: Tooltip(
+                  message: "Copy",
+                  verticalOffset: 12,
+                  child: Text("https://www.thebluealliance.com/account",
+                      style: Theme.of(context).textTheme.bodySmall)),
+            )),
+            const TextSpan(text: ") (may ask for sign-in)\n"),
+            const TextSpan(text: "Scroll down to "),
+            TextSpan(
+                text: 'Read API Keys',
+                style: Theme.of(context).textTheme.bodySmall),
+            const TextSpan(text: " and enter "),
+            TextSpan(
+                text: 'BirdsEye', style: Theme.of(context).textTheme.bodySmall),
+            const TextSpan(text: " as the description\n"),
+            const TextSpan(text: "Click "),
+            TextSpan(
+                text: 'Add New Key',
+                style: Theme.of(context).textTheme.bodySmall),
+            const TextSpan(text: " then copy the "),
+            TextSpan(
+                text: 'X-TBA-Auth-Key',
+                style: Theme.of(context).textTheme.bodySmall),
+            const TextSpan(text: " text (base 64 string)")
+          ]))));
+
   @override
   Widget build(BuildContext context) {
     UserMetadata.instance.fetch();
@@ -59,9 +100,16 @@ class MetadataPage extends StatelessWidget {
                       )),
               TextField(
                   obscureText: true,
+                  autocorrect: false,
                   controller: _tbaFieldController,
-                  decoration: const InputDecoration(
-                      labelText: "TBA API Key", counterText: ""),
+                  decoration: InputDecoration(
+                      labelText: "TBA API Key",
+                      counterText: "",
+                      suffixIcon: IconButton(
+                          onPressed: () => showDialog(
+                              context: context, builder: _tbaInfoDialog),
+                          tooltip: "Instructions",
+                          icon: const Icon(Icons.info_outline_rounded))),
                   keyboardType: TextInputType.none,
                   maxLength: 64),
               Expanded(
