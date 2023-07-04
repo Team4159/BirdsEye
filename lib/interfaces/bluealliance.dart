@@ -49,14 +49,14 @@ class BlueAlliance {
           : throw Exception(resp.body));
 
   static final Set<String> _keyCache = {};
-  static Future<bool> isKeyValid(String? key) => key == null || key.isEmpty
-      ? Future.value(false)
-      : _keyCache.contains(key)
-          ? Future.value(true)
-          : _getJson("status", key: key).then((_) {
-              _keyCache.add(key);
-              return true;
-            }).catchError((_) => false);
+  static Future<bool> isKeyValid(String? key) {
+    if (key?.isEmpty ?? true) return Future.value(false);
+    if (_keyCache.contains(key)) return Future.value(true);
+    return _getJson("status", key: key).then((_) {
+      _keyCache.add(key!);
+      return true;
+    }).catchError((_) => false);
+  }
 
   static final stock = Stock<({int season, String? event, String? match}),
           Map<String, String>>(

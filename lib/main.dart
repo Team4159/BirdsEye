@@ -143,7 +143,7 @@ final router = GoRouter(
           name: RoutePaths.landing.name,
           pageBuilder: (context, state) =>
               const MaterialPage(child: LandingPage(), name: "Sign In"),
-          redirect: (_, state) async => !UserMetadata.isAuthenticated
+          redirect: (_, state) => !UserMetadata.isAuthenticated
               ? null
               : UserMetadata.instance.isValid.then((valid) =>
                   state.namedLocation(valid
@@ -154,10 +154,7 @@ final router = GoRouter(
           name: RoutePaths.metadata.name,
           pageBuilder: (context, state) => MaterialPage(
               child: Scaffold(body: SafeArea(child: MetadataPage())),
-              name: "Metadata"),
-          redirect: (_, state) async => await SupabaseInterface.canConnect
-              ? null
-              : state.namedLocation(RoutePaths.configuration.name)),
+              name: "Metadata")),
       ShellRoute(
           navigatorKey: _shellNavigatorKey,
           pageBuilder: (context, state, child) =>
@@ -206,8 +203,9 @@ final router = GoRouter(
         : state.namedLocation(RoutePaths.landing.name),
     onException: (_, state, router) {
       if (state.location.startsWith("access_token")) {
-        UserMetadata.instance.isValid.then((valid) => router.goNamed(
-            valid ? RoutePaths.configuration.name : RoutePaths.metadata.name));
+        router.goNamed(RoutePaths.metadata.name);
+        UserMetadata.instance.isValid.then((valid) =>
+            valid ? router.goNamed(RoutePaths.configuration.name) : null);
       }
     });
 
@@ -263,12 +261,15 @@ class ScaffoldShell extends StatelessWidget {
                                     child: const Text("Confirm"))
                               ],
                             )))),
-            ListTile(
-                leading: const Icon(Icons.app_registration_outlined),
-                title: const Text("Metadata"),
-                onTap: () => GoRouter.of(context)
-                  ..pop()
-                  ..goNamed(RoutePaths.metadata.name)),
+            FutureBuilder(
+                future: SupabaseInterface.canConnect,
+                builder: (context, snapshot) => ListTile(
+                    leading: const Icon(Icons.app_registration_outlined),
+                    title: const Text("Metadata"),
+                    enabled: snapshot.hasData && snapshot.data!,
+                    onTap: () => GoRouter.of(context)
+                      ..pop()
+                      ..goNamed(RoutePaths.metadata.name))),
             ListTile(
                 leading: const Icon(Icons.settings_rounded),
                 title: const Text("Configuration"),

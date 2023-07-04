@@ -127,15 +127,17 @@ class MetadataPage extends StatelessWidget {
 class UserMetadata extends ChangeNotifier {
   static void initialize() =>
       Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-        if (event.event
-            case AuthChangeEvent.mfaChallengeVerified ||
+        switch (event.event) {
+          case AuthChangeEvent.mfaChallengeVerified ||
                 AuthChangeEvent.passwordRecovery ||
-                AuthChangeEvent.tokenRefreshed) return;
-        if (event.event == AuthChangeEvent.signedOut) {
-          SupabaseInterface.clearSession();
-          UserMetadata.instance._name = UserMetadata.instance._team = null;
-        } else {
-          UserMetadata.instance.fetch();
+                AuthChangeEvent.tokenRefreshed:
+            break;
+          case AuthChangeEvent.signedOut:
+            SupabaseInterface.clearSession();
+            UserMetadata.instance._name = UserMetadata.instance._team = null;
+            break;
+          default:
+            UserMetadata.instance.fetch();
         }
       });
   static UserMetadata instance = UserMetadata();
