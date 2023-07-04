@@ -329,14 +329,12 @@ class _MatchScoutInfoFieldsState extends State<_MatchScoutInfoFields> {
                 .map((e) => MapEntry(int.parse(e.key),
                     "${sessions.containsKey(e.key) ? '${sessions[e.key]}|' : ''}${e.value}"))))
             .then((data) {
-              int t = (sessions.entries.toList().cast<MapEntry<int, dynamic>>()
-                    ..sort((a, b) => a.value - b.value))
-                  .firstWhere((element) => data.containsKey(element),
-                      orElse: () => data.entries.first)
-                  .key;
+              var t = (data.keys.toList()
+                ..sort((a, b) => (sessions[a] ?? 0) - (sessions[b] ?? 0)));
+              print(t);
               setState(() {
                 _teams = data;
-                team = t;
+                team = t.first;
               });
               if (widget.onUpdate != null) widget.onUpdate!();
             }))
