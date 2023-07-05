@@ -281,8 +281,6 @@ class MatchScoutInfoFields extends StatelessWidget {
   static Widget _generateRobotPositionChip(String position) {
     RegExpMatch? patternMatch = _robotPositionPattern.firstMatch(position);
     if (patternMatch == null) throw Exception("Malformed Robot Position '$position'");
-    print(
-        "${patternMatch.namedGroup("count")} => ${1 / ((int.tryParse(patternMatch.namedGroup("count") ?? "") ?? 0) + 1)}");
     return Container(
         decoration: BoxDecoration(
             color: const {
