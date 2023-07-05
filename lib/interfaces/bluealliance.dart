@@ -38,6 +38,12 @@ MatchInfo? parseMatchInfo(String s) {
 String stringifyMatchInfo(MatchInfo m) =>
     "${m.level.compLevel}${m.finalnum != null ? '${m.finalnum}m' : ''}${m.index}";
 
+int compareMatchInfo(MatchInfo a, MatchInfo b) => a.level != b.level
+    ? b.level.index - a.level.index
+    : a.finalnum != null && b.finalnum != null && a.finalnum != b.finalnum
+        ? b.finalnum! - a.finalnum!
+        : b.index - a.index;
+
 class BlueAlliance {
   static final _client = Client();
 
