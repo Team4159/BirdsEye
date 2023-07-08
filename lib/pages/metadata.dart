@@ -9,8 +9,7 @@ import '../main.dart' show RoutePaths, prefs;
 
 class MetadataPage extends StatelessWidget {
   final GlobalKey<FormState> _formKey = GlobalKey();
-  final _tbaFieldController =
-      TextEditingController(text: prefs.getString("tbaKey"));
+  final _tbaFieldController = TextEditingController(text: prefs.getString("tbaKey"));
   MetadataPage({super.key});
 
   static Dialog _tbaInfoDialog(BuildContext context) => Dialog(
@@ -25,9 +24,10 @@ class MetadataPage extends StatelessWidget {
                 child: TextButton(
               style: const ButtonStyle(
                   padding: MaterialStatePropertyAll(EdgeInsets.zero),
-                  minimumSize: MaterialStatePropertyAll(Size(0, 20))),
-              onPressed: () => Clipboard.setData(const ClipboardData(
-                  text: "https://www.thebluealliance.com/account")),
+                  minimumSize: MaterialStatePropertyAll(Size(0, 20)),
+                  maximumSize: MaterialStatePropertyAll(Size(0, 20))),
+              onPressed: () => Clipboard.setData(
+                  const ClipboardData(text: "https://www.thebluealliance.com/account")),
               child: Tooltip(
                   message: "Copy",
                   verticalOffset: 12,
@@ -36,21 +36,14 @@ class MetadataPage extends StatelessWidget {
             )),
             const TextSpan(text: ") (may ask for sign-in)\n"),
             const TextSpan(text: "Scroll down to "),
-            TextSpan(
-                text: 'Read API Keys',
-                style: Theme.of(context).textTheme.bodySmall),
+            TextSpan(text: 'Read API Keys', style: Theme.of(context).textTheme.bodySmall),
             const TextSpan(text: " and enter "),
-            TextSpan(
-                text: 'BirdsEye', style: Theme.of(context).textTheme.bodySmall),
+            TextSpan(text: 'BirdsEye', style: Theme.of(context).textTheme.bodySmall),
             const TextSpan(text: " as the description\n"),
             const TextSpan(text: "Click "),
-            TextSpan(
-                text: 'Add New Key',
-                style: Theme.of(context).textTheme.bodySmall),
+            TextSpan(text: 'Add New Key', style: Theme.of(context).textTheme.bodySmall),
             const TextSpan(text: " then copy the "),
-            TextSpan(
-                text: 'X-TBA-Auth-Key',
-                style: Theme.of(context).textTheme.bodySmall),
+            TextSpan(text: 'X-TBA-Auth-Key', style: Theme.of(context).textTheme.bodySmall),
             const TextSpan(text: " text (base 64 string)")
           ]))));
 
@@ -66,37 +59,27 @@ class MetadataPage extends StatelessWidget {
             autovalidateMode: AutovalidateMode.always,
             child: Column(children: [
               Text("Modify User Info",
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge),
+                  textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
               ListenableBuilder(
                   listenable: UserMetadata.instance,
                   builder: (context, child) => TextFormField(
-                        autofillHints: const [
-                          AutofillHints.name,
-                          AutofillHints.nickname
-                        ],
+                        autofillHints: const [AutofillHints.name, AutofillHints.nickname],
                         initialValue: UserMetadata.instance.name,
                         decoration: const InputDecoration(labelText: "Name"),
                         keyboardType: TextInputType.name,
-                        validator: (value) =>
-                            value == null || value.isEmpty ? "Required" : null,
+                        validator: (value) => value == null || value.isEmpty ? "Required" : null,
                         onSaved: (String? value) => name = value,
                       )),
               ListenableBuilder(
                   listenable: UserMetadata.instance,
                   builder: (context, child) => TextFormField(
                         initialValue: UserMetadata.instance.team?.toString(),
-                        decoration: const InputDecoration(
-                            labelText: "Team", counterText: ""),
+                        decoration: const InputDecoration(labelText: "Team", counterText: ""),
                         keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly
-                        ],
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         maxLength: 4,
-                        validator: (value) =>
-                            value == null || value.isEmpty ? "Required" : null,
-                        onSaved: (String? value) =>
-                            team = int.tryParse(value ?? ""),
+                        validator: (value) => value == null || value.isEmpty ? "Required" : null,
+                        onSaved: (String? value) => team = int.tryParse(value ?? ""),
                       )),
               TextField(
                   obscureText: true,
@@ -106,8 +89,7 @@ class MetadataPage extends StatelessWidget {
                       labelText: "TBA API Key",
                       counterText: "",
                       suffixIcon: IconButton(
-                          onPressed: () => showDialog(
-                              context: context, builder: _tbaInfoDialog),
+                          onPressed: () => showDialog(context: context, builder: _tbaInfoDialog),
                           tooltip: "Instructions",
                           icon: const Icon(Icons.info_outline_rounded))),
                   keyboardType: TextInputType.none,
@@ -122,22 +104,18 @@ class MetadataPage extends StatelessWidget {
                             OutlinedButton(
                                 onPressed: () {
                                   _formKey.currentState!.reset();
-                                  _tbaFieldController.text =
-                                      prefs.getString("tbaKey") ?? "";
+                                  _tbaFieldController.text = prefs.getString("tbaKey") ?? "";
                                   if (!_formKey.currentState!.validate()) {
-                                    return UserMetadata.instance
-                                        .fetch()
-                                        .ignore();
+                                    return UserMetadata.instance.fetch().ignore();
                                   }
-                                  BlueAlliance.isKeyValid(
-                                          prefs.getString("tbaKey"))
+                                  BlueAlliance.isKeyValid(prefs.getString("tbaKey"))
                                       .then((valid) => valid
-                                          ? GoRouter.of(context).goNamed(
-                                              RoutePaths.configuration.name)
+                                          ? GoRouter.of(context)
+                                              .goNamed(RoutePaths.configuration.name)
                                           : throw Exception("Invalid TBA Key!"))
                                       .catchError((e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(e.message)));
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(SnackBar(content: Text(e.message)));
                                   });
                                 },
                                 child: const Text("Cancel")),
@@ -148,22 +126,17 @@ class MetadataPage extends StatelessWidget {
                                     return;
                                   }
                                   _formKey.currentState!.save();
-                                  BlueAlliance.isKeyValid(
-                                          _tbaFieldController.text)
-                                      .then((valid) {
+                                  BlueAlliance.isKeyValid(_tbaFieldController.text).then((valid) {
                                     if (!valid) {
                                       throw Exception("Invalid TBA Key!");
                                     }
-                                    prefs.setString(
-                                        "tbaKey", _tbaFieldController.text);
-                                    return UserMetadata.instance
-                                        .update(name, team)
-                                        .then((_) => GoRouter.of(context)
-                                            .goNamed(
-                                                RoutePaths.configuration.name));
+                                    prefs.setString("tbaKey", _tbaFieldController.text);
+                                    return UserMetadata.instance.update(name, team).then((_) =>
+                                        GoRouter.of(context)
+                                            .goNamed(RoutePaths.configuration.name));
                                   }).catchError((e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(e.message)));
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(SnackBar(content: Text(e.message)));
                                   });
                                 },
                                 child: const Text("Submit"))
@@ -173,8 +146,7 @@ class MetadataPage extends StatelessWidget {
 }
 
 class UserMetadata extends ChangeNotifier {
-  static void initialize() =>
-      Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+  static void initialize() => Supabase.instance.client.auth.onAuthStateChange.listen((event) {
         switch (event.event) {
           case AuthChangeEvent.mfaChallengeVerified ||
                 AuthChangeEvent.passwordRecovery ||
@@ -189,8 +161,7 @@ class UserMetadata extends ChangeNotifier {
         }
       });
   static UserMetadata instance = UserMetadata();
-  static bool get isAuthenticated =>
-      Supabase.instance.client.auth.currentUser != null;
+  static bool get isAuthenticated => Supabase.instance.client.auth.currentUser != null;
 
   final String? id = Supabase.instance.client.auth.currentUser?.id;
   String? _name;
@@ -204,8 +175,7 @@ class UserMetadata extends ChangeNotifier {
     _team = team;
     return Supabase.instance.client
         .from("users")
-        .update(
-            {if (_name != null) "name": name, if (_team != null) "team": team})
+        .update({if (_name != null) "name": name, if (_team != null) "team": team})
         .eq("id", id)
         .then((_) => notifyListeners());
   }
