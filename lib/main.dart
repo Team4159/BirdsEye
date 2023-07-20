@@ -62,17 +62,11 @@ void main() async {
             outlineVariant: Color(0xFFD8C2BF),
             scrim: Color(0xFF000000),
           ),
-          textTheme: Typography.englishLike2021
-              .merge(Typography.blackHelsinki)
-              .copyWith(
-                  titleLarge: const TextStyle(
-                      inherit: true,
-                      fontFamily: "Verdana",
-                      fontWeight: FontWeight.bold),
-                  headlineLarge: const TextStyle(
-                      fontFamily: "VarelaRound",
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 4))),
+          textTheme: Typography.englishLike2021.merge(Typography.blackHelsinki).copyWith(
+              titleLarge: const TextStyle(
+                  inherit: true, fontFamily: "Verdana", fontWeight: FontWeight.bold),
+              headlineLarge: const TextStyle(
+                  fontFamily: "VarelaRound", fontWeight: FontWeight.w500, letterSpacing: 4))),
       darkTheme: ThemeData.from(
           useMaterial3: true,
           colorScheme: const ColorScheme(
@@ -108,32 +102,18 @@ void main() async {
             outlineVariant: Color(0xFF534342),
             scrim: Color(0xFF000000),
           ),
-          textTheme: Typography.englishLike2021
-              .merge(Typography.whiteHelsinki)
-              .copyWith(
-                  titleLarge: const TextStyle(
-                      inherit: true,
-                      fontFamily: "Verdana",
-                      fontWeight: FontWeight.bold),
-                  headlineLarge: const TextStyle(
-                      fontFamily: "VarelaRound",
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 4)))));
+          textTheme: Typography.englishLike2021.merge(Typography.whiteHelsinki).copyWith(
+              titleLarge: const TextStyle(
+                  inherit: true, fontFamily: "Verdana", fontWeight: FontWeight.bold),
+              headlineLarge: const TextStyle(
+                  fontFamily: "VarelaRound", fontWeight: FontWeight.w500, letterSpacing: 4)))));
 }
 
 late final SharedPreferences prefs;
 
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
-enum RoutePaths {
-  landing,
-  metadata,
-  configuration,
-  scouting,
-  matchscout,
-  pitscout,
-  savedresp
-}
+enum RoutePaths { landing, metadata, configuration, scouting, matchscout, pitscout, savedresp }
 
 final router = GoRouter(
     initialLocation: '/',
@@ -143,69 +123,59 @@ final router = GoRouter(
           name: RoutePaths.landing.name,
           pageBuilder: (context, state) =>
               const MaterialPage(child: LandingPage(), name: "Sign In"),
-          redirect: (_, state) => !UserMetadata.isAuthenticated
-              ? null
-              : UserMetadata.instance.isValid.then((valid) =>
-                  state.namedLocation(valid
-                      ? RoutePaths.configuration.name
-                      : RoutePaths.metadata.name))),
+          redirect: (_, state) =>
+              UserMetadata.isAuthenticated ? state.namedLocation(RoutePaths.metadata.name) : null),
       GoRoute(
           path: '/account/data',
           name: RoutePaths.metadata.name,
           pageBuilder: (context, state) => MaterialPage(
-              child: Scaffold(body: SafeArea(child: MetadataPage())),
-              name: "Metadata")),
+              child: Scaffold(body: SafeArea(child: MetadataPage())), name: "Metadata")),
       ShellRoute(
           navigatorKey: _shellNavigatorKey,
-          pageBuilder: (context, state, child) =>
-              NoTransitionPage(child: ScaffoldShell(child)),
+          pageBuilder: (context, state, child) => NoTransitionPage(child: ScaffoldShell(child)),
           routes: [
             GoRoute(
                 parentNavigatorKey: _shellNavigatorKey,
                 path: '/configuration',
                 name: RoutePaths.configuration.name,
-                pageBuilder: (context, state) => const MaterialPage(
-                    child: ConfigurationPage(), name: "Configuration")),
+                pageBuilder: (context, state) =>
+                    const MaterialPage(child: ConfigurationPage(), name: "Configuration")),
             GoRoute(
                 parentNavigatorKey: _shellNavigatorKey,
                 path: '/scouting/match',
                 name: RoutePaths.matchscout.name,
-                pageBuilder: (context, state) => const MaterialPage(
-                    child: MatchScoutPage(), name: "Match Scouting"),
-                redirect: (context, state) async =>
-                    await Configuration.instance.isValid
-                        ? null
-                        : state.namedLocation(RoutePaths.configuration.name)),
+                pageBuilder: (context, state) =>
+                    const MaterialPage(child: MatchScoutPage(), name: "Match Scouting"),
+                redirect: (context, state) async => await Configuration.instance.isValid
+                    ? null
+                    : state.namedLocation(RoutePaths.configuration.name)),
             GoRoute(
                 parentNavigatorKey: _shellNavigatorKey,
                 path: '/scouting/pit',
                 name: RoutePaths.pitscout.name,
-                pageBuilder: (context, state) => const MaterialPage(
-                    child: PitScoutPage(), name: "Pit Scouting"),
-                redirect: (context, state) async =>
-                    await Configuration.instance.isValid
-                        ? null
-                        : state.namedLocation(RoutePaths.configuration.name)),
+                pageBuilder: (context, state) =>
+                    const MaterialPage(child: PitScoutPage(), name: "Pit Scouting"),
+                redirect: (context, state) async => await Configuration.instance.isValid
+                    ? null
+                    : state.namedLocation(RoutePaths.configuration.name)),
             GoRoute(
                 parentNavigatorKey: _shellNavigatorKey,
                 path: '/scouting/saved',
                 name: RoutePaths.savedresp.name,
-                pageBuilder: (context, state) => MaterialPage(
-                    child: SavedResponsesPage(), name: "Saved Responses"),
-                redirect: (context, state) async =>
-                    await Configuration.instance.isValid
-                        ? null
-                        : state.namedLocation(RoutePaths.configuration.name))
+                pageBuilder: (context, state) =>
+                    MaterialPage(child: SavedResponsesPage(), name: "Saved Responses"),
+                redirect: (context, state) async => await Configuration.instance.isValid
+                    ? null
+                    : state.namedLocation(RoutePaths.configuration.name))
           ])
     ],
-    redirect: (context, state) => UserMetadata.isAuthenticated
-        ? null
-        : state.namedLocation(RoutePaths.landing.name),
+    redirect: (context, state) =>
+        UserMetadata.isAuthenticated ? null : state.namedLocation(RoutePaths.landing.name),
     onException: (_, state, router) {
       if (state.location.startsWith("access_token")) {
         router.goNamed(RoutePaths.metadata.name);
-        UserMetadata.instance.isValid.then((valid) =>
-            valid ? router.goNamed(RoutePaths.configuration.name) : null);
+        UserMetadata.instance.isValid
+            .then((valid) => valid ? router.goNamed(RoutePaths.configuration.name) : null);
       }
     });
 
@@ -222,14 +192,10 @@ class ScaffoldShell extends StatelessWidget {
                 listenable: UserMetadata.instance,
                 builder: (context, child) => UserAccountsDrawerHeader(
                     decoration: Theme.of(context).brightness == Brightness.dark
-                        ? BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer)
+                        ? BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer)
                         : null,
                     currentAccountPicture: Icon(
-                        UserMetadata.isAuthenticated
-                            ? Icons.person
-                            : Icons.person_off_outlined,
+                        UserMetadata.isAuthenticated ? Icons.person : Icons.person_off_outlined,
                         size: 64),
                     accountName: Text(UserMetadata.instance.name ?? "User",
                         style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -244,19 +210,15 @@ class ScaffoldShell extends StatelessWidget {
                         barrierDismissible: false,
                         builder: (context) => AlertDialog(
                               title: const Text("Sign Out"),
-                              content: const Text(
-                                  "Are you sure you want to sign out?"),
+                              content: const Text("Are you sure you want to sign out?"),
                               actions: [
                                 OutlinedButton(
                                     onPressed: () => GoRouter.of(context).pop(),
                                     child: const Text("Cancel")),
                                 FilledButton(
                                     onPressed: () {
-                                      Supabase.instance.client.auth
-                                          .signOut()
-                                          .then((_) => GoRouter.of(context)
-                                              .goNamed(
-                                                  RoutePaths.landing.name));
+                                      Supabase.instance.client.auth.signOut().then((_) =>
+                                          GoRouter.of(context).goNamed(RoutePaths.landing.name));
                                     },
                                     child: const Text("Confirm"))
                               ],
@@ -306,9 +268,7 @@ class ScaffoldShell extends StatelessWidget {
                               overflow: TextOverflow.visible,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                  fontFamily: "HemiHead",
-                                  fontSize: 32,
-                                  color: cardinalred),
+                                  fontFamily: "HemiHead", fontSize: 32, color: cardinalred),
                             )))))
           ])),
       body: SafeArea(child: child));

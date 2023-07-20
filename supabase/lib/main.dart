@@ -7,8 +7,7 @@ import 'package:supabase_functions/supabase_functions.dart';
 void main() {
   final supabase = SupabaseClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get(
-        'SUPABASE_SERVICE_ROLE_KEY')!, // Use service role key to bypass RLS
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, // Use service role key to bypass RLS
     httpClient: EdgeHttpClient(),
   );
 
@@ -34,8 +33,7 @@ void main() {
     for (Map<String, dynamic> scoutingEntry in data) {
       String match = scoutingEntry['match'];
       if (agg[match] == null) agg[match] = {};
-      scoutingEntry.removeWhere(
-          (key, _) => {"event", "match", "team", "scouter"}.contains(key));
+      scoutingEntry.removeWhere((key, _) => {"event", "match", "team", "scouter"}.contains(key));
       for (var MapEntry(:key, :value) in scoutingEntry.entries) {
         if (value is! int && value is! double) continue;
         if (agg[match]![key] == null) agg[match]![key] = {};

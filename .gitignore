@@ -45,3 +45,6 @@ app.*.map.json
 
 # Supabase Edge
 supabase/functions
+
+# dev todo list
+plans/

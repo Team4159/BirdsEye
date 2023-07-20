@@ -85,52 +85,44 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                       if (!prefs.containsKey("event") || index < 0) {
                         prefs.setString("event", entries[index = 0].key);
                       }
-                      return Stack(
-                          fit: StackFit.passthrough,
-                          alignment: Alignment.center,
-                          children: [
-                            CarouselSlider(
-                                carouselController: _eventCarouselController,
-                                items: entries
-                                    .asMap()
-                                    .entries
-                                    .map<Widget>((enumeratedEntry) => ListTile(
-                                        visualDensity: VisualDensity.adaptivePlatformDensity,
-                                        title: Text(
-                                          enumeratedEntry.value.value,
-                                          overflow:
-                                              kIsWeb ? TextOverflow.ellipsis : TextOverflow.fade,
-                                          softWrap: false,
-                                          maxLines: 1,
-                                          style: Theme.of(context).textTheme.headlineSmall,
-                                        ),
-                                        trailing: IntrinsicWidth(
-                                            child: Text(enumeratedEntry.value.key,
-                                                textAlign: TextAlign.right,
-                                                style: Theme.of(context).textTheme.titleMedium)),
-                                        onTap: () => _eventCarouselController.animateToPage(
-                                            enumeratedEntry.key,
-                                            curve: Curves.easeOutQuart)))
-                                    .toList(),
-                                options: CarouselOptions(
-                                    aspectRatio: 1 / 5,
-                                    viewportFraction:
-                                        40 / (MediaQuery.of(context).size.height * 7 / 8),
-                                    scrollDirection: Axis.vertical,
-                                    initialPage: index,
-                                    onPageChanged: (i, _) =>
-                                        prefs.setString('event', entries[i].key))),
-                            GestureDetector(
+                      return Stack(fit: StackFit.expand, alignment: Alignment.center, children: [
+                        CarouselSlider(
+                            carouselController: _eventCarouselController,
+                            items: entries
+                                .asMap()
+                                .entries
+                                .map<Widget>((enumeratedEntry) => ListTile(
+                                    visualDensity: VisualDensity.adaptivePlatformDensity,
+                                    title: Text(
+                                      enumeratedEntry.value.value,
+                                      overflow: kIsWeb ? TextOverflow.ellipsis : TextOverflow.fade,
+                                      softWrap: false,
+                                      maxLines: 1,
+                                      style: Theme.of(context).textTheme.headlineSmall,
+                                    ),
+                                    trailing: IntrinsicWidth(
+                                        child: Text(enumeratedEntry.value.key,
+                                            textAlign: TextAlign.right,
+                                            style: Theme.of(context).textTheme.titleMedium)),
+                                    onTap: () => _eventCarouselController.animateToPage(
+                                        enumeratedEntry.key,
+                                        curve: Curves.easeOutQuart)))
+                                .toList(),
+                            options: CarouselOptions(
+                                aspectRatio: 1 / 5,
+                                viewportFraction: 40 / (MediaQuery.of(context).size.height * 7 / 8),
+                                scrollDirection: Axis.vertical,
+                                initialPage: index,
+                                onPageChanged: (i, _) => prefs.setString('event', entries[i].key))),
+                        Center(
+                            child: GestureDetector(
                                 behavior: HitTestBehavior.translucent,
                                 child: IgnorePointer(
-                                    child: Center(
-                                        child: Container(
-                                  constraints: const BoxConstraints.tightFor(height: 40),
-                                  alignment: Alignment.center,
-                                  margin: const EdgeInsets.only(top: 10),
-                                  color: Colors.grey.withAlpha(100),
-                                ))))
-                          ]);
+                                    child: Container(
+                                        height: 35,
+                                        margin: const EdgeInsets.only(top: 10),
+                                        color: Colors.grey.withAlpha(100)))))
+                      ]);
                     })))
       ]);
 }
