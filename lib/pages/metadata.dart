@@ -27,18 +27,19 @@ class MetadataPage extends StatelessWidget {
             TextSpan(
                 text: "Getting a TheBlueAlliance API Key\n\n",
                 style: Theme.of(context).textTheme.titleLarge),
-            const TextSpan(text: "Visit the account page ("),
+            const TextSpan(text: "Visit the "),
             TextSpan(
-              text: "https://www.thebluealliance.com/account",
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall!
-                  .copyWith(decoration: TextDecoration.underline, color: Colors.blue),
-              recognizer: TapGestureRecognizer()
-                ..onTap = () => Clipboard.setData(
-                    const ClipboardData(text: "https://www.thebluealliance.com/account")),
-            ),
-            const TextSpan(text: " [copy]) (may ask for sign-in)\n"),
+                text: "account page",
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall!
+                    .copyWith(decoration: TextDecoration.underline, color: Colors.blue),
+                recognizer: TapGestureRecognizer()
+                  ..onTap = () => Clipboard.setData(
+                          const ClipboardData(text: "https://www.thebluealliance.com/account"))
+                      .then((_) => ScaffoldMessenger.of(context)
+                          .showSnackBar(const SnackBar(content: Text("Copied!"))))),
+            const TextSpan(text: " (may ask for sign-in)\n"),
             const TextSpan(text: "Scroll down to "),
             TextSpan(text: 'Read API Keys', style: Theme.of(context).textTheme.bodySmall),
             const TextSpan(text: " and enter "),
