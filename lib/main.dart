@@ -172,7 +172,7 @@ final router = GoRouter(
     redirect: (context, state) =>
         UserMetadata.isAuthenticated ? null : state.namedLocation(RoutePaths.landing.name),
     onException: (_, state, router) {
-      if (state.location.startsWith("access_token")) {
+      if (state.matchedLocation.startsWith("access_token")) {
         router.goNamed(RoutePaths.metadata.name);
         UserMetadata.instance.isValid
             .then((valid) => valid ? router.goNamed(RoutePaths.configuration.name) : null);

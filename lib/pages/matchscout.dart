@@ -3,11 +3,11 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import './configuration.dart';
 import '../interfaces/bluealliance.dart';
 import '../interfaces/localstore.dart';
 import '../interfaces/supabase.dart';
-import '../widgets/resetbutton.dart';
-import './configuration.dart';
+import '../widgets/deleteconfirmation.dart';
 
 typedef MatchScoutQuestionSchema = Map<String, Map<String, MatchScoutQuestionTypes>>;
 
@@ -36,7 +36,7 @@ class MatchScoutPage extends StatefulWidget {
   State<MatchScoutPage> createState() => _MatchScoutPageState();
 }
 
-class _MatchScoutPageState extends State<MatchScoutPage> {
+class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObserver {
   final GlobalKey<FormState> _formKey = GlobalKey();
   final MatchScoutInfo info = MatchScoutInfo();
   final Map<String, dynamic> _fields = {};
@@ -45,12 +45,24 @@ class _MatchScoutPageState extends State<MatchScoutPage> {
   @override
   void initState() {
     info.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addObserver(this);
     super.initState();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) => switch (state) {
+        AppLifecycleState.paused ||
+        AppLifecycleState.inactive ||
+        AppLifecycleState.detached =>
+          SupabaseInterface.setSession(),
+        AppLifecycleState.resumed =>
+          SupabaseInterface.setSession(match: info.match, team: info.team),
+      };
+
+  @override
   void dispose() {
     SupabaseInterface.setSession();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 

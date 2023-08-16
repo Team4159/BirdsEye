@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -27,21 +28,17 @@ class MetadataPage extends StatelessWidget {
                 text: "Getting a TheBlueAlliance API Key\n\n",
                 style: Theme.of(context).textTheme.titleLarge),
             const TextSpan(text: "Visit the account page ("),
-            WidgetSpan(
-                child: TextButton(
-              style: const ButtonStyle(
-                  padding: MaterialStatePropertyAll(EdgeInsets.zero),
-                  minimumSize: MaterialStatePropertyAll(Size(0, 20)),
-                  maximumSize: MaterialStatePropertyAll(Size(0, 20))),
-              onPressed: () => Clipboard.setData(
-                  const ClipboardData(text: "https://www.thebluealliance.com/account")),
-              child: Tooltip(
-                  message: "Copy",
-                  verticalOffset: 12,
-                  child: Text("https://www.thebluealliance.com/account",
-                      style: Theme.of(context).textTheme.bodySmall)),
-            )),
-            const TextSpan(text: ") (may ask for sign-in)\n"),
+            TextSpan(
+              text: "https://www.thebluealliance.com/account",
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall!
+                  .copyWith(decoration: TextDecoration.underline, color: Colors.blue),
+              recognizer: TapGestureRecognizer()
+                ..onTap = () => Clipboard.setData(
+                    const ClipboardData(text: "https://www.thebluealliance.com/account")),
+            ),
+            const TextSpan(text: " [copy]) (may ask for sign-in)\n"),
             const TextSpan(text: "Scroll down to "),
             TextSpan(text: 'Read API Keys', style: Theme.of(context).textTheme.bodySmall),
             const TextSpan(text: " and enter "),

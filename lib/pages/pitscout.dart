@@ -7,14 +7,10 @@ import './metadata.dart';
 import '../interfaces/bluealliance.dart';
 import '../interfaces/localstore.dart';
 import '../interfaces/supabase.dart';
-import '../widgets/resetbutton.dart';
+import '../widgets/deleteconfirmation.dart';
 
 Future<List<int>> pitScoutGetUnfilled() => BlueAlliance.stock
-    .get((
-      season: Configuration.instance.season,
-      event: Configuration.event,
-      match: "*"
-    ))
+    .get((season: Configuration.instance.season, event: Configuration.event, match: "*"))
     .then((data) => Set<int>.of(data.keys.map(int.parse)))
     .then((teams) async {
       Set<int> filledteams = await Supabase.instance.client
@@ -28,26 +24,21 @@ Future<List<int>> pitScoutGetUnfilled() => BlueAlliance.stock
       return teams.difference(filledteams).toList()..sort();
     });
 
-Future<Map<String, String>?> pitScoutGetPrevious(int team) =>
-    Supabase.instance.client
-        .from("${Configuration.instance.season}_pit")
-        .select<Map<String, dynamic>?>()
-        .eq("event", Configuration.event)
-        .eq("team", team)
-        .eq("scouter", UserMetadata.instance.id)
-        .maybeSingle()
-        .then((value) => value == null
-            ? {}
-            : Map.castFrom(
-                value..removeWhere((k, _) => {"event", "team"}.contains(k))));
+Future<Map<String, String>?> pitScoutGetPrevious(int team) => Supabase.instance.client
+    .from("${Configuration.instance.season}_pit")
+    .select<Map<String, dynamic>?>()
+    .eq("event", Configuration.event)
+    .eq("team", team)
+    .eq("scouter", UserMetadata.instance.id)
+    .maybeSingle()
+    .then((value) => value == null
+        ? {}
+        : Map.castFrom(value..removeWhere((k, _) => {"event", "team"}.contains(k))));
 
-Future<void> submitInfo(Map<String, dynamic> data, {int? season}) async =>
-    (await SupabaseInterface.canConnect)
-        ? Supabase.instance.client
-            .from("${season ?? Configuration.instance.season}_pit")
-            .upsert(data)
-        : LocalStoreInterface.addPit(
-            season ?? Configuration.instance.season, data);
+Future<void> submitInfo(Map<String, dynamic> data, {int? season}) async => (await SupabaseInterface
+        .canConnect)
+    ? Supabase.instance.client.from("${season ?? Configuration.instance.season}_pit").upsert(data)
+    : LocalStoreInterface.addPit(season ?? Configuration.instance.season, data);
 
 class PitScoutPage extends StatefulWidget {
   const PitScoutPage({super.key});
@@ -82,10 +73,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
       controller: _scrollController,
       headerSliverBuilder: (context, _) => [
             const SliverAppBar(
-                primary: true,
-                floating: true,
-                snap: true,
-                title: Text("Pit Scouting")),
+                primary: true, floating: true, snap: true, title: Text("Pit Scouting")),
             SliverToBoxAdapter(
                 child: Align(
                     alignment: Alignment.topRight,
@@ -101,8 +89,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                   flex: 2,
                                   child: TextField(
                                     textAlignVertical: TextAlignVertical.top,
-                                    controller: TextEditingController(
-                                        text: Configuration.event),
+                                    controller: TextEditingController(text: Configuration.event),
                                     decoration: const InputDecoration(
                                         helperText: "Event",
                                         counter: Icon(Icons.edit_off_rounded,
@@ -110,34 +97,26 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                     readOnly: true,
                                     canRequestFocus: false,
                                   )),
-                              const Flexible(
-                                  flex: 1, child: SizedBox(width: 12)),
+                              const Flexible(flex: 1, child: SizedBox(width: 12)),
                               Flexible(
                                   flex: 3,
                                   child: Autocomplete(
                                       optionsMaxHeight: 300,
-                                      optionsBuilder: (value) => _getUnfilled().then(
-                                          (teams) => teams.where((team) => team
-                                              .toString()
-                                              .startsWith(value.text))),
-                                      fieldViewBuilder: (context,
-                                              textEditingController,
-                                              focusNode,
+                                      optionsBuilder: (value) => _getUnfilled().then((teams) =>
+                                          teams.where(
+                                              (team) => team.toString().startsWith(value.text))),
+                                      fieldViewBuilder: (context, textEditingController, focusNode,
                                               onSubmitted) =>
                                           TextFormField(
                                               key: _teamFieldKey,
                                               controller: textEditingController,
                                               focusNode: focusNode,
-                                              autovalidateMode:
-                                                  AutovalidateMode.always,
+                                              autovalidateMode: AutovalidateMode.always,
                                               decoration: const InputDecoration(
-                                                  helperText: "Team",
-                                                  counterText: ""),
-                                              keyboardType:
-                                                  TextInputType.number,
+                                                  helperText: "Team", counterText: ""),
+                                              keyboardType: TextInputType.number,
                                               inputFormatters: [
-                                                FilteringTextInputFormatter
-                                                    .digitsOnly
+                                                FilteringTextInputFormatter.digitsOnly
                                               ],
                                               maxLength: 4,
                                               validator: (value) {
@@ -145,8 +124,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                   return "Required";
                                                 }
                                                 if (_teamFieldError != null) {
-                                                  return _teamFieldError!
-                                                          .isEmpty
+                                                  return _teamFieldError!.isEmpty
                                                       ? null
                                                       : _teamFieldError;
                                                 }
@@ -158,57 +136,40 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                 }
                                                 BlueAlliance.stock
                                                     .get((
-                                                      season: Configuration
-                                                          .instance.season,
-                                                      event:
-                                                          Configuration.event,
+                                                      season: Configuration.instance.season,
+                                                      event: Configuration.event,
                                                       match: "*"
                                                     ))
                                                     .then((data) =>
-                                                        Set<String>.of(
-                                                                data.keys)
-                                                            .contains(value))
+                                                        Set<String>.of(data.keys).contains(value))
                                                     .then((isValid) {
-                                                      _teamFieldError = isValid
-                                                          ? ""
-                                                          : "Invalid";
-                                                      _teamFieldKey
-                                                          .currentState!
-                                                          .validate();
+                                                      _teamFieldError = isValid ? "" : "Invalid";
+                                                      _teamFieldKey.currentState!.validate();
                                                     })
                                                     .catchError((e) {
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(SnackBar(
-                                                              content: Text(e
-                                                                  .toString())));
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                          SnackBar(content: Text(e.toString())));
                                                     });
                                               },
-                                              onFieldSubmitted:
-                                                  (String? value) async {
+                                              onFieldSubmitted: (String? value) async {
                                                 if (value == null) return;
-                                                if (_teamFieldError
-                                                        ?.isNotEmpty ??
-                                                    true) return;
+                                                if (_teamFieldError?.isNotEmpty ?? true) return;
                                                 int team = int.parse(value);
                                                 onSubmitted();
                                                 Map<String, String>? prev =
-                                                    await pitScoutGetPrevious(
-                                                        team);
+                                                    await pitScoutGetPrevious(team);
                                                 if (prev != null) {
-                                                  for (var MapEntry(
-                                                        :key,
-                                                        :value
-                                                      ) in prev.entries) {
-                                                    _controllers[key] ??=
-                                                        TextEditingController();
-                                                    _controllers[key]!.text =
-                                                        value;
+                                                  for (var MapEntry(:key, :value) in prev.entries) {
+                                                    _controllers[key] ??= TextEditingController();
+                                                    _controllers[key]!.text = value;
                                                   }
                                                 }
                                                 setState(() => _team = team);
                                               }),
-                                      onSelected: (int team) => setState(() => _team = team)))
+                                      onSelected: (int team) => setState(() {
+                                            _team = team;
+                                            _teamFieldError = "";
+                                          })))
                             ]))))
           ],
       body: FutureBuilder(
@@ -219,8 +180,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                          Icon(Icons.warning_rounded,
-                              color: Colors.red[700], size: 50),
+                          Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
                           const SizedBox(height: 20),
                           Text(snapshot.error.toString())
                         ])
@@ -229,38 +189,28 @@ class _PitScoutPageState extends State<PitScoutPage> {
                   offset: (_team != null) ? Offset.zero : const Offset(0, 1),
                   curve: Curves.easeInOutCirc,
                   duration: const Duration(seconds: 1),
-                  child:
-                      CustomScrollView(cacheExtent: double.infinity, slivers: [
-                    for (var MapEntry(:key, value: question)
-                        in snapshot.data!.entries)
+                  child: CustomScrollView(cacheExtent: double.infinity, slivers: [
+                    for (var MapEntry(:key, value: question) in snapshot.data!.entries)
                       SliverPadding(
-                          padding: const EdgeInsets.only(
-                              top: 12, left: 12, right: 12),
+                          padding: const EdgeInsets.only(top: 12, left: 12, right: 12),
                           sliver: SliverToBoxAdapter(
                               child: Material(
                                   type: MaterialType.button,
                                   borderRadius: BorderRadius.circular(4),
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .secondaryContainer,
+                                  color: Theme.of(context).colorScheme.secondaryContainer,
                                   child: Padding(
                                       padding: const EdgeInsets.all(24),
                                       child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(question,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleSmall,
+                                                style: Theme.of(context).textTheme.titleSmall,
                                                 textScaleFactor: 1.5),
                                             const SizedBox(height: 16),
                                             TextField(
-                                                controller:
-                                                    _controllers[key] ??=
-                                                        TextEditingController(),
-                                                keyboardType:
-                                                    TextInputType.multiline,
+                                                controller: _controllers[key] ??=
+                                                    TextEditingController(),
+                                                keyboardType: TextInputType.multiline,
                                                 maxLines: null,
                                                 maxLength: 65535,
                                                 style: TextStyle(
@@ -273,13 +223,11 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                 decoration: InputDecoration(
                                                     hintText: "Type answer",
                                                     counterText: "",
-                                                    focusedBorder:
-                                                        UnderlineInputBorder(
-                                                            borderSide: BorderSide(
-                                                                color: Theme.of(
-                                                                        context)
-                                                                    .colorScheme
-                                                                    .onSecondaryContainer))))
+                                                    focusedBorder: UnderlineInputBorder(
+                                                        borderSide: BorderSide(
+                                                            color: Theme.of(context)
+                                                                .colorScheme
+                                                                .onSecondaryContainer))))
                                           ]))))),
                     SliverPadding(
                         padding: const EdgeInsets.all(20),
@@ -292,8 +240,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                     submitInfo({
                                       "event": Configuration.event,
                                       "team": _team,
-                                      ..._controllers.map((key, value) =>
-                                          MapEntry(key, value.text))
+                                      ..._controllers.map((key, value) => MapEntry(key, value.text))
                                     }).then((_) async {
                                       for (TextEditingController controller
                                           in _controllers.values) {
@@ -303,20 +250,17 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                           duration: const Duration(seconds: 1),
                                           curve: Curves.easeOutBack);
                                       _teamFieldKey.currentState!.didChange("");
-                                      setState(
-                                          () => _team = _teamFieldError = null);
+                                      setState(() => _team = _teamFieldError = null);
                                     }).catchError((e) {
                                       ScaffoldMessenger.of(context)
-                                          .showSnackBar(SnackBar(
-                                              content: Text(e.toString())));
+                                          .showSnackBar(SnackBar(content: Text(e.toString())));
                                     });
                                   })),
                           const SizedBox(width: 10),
                           DeleteConfirmation(
                               context: context,
                               reset: () async {
-                                for (TextEditingController controller
-                                    in _controllers.values) {
+                                for (TextEditingController controller in _controllers.values) {
                                   controller.clear();
                                 }
                                 await _scrollController.animateTo(0,
