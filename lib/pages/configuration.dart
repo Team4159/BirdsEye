@@ -98,7 +98,10 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                                       overflow: kIsWeb ? TextOverflow.ellipsis : TextOverflow.fade,
                                       softWrap: false,
                                       maxLines: 1,
-                                      style: Theme.of(context).textTheme.headlineSmall,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall!
+                                          .copyWith(fontSize: 22),
                                     ),
                                     trailing: IntrinsicWidth(
                                         child: Text(enumeratedEntry.value.key,

@@ -121,8 +121,7 @@ final router = GoRouter(
       GoRoute(
           path: '/',
           name: RoutePaths.landing.name,
-          pageBuilder: (context, state) =>
-              const MaterialPage(child: LandingPage(), name: "Sign In"),
+          pageBuilder: (context, state) => MaterialPage(child: LandingPage(), name: "Sign In"),
           redirect: (_, state) =>
               UserMetadata.isAuthenticated ? state.namedLocation(RoutePaths.metadata.name) : null),
       GoRoute(
