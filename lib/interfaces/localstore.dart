@@ -25,13 +25,9 @@ class LocalStoreInterface {
           ? _db.collection("pitscout").doc(id).get()
           : throw Exception("Invalid LocalStore ID: $id");
 
-  static Future<Set<String>> getMatches() => _db
-      .collection("matchscout")
-      .get()
-      .then((value) => value?.keys.toSet() ?? <String>{});
+  static Future<Set<String>> getMatches() =>
+      _db.collection("matchscout").get().then((value) => value?.keys.toSet() ?? {});
 
-  static Future<Set<String>> getPits() => _db
-      .collection("pitscout")
-      .get()
-      .then((value) => value?.keys.toSet() ?? <String>{});
+  static Future<Set<String>> getPits() =>
+      _db.collection("pitscout").get().then((value) => value?.keys.toSet() ?? {});
 }

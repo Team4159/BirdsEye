@@ -8,6 +8,7 @@ import '../pages/matchscout.dart' hide MatchScoutPage;
 class SupabaseInterface {
   static Future<bool> get canConnect => Supabase.instance.client
       .rpc('ping')
+      .timeout(const Duration(seconds: 5))
       .then((_) => true)
       .catchError((_) => false);
 
@@ -19,27 +20,23 @@ class SupabaseInterface {
         "team": team
       }).then((_) {});
 
-  static Future<void> clearSession() =>
-      Supabase.instance.client.from("sessions").delete();
+  static Future<void> clearSession() => Supabase.instance.client.from("sessions").delete();
 
-  static Future<Map<int, int>> getSessions({required String match}) => Supabase
-      .instance.client
+  static Future<Map<int, int>> getSessions({required String match}) => Supabase.instance.client
       .from("sessions")
       .select<List<Map<String, dynamic>>>("team")
       .eq("season", Configuration.instance.season)
       .eq("event", Configuration.event)
       .eq("match", match)
       .then((resp) => resp.map((e) => e['team'] as int).toList())
-      .then((sessions) => Map.fromEntries(sessions.toSet().map(
-          (team) => MapEntry(team, sessions.where((t) => t == team).length))));
+      .then((sessions) => Map.fromEntries(
+          sessions.toSet().map((team) => MapEntry(team, sessions.where((t) => t == team).length))));
 
   static final matchscoutStock = Stock<int, MatchScoutQuestionSchema>(
-      fetcher: Fetcher.ofFuture((key) => Supabase.instance.client.rpc(
-              'gettableschema',
-              params: {"tablename": "${key}_match"}).then((resp) {
+      fetcher: Fetcher.ofFuture((key) => Supabase.instance.client
+              .rpc('gettableschema', params: {"tablename": "${key}_match"}).then((resp) {
             Map<String, String> raw = Map.from(resp);
-            raw.removeWhere((key, value) =>
-                {"event", "match", "team", "scouter"}.contains(key));
+            raw.removeWhere((key, value) => {"event", "match", "team", "scouter"}.contains(key));
             MatchScoutQuestionSchema matchSchema = {};
             for (var MapEntry(key: columnname, value: sqltype) in raw.entries) {
               List<String> components = columnname.split('_');
@@ -53,24 +50,21 @@ class SupabaseInterface {
           })),
       sourceOfTruth: CachedSourceOfTruth());
 
-  static Future<MatchScoutQuestionSchema> get matchSchema async =>
-      await canConnect
-          ? matchscoutStock.fresh(Configuration.instance.season)
-          : matchscoutStock.get(Configuration.instance.season);
+  static Future<MatchScoutQuestionSchema> get matchSchema async => await canConnect
+      ? matchscoutStock.fresh(Configuration.instance.season)
+      : matchscoutStock.get(Configuration.instance.season);
 
   static final pitscoutStock = Stock<int, Map<String, String>>(
-      fetcher: Fetcher.ofFuture((key) => Supabase.instance.client.rpc(
-              'gettableschema',
-              params: {"tablename": "${key}_pit"}).then((resp) async {
-            Iterable<String> raw = Map<String, String>.from(resp).keys.where(
-                (key) => !{"event", "match", "team", "scouter"}.contains(key));
-            Map<String, String> questions =
-                await pitscoutquestionStock.get(null);
+      fetcher: Fetcher.ofFuture((key) => Supabase.instance.client
+              .rpc('gettableschema', params: {"tablename": "${key}_pit"}).then((resp) async {
+            Iterable<String> raw = Map<String, String>.from(resp)
+                .keys
+                .where((key) => !{"event", "match", "team", "scouter"}.contains(key));
+            Map<String, String> questions = await pitscoutquestionStock.get(null);
             if (raw.any((e) => !questions.containsKey(e))) {
               questions = await pitscoutquestionStock.fresh(null);
             }
-            return Map.fromEntries(
-                raw.map((e) => MapEntry(e, questions[e] ?? e)));
+            return Map.fromEntries(raw.map((e) => MapEntry(e, questions[e] ?? e)));
           })),
       sourceOfTruth: CachedSourceOfTruth());
 
@@ -78,8 +72,8 @@ class SupabaseInterface {
       fetcher: Fetcher.ofFuture((_) => Supabase.instance.client
           .from("pit_questions")
           .select<List<Map<String, dynamic>>>()
-          .then((resp) => Map.fromEntries(
-              resp.map((e) => MapEntry(e["columnname"], e["question"]))))));
+          .then((resp) =>
+              Map.fromEntries(resp.map((e) => MapEntry(e["columnname"], e["question"]))))));
 
   static Future<Map<String, String>> get pitSchema async => await canConnect
       ? pitscoutStock.fresh(Configuration.instance.season)
