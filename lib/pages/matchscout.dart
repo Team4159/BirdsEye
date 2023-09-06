@@ -53,7 +53,8 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
   void didChangeAppLifecycleState(AppLifecycleState state) => switch (state) {
         AppLifecycleState.paused ||
         AppLifecycleState.inactive ||
-        AppLifecycleState.detached =>
+        AppLifecycleState.detached ||
+        AppLifecycleState.hidden =>
           SupabaseInterface.setSession(),
         AppLifecycleState.resumed =>
           SupabaseInterface.setSession(match: info.match, team: info.team),
