@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import './interfaces/supabase.dart';
 import './pages/configuration.dart';
 import './pages/landing.dart';
+import './pages/legal.dart';
 import './pages/matchscout.dart';
 import './pages/metadata.dart';
 import './pages/pitscout.dart';
@@ -121,61 +122,81 @@ final router = GoRouter(
       GoRoute(
           path: '/',
           name: RoutePaths.landing.name,
-          pageBuilder: (context, state) => MaterialPage(child: LandingPage(), name: "Sign In"),
-          redirect: (_, state) =>
-              UserMetadata.isAuthenticated ? state.namedLocation(RoutePaths.metadata.name) : null),
+          pageBuilder: (context, state) =>
+              const MaterialPage(child: LandingPage(), name: "Sign In"),
+          redirect: (_, state) => UserMetadata.isAuthenticated
+              ? state.namedLocation(RoutePaths.metadata.name, queryParameters: {"redirect": "true"})
+              : null),
       GoRoute(
-          path: '/account/data',
+          path: '/accountdata',
           name: RoutePaths.metadata.name,
           pageBuilder: (context, state) => MaterialPage(
-              child: Scaffold(body: SafeArea(child: MetadataPage())), name: "Metadata")),
-      ShellRoute(
-          navigatorKey: _shellNavigatorKey,
-          pageBuilder: (context, state, child) => NoTransitionPage(child: ScaffoldShell(child)),
+              child: Scaffold(
+                  body: SafeArea(
+                      child: MetadataPage(
+                          isRedirect: state.uri.queryParameters["redirect"] == "true"))),
+              name: "Metadata"),
+          redirect: (_, state) => UserMetadata.isAuthenticated
+              ? null
+              : state.namedLocation(RoutePaths.landing.name, queryParameters: {})),
+      GoRoute(
+          path: '/scouting',
+          redirect: (context, state) =>
+              UserMetadata.isAuthenticated ? null : state.namedLocation(RoutePaths.landing.name),
           routes: [
-            GoRoute(
-                parentNavigatorKey: _shellNavigatorKey,
-                path: '/configuration',
-                name: RoutePaths.configuration.name,
-                pageBuilder: (context, state) =>
-                    const MaterialPage(child: ConfigurationPage(), name: "Configuration")),
-            GoRoute(
-                parentNavigatorKey: _shellNavigatorKey,
-                path: '/scouting/match',
-                name: RoutePaths.matchscout.name,
-                pageBuilder: (context, state) =>
-                    const MaterialPage(child: MatchScoutPage(), name: "Match Scouting"),
-                redirect: (context, state) async => await Configuration.instance.isValid
-                    ? null
-                    : state.namedLocation(RoutePaths.configuration.name)),
-            GoRoute(
-                parentNavigatorKey: _shellNavigatorKey,
-                path: '/scouting/pit',
-                name: RoutePaths.pitscout.name,
-                pageBuilder: (context, state) =>
-                    const MaterialPage(child: PitScoutPage(), name: "Pit Scouting"),
-                redirect: (context, state) async => await Configuration.instance.isValid
-                    ? null
-                    : state.namedLocation(RoutePaths.configuration.name)),
-            GoRoute(
-                parentNavigatorKey: _shellNavigatorKey,
-                path: '/scouting/saved',
-                name: RoutePaths.savedresp.name,
-                pageBuilder: (context, state) =>
-                    MaterialPage(child: SavedResponsesPage(), name: "Saved Responses"),
-                redirect: (context, state) async => await Configuration.instance.isValid
-                    ? null
-                    : state.namedLocation(RoutePaths.configuration.name))
+            ShellRoute(
+                navigatorKey: _shellNavigatorKey,
+                pageBuilder: (context, state, child) =>
+                    NoTransitionPage(child: ScaffoldShell(child)),
+                routes: [
+                  GoRoute(
+                      parentNavigatorKey: _shellNavigatorKey,
+                      path: 'configuration',
+                      name: RoutePaths.configuration.name,
+                      pageBuilder: (context, state) =>
+                          const MaterialPage(child: ConfigurationPage(), name: "Configuration")),
+                  GoRoute(
+                      parentNavigatorKey: _shellNavigatorKey,
+                      path: 'match',
+                      name: RoutePaths.matchscout.name,
+                      pageBuilder: (context, state) =>
+                          const MaterialPage(child: MatchScoutPage(), name: "Match Scouting"),
+                      redirect: (context, state) async => await Configuration.instance.isValid
+                          ? null
+                          : state.namedLocation(RoutePaths.configuration.name)),
+                  GoRoute(
+                      parentNavigatorKey: _shellNavigatorKey,
+                      path: 'pit',
+                      name: RoutePaths.pitscout.name,
+                      pageBuilder: (context, state) =>
+                          const MaterialPage(child: PitScoutPage(), name: "Pit Scouting"),
+                      redirect: (context, state) async => await Configuration.instance.isValid
+                          ? null
+                          : state.namedLocation(RoutePaths.configuration.name)),
+                  GoRoute(
+                      parentNavigatorKey: _shellNavigatorKey,
+                      path: 'saved',
+                      name: RoutePaths.savedresp.name,
+                      pageBuilder: (context, state) =>
+                          MaterialPage(child: SavedResponsesPage(), name: "Saved Responses"),
+                      redirect: (context, state) async => await Configuration.instance.isValid
+                          ? null
+                          : state.namedLocation(RoutePaths.configuration.name))
+                ])
+          ]),
+      ShellRoute(
+          pageBuilder: (context, state, child) => MaterialPage(child: LegalShell(child)),
+          routes: [
+            GoRoute(path: '/legal/privacy', builder: (context, state) => const PrivacyPolicy()),
+            GoRoute(path: '/legal/terms', builder: (context, state) => const TermsOfService())
           ])
     ],
-    redirect: (context, state) =>
-        UserMetadata.isAuthenticated ? null : state.namedLocation(RoutePaths.landing.name),
+    refreshListenable: UserMetadata.instance,
     onException: (_, state, router) {
-      if (state.matchedLocation.startsWith("access_token")) {
-        router.goNamed(RoutePaths.metadata.name);
-        UserMetadata.instance.isValid
-            .then((valid) => valid ? router.goNamed(RoutePaths.configuration.name) : null);
+      if (state.uri.fragment.startsWith("access_token")) {
+        router.goNamed(RoutePaths.metadata.name, queryParameters: {"redirect": "true"});
       }
+      router.goNamed(RoutePaths.landing.name);
     });
 
 class ScaffoldShell extends StatelessWidget {

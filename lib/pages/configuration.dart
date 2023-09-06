@@ -123,7 +123,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                                 child: IgnorePointer(
                                     child: Container(
                                         height: 35,
-                                        margin: const EdgeInsets.only(top: 10),
+                                        margin: const EdgeInsets.only(top: 12),
                                         color: Colors.grey.withAlpha(100)))))
                       ]);
                     })))

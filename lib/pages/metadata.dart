@@ -6,14 +6,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../interfaces/bluealliance.dart';
 import '../interfaces/supabase.dart';
-import '../main.dart' show RoutePaths, prefs;
+import '../main.dart';
 
 class MetadataPage extends StatelessWidget {
+  final bool isRedirect;
   final GlobalKey<FormState> _formKey = GlobalKey();
   final _nameController = TextEditingController(text: UserMetadata.instance.name);
   final _teamController = TextEditingController(text: UserMetadata.instance.team.toString());
   final _tbaFieldController = TextEditingController(text: prefs.getString("tbaKey"));
-  MetadataPage({super.key}) {
+  MetadataPage({super.key, this.isRedirect = false}) {
     UserMetadata.instance.addListener(() {
       _nameController.text = UserMetadata.instance.name ?? "";
       _teamController.text = UserMetadata.instance.team.toString();
@@ -53,84 +54,103 @@ class MetadataPage extends StatelessWidget {
           ]))));
 
   @override
-  Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.all(24),
-      child: Form(
-          key: _formKey,
-          autovalidateMode: AutovalidateMode.always,
-          child: Column(children: [
-            Text("Modify User Info",
-                textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
-            TextFormField(
-                autofillHints: const [AutofillHints.name, AutofillHints.nickname],
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: "Name"),
-                keyboardType: TextInputType.name,
-                validator: (value) => value == null || value.isEmpty ? "Required" : null),
-            TextFormField(
-                controller: _teamController,
-                decoration: const InputDecoration(labelText: "Team", counterText: ""),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                maxLength: 4,
-                validator: (value) => value == null || value.isEmpty ? "Required" : null),
-            TextField(
-                obscureText: true,
-                autocorrect: false,
-                controller: _tbaFieldController,
-                decoration: InputDecoration(
-                    labelText: "TBA API Key",
-                    counterText: "",
-                    suffixIcon: IconButton(
-                        onPressed: () => showDialog(context: context, builder: _tbaInfoDialog),
-                        tooltip: "Instructions",
-                        icon: const Icon(Icons.info_outline_rounded))),
-                keyboardType: TextInputType.none,
-                maxLength: 64),
-            Expanded(
-                child: Align(
-                    alignment: Alignment.bottomRight,
-                    child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          OutlinedButton(
-                              onPressed: () async {
-                                await UserMetadata.instance.fetch();
-                                _tbaFieldController.text = prefs.getString("tbaKey") ?? "";
-                                if (!_formKey.currentState!.validate()) return;
-                                BlueAlliance.isKeyValid(_tbaFieldController.text)
-                                    .then((valid) => valid
-                                        ? GoRouter.of(context)
-                                            .goNamed(RoutePaths.configuration.name)
-                                        : throw Exception("Invalid TBA Key!"))
-                                    .catchError((e) {
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(SnackBar(content: Text(e.message)));
-                                });
-                              },
-                              child: const Text("Cancel")),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                              onPressed: () {
-                                if (!_formKey.currentState!.validate()) return;
-                                BlueAlliance.isKeyValid(_tbaFieldController.text).then((valid) {
-                                  if (!valid) {
-                                    throw Exception("Invalid TBA Key!");
-                                  }
-                                  prefs.setString("tbaKey", _tbaFieldController.text);
-                                  return UserMetadata.instance
-                                      .update(_nameController.text, int.parse(_teamController.text))
-                                      .then((_) => GoRouter.of(context)
-                                          .goNamed(RoutePaths.configuration.name));
-                                }).catchError((e) {
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(SnackBar(content: Text(e.message)));
-                                });
-                              },
-                              child: const Text("Submit"))
-                        ])))
-          ])));
+  Widget build(BuildContext context) => FutureBuilder(
+      future: UserMetadata.instance.fetch().then((_) async {
+        if (isRedirect && UserMetadata.isAuthenticated) {
+          return UserMetadata.instance.isValid.then((valid) {
+            if (valid) {
+              GoRouter.of(context).goNamed(RoutePaths
+                  .configuration.name); // replaceNamed throws a Unexpected null value here
+              return null;
+            }
+            return true;
+          });
+        }
+        return true;
+      }),
+      builder: (context, snapshot) => !snapshot.hasData
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.always,
+                  child: Column(children: [
+                    Text("Modify User Info",
+                        textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
+                    TextFormField(
+                        autofillHints: const [AutofillHints.name, AutofillHints.nickname],
+                        controller: _nameController,
+                        decoration: const InputDecoration(labelText: "Name"),
+                        keyboardType: TextInputType.name,
+                        validator: (value) => value == null || value.isEmpty ? "Required" : null),
+                    TextFormField(
+                        controller: _teamController,
+                        decoration: const InputDecoration(labelText: "Team", counterText: ""),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        maxLength: 4,
+                        validator: (value) => value == null || value.isEmpty ? "Required" : null),
+                    TextField(
+                        obscureText: true,
+                        autocorrect: false,
+                        controller: _tbaFieldController,
+                        decoration: InputDecoration(
+                            labelText: "TBA API Key",
+                            counterText: "",
+                            suffixIcon: IconButton(
+                                onPressed: () =>
+                                    showDialog(context: context, builder: _tbaInfoDialog),
+                                tooltip: "Instructions",
+                                icon: const Icon(Icons.info_outline_rounded))),
+                        keyboardType: TextInputType.none,
+                        maxLength: 64),
+                    Expanded(
+                        child: Align(
+                            alignment: Alignment.bottomRight,
+                            child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  OutlinedButton(
+                                      onPressed: () async {
+                                        await UserMetadata.instance.fetch(hard: true);
+                                        _tbaFieldController.text = prefs.getString("tbaKey") ?? "";
+                                        if (!_formKey.currentState!.validate()) return;
+                                        BlueAlliance.isKeyValid(_tbaFieldController.text)
+                                            .then((valid) => valid
+                                                ? GoRouter.of(context)
+                                                    .goNamed(RoutePaths.configuration.name)
+                                                : throw Exception("Invalid TBA Key!"))
+                                            .catchError((e) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(content: Text(e.message)));
+                                        });
+                                      },
+                                      child: const Text("Cancel")),
+                                  const SizedBox(width: 8),
+                                  FilledButton(
+                                      onPressed: () {
+                                        if (!_formKey.currentState!.validate()) return;
+                                        BlueAlliance.isKeyValid(_tbaFieldController.text)
+                                            .then((valid) {
+                                          if (!valid) {
+                                            throw Exception("Invalid TBA Key!");
+                                          }
+                                          prefs.setString("tbaKey", _tbaFieldController.text);
+                                          return UserMetadata.instance
+                                              .update(_nameController.text,
+                                                  int.parse(_teamController.text))
+                                              .then((_) => GoRouter.of(context)
+                                                  .goNamed(RoutePaths.configuration.name));
+                                        }).catchError((e) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(content: Text(e.message)));
+                                        });
+                                      },
+                                      child: const Text("Submit"))
+                                ])))
+                  ]))));
 }
 
 class UserMetadata extends ChangeNotifier {
@@ -169,19 +189,23 @@ class UserMetadata extends ChangeNotifier {
         .then((_) => notifyListeners());
   }
 
-  Future<void> fetch() => Supabase.instance.client
+  Future<void> fetch({bool hard = false}) => Supabase.instance.client
           .from("users")
           .select<Map<String, dynamic>?>('name, team')
           .eq('id', id)
           .maybeSingle()
           .then((value) {
         if (value == null) throw Exception("No User Found");
+        bool dirty = hard || _name != value['name'] || _team != value['team'];
         _name = value['name'];
         _team = value['team'];
+        if (dirty) notifyListeners();
       }).catchError((e) {
+        bool dirty = hard || _name != null || _team != null;
         _name = _team = null;
+        if (dirty) notifyListeners();
         throw e;
-      }).whenComplete(notifyListeners);
+      });
 
   Future<bool> get isValid async =>
       _name != null &&

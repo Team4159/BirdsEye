@@ -4,7 +4,7 @@
     <title>btn_google_dark_normal_ios</title>
     <desc>Created with Sketch.</desc>
     <defs>
-        <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="filter-1">
+        <!-- <filter x="-50%" y="-50%" width="200%" height="200%" filterUnits="objectBoundingBox" id="filter-1">
             <feOffset dx="0" dy="1" in="SourceAlpha" result="shadowOffsetOuter1"></feOffset>
             <feGaussianBlur stdDeviation="0.5" in="shadowOffsetOuter1" result="shadowBlurOuter1"></feGaussianBlur>
             <feColorMatrix values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.168 0" in="shadowBlurOuter1" type="matrix" result="shadowMatrixOuter1"></feColorMatrix>
@@ -16,7 +16,7 @@
                 <feMergeNode in="shadowMatrixOuter2"></feMergeNode>
                 <feMergeNode in="SourceGraphic"></feMergeNode>
             </feMerge>
-        </filter>
+        </filter> -->
         <rect id="path-2" x="0" y="0" width="40" height="40" rx="2"></rect>
         <rect id="path-3" x="5" y="5" width="38" height="38" rx="1"></rect>
     </defs>
