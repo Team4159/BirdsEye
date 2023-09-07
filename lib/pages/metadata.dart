@@ -58,12 +58,10 @@ class MetadataPage extends StatelessWidget {
       future: UserMetadata.instance.fetch().then((_) async {
         if (isRedirect && UserMetadata.isAuthenticated) {
           return UserMetadata.instance.isValid.then((valid) {
-            if (valid) {
-              GoRouter.of(context).goNamed(RoutePaths
-                  .configuration.name); // replaceNamed throws a Unexpected null value here
-              return null;
-            }
-            return true;
+            if (!valid) return true;
+            GoRouter.of(context).goNamed(RoutePaths.configuration.name);
+            // replaceNamed throws a Unexpected null value if used here
+            return null;
           });
         }
         return true;
