@@ -35,8 +35,6 @@ MatchInfo? parseMatchInfo(String? s) {
   );
 }
 
-bool isQual(String s) => s.startsWith("qm");
-
 String stringifyMatchInfo(MatchInfo m) =>
     "${m.level.compLevel}${m.finalnum != null ? '${m.finalnum}m' : ''}${m.index}";
 
