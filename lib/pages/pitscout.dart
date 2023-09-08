@@ -49,7 +49,8 @@ class PitScoutPage extends StatefulWidget {
 
 class _PitScoutPageState extends State<PitScoutPage> {
   final GlobalKey<FormFieldState<String>> _teamFieldKey = GlobalKey();
-  String? _teamFieldError;
+  String?
+      _teamFieldError; // TODO: replace with valuenotifiers to prevent full tree rebuild on setstate
   int? _team;
   final Map<String, TextEditingController> _controllers = {};
   final ScrollController _scrollController = ScrollController();

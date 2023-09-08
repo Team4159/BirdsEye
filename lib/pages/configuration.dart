@@ -80,6 +80,16 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                             : const Center(child: CircularProgressIndicator());
                       }
                       List<MapEntry<String, String>> entries = snapshot.data!.entries.toList();
+                      if (entries.isEmpty) {
+                        return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Icon(Icons.warning_rounded, color: Colors.yellow[600], size: 50),
+                              const SizedBox(height: 20),
+                              const Text("No Events Found")
+                            ]);
+                      }
                       int index =
                           entries.indexWhere((element) => element.key == Configuration.event);
                       if (!prefs.containsKey("event") || index < 0) {

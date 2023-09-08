@@ -1,33 +1,43 @@
 import 'package:localstore/localstore.dart';
+import 'package:stock/stock.dart';
 
 class LocalStoreInterface {
   static final _db = Localstore.instance;
 
   static Future<void> addMatch(int season, Map<String, dynamic> data) => _db
-      .collection("matchscout")
+      .collection("scout")
       .doc("match-$season${data['event']}_${data['match']}-${data['team']}")
       .set(data..['season'] = season);
 
   static Future<void> addPit(int season, Map<String, dynamic> data) => _db
-      .collection("pitscout")
+      .collection("scout")
       .doc("pit-$season${data['event']}-${data['team']}")
       .set(data..['season'] = season);
 
-  static Future<void> remove(String id) => id.startsWith("match")
-      ? _db.collection("matchscout").doc(id).delete()
-      : id.startsWith("pit")
-          ? _db.collection("pitscout").doc(id).delete()
-          : throw Exception("Invalid LocalStore ID: $id");
+  static Future<void> remove(String id) => _db.collection("scout").doc(id).delete();
 
-  static Future<Map<String, dynamic>?> get(String id) => id.startsWith("match")
-      ? _db.collection("matchscout").doc(id).get()
-      : id.startsWith("pit")
-          ? _db.collection("pitscout").doc(id).get()
-          : throw Exception("Invalid LocalStore ID: $id");
+  static Future<Map<String, dynamic>?> get(String id) => _db.collection("scout").doc(id).get();
 
-  static Future<Set<String>> getMatches() =>
-      _db.collection("matchscout").get().then((value) => value?.keys.toSet() ?? {});
+  static Future<Set<String>> get getAll =>
+      _db.collection("scout").get().then((value) => value?.keys.toSet() ?? {});
+}
 
-  static Future<Set<String>> getPits() =>
-      _db.collection("pitscout").get().then((value) => value?.keys.toSet() ?? {});
+class LocalSourceOfTruth<Key> implements SourceOfTruth<Key, Map<String, dynamic>> {
+  // FIXME very strange connection bugs. maybe switch to sqlflite
+  final CollectionRef collection;
+  LocalSourceOfTruth(String key) : collection = LocalStoreInterface._db.collection(key);
+
+  @override
+  Future<void> delete(Key key) => collection.doc(key.hashCode.toString()).delete();
+
+  @override
+  Future<void> deleteAll() => collection.delete();
+
+  @override
+  Stream<Map<String, dynamic>?> reader(Key key) =>
+      Stream.fromFuture(collection.doc(key.hashCode.toString()).get());
+
+  @override
+  Future<void> write(Key key, Map<String, dynamic>? value) =>
+      collection.doc(key.hashCode.toString()).set(value ?? {});
 }

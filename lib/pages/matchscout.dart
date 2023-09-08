@@ -44,7 +44,6 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
 
   @override
   void initState() {
-    info.addListener(() => setState(() {}));
     WidgetsBinding.instance.addObserver(this);
     super.initState();
   }
@@ -57,7 +56,7 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
         AppLifecycleState.hidden =>
           SupabaseInterface.setSession(),
         AppLifecycleState.resumed =>
-          SupabaseInterface.setSession(match: info.match, team: info.team),
+          SupabaseInterface.setSession(match: info.getMatchStr(), team: info.team),
       };
 
   @override
@@ -88,10 +87,13 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                           Text(snapshot.error.toString())
                         ])
                   : const Center(child: CircularProgressIndicator())
-              : AnimatedSlide(
-                  offset: info.isFilled ? Offset.zero : const Offset(0, 1),
-                  curve: Curves.easeInOutCirc,
-                  duration: const Duration(seconds: 1),
+              : ListenableBuilder(
+                  listenable: info.teamController,
+                  builder: (context, child) => AnimatedSlide(
+                      offset: info.isFilled ? Offset.zero : const Offset(0, 1),
+                      curve: Curves.easeInOutCirc,
+                      duration: const Duration(seconds: 1),
+                      child: child),
                   child: Form(
                       key: _formKey,
                       child: CustomScrollView(cacheExtent: double.infinity, slivers: [
@@ -187,7 +189,7 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                                         _formKey.currentState!.save();
                                         submitInfo({
                                           "event": Configuration.event,
-                                          "match": info.match,
+                                          "match": info.getMatchStr(),
                                           "team": info.team,
                                           ..._fields
                                         }).then((_) async {
@@ -215,79 +217,101 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                       ])))));
 }
 
-class MatchScoutInfo extends ChangeNotifier {
-  MatchScoutInfo() {
+class MatchScoutInfo {
+  MatchScoutInfo()
+      : matchController = TextEditingController(),
+        teamController = ValueNotifier(null) {
     BlueAlliance.stock
         .get((season: Configuration.instance.season, event: Configuration.event, match: null)).then(
-            (matchesdata) {
-      _matches = LinkedHashMap.fromEntries(
-          matchesdata.keys.map((k) => MapEntry(k, parseMatchInfo(k)!)).toList()
-            ..sort((a, b) => compareMatchInfo(a.value, b.value)));
-      highestQual =
-          (_matches!.values.where((element) => element.level == MatchLevel.qualification).toList()
-                    ..sort((a, b) => b.index - a.index))
-                  .firstOrNull
-                  ?.index ??
-              -1;
-      notifyListeners();
-    });
+            (matchesdata) => matches = LinkedHashMap.fromEntries(
+                matchesdata.keys.map((k) => MapEntry(k, parseMatchInfo(k)!)).toList()
+                  ..sort((a, b) => compareMatchInfo(a.value, b.value))));
   }
 
+  int highestQual = -1;
   LinkedHashMap<String, MatchInfo>? _matches;
   LinkedHashMap<String, MatchInfo>? get matches => _matches;
+  set matches(LinkedHashMap<String, MatchInfo>? m) {
+    _matches = m;
+    match = null;
+    highestQual = m == null
+        ? -1
+        : (m.values.where((element) => element.level == MatchLevel.qualification).toList()
+                  ..sort((a, b) => b.index - a.index))
+                .firstOrNull
+                ?.index ??
+            -1;
+  }
 
-  int highestQual = -1;
-
-  String? _match;
-  String? get match => _match;
-  set match(String? match) {
-    if (match == _match) return;
-    _match = match;
-    _team = _teams = null;
-    notifyListeners();
-    if (match == null) return;
-    SupabaseInterface.getSessions(match: match)
-        .then((sessions) => BlueAlliance.stock
-            .get((season: Configuration.instance.season, event: Configuration.event, match: match))
-            .then((teamsData) => LinkedHashMap.fromEntries((teamsData.entries.toList()
-                  ..sort((a, b) => a.value.compareTo(b.value)))
-                .map((e) => MapEntry(int.parse(e.key), e.value))
-                .map((e) => MapEntry(e.key,
-                    "${sessions.containsKey(e.key) ? '${sessions[e.key]}|' : ''}${e.value}"))))
-            .then((data) {
-              _teams = data;
+  final TextEditingController matchController;
+  MatchInfo? _match;
+  MatchInfo? get match => _match;
+  set match(MatchInfo? m) {
+    if (m == null) {
+      matchController.text = "";
+      return _match = teams = null;
+    }
+    if (matches == null) return;
+    if (m == match || !matches!.containsValue(m)) return;
+    String mstr = stringifyMatchInfo(m);
+    matchController.text = mstr;
+    _match = m;
+    teams = null;
+    Future<Map<String, String>> tbaDataFuture = m.level == MatchLevel.qualification ||
+            !BlueAlliance.dirtyConnected
+        ? BlueAlliance.stock
+            .get((season: Configuration.instance.season, event: Configuration.event, match: mstr))
+        : BlueAlliance.stock.fresh((
+            season: Configuration.instance.season,
+            event: Configuration.event,
+            match: mstr
+          )); // keep fetching latest info for finals
+    SupabaseInterface.canConnect
+        .then((conn) => conn ? SupabaseInterface.getSessions(match: mstr) : Future.value({}))
+        .then((sessions) => tbaDataFuture
+                .then((td) => td.length < 6 ? throw Exception("Incorrect Team Count!") : td)
+                // WARNING untested: filter unfilled (finals) matches out
+                .then((teamsData) => LinkedHashMap.fromEntries((teamsData.entries.toList()
+                      ..sort((a, b) => a.value.compareTo(b.value)))
+                    .map((e) => MapEntry(int.parse(e.key), e.value))
+                    .map((e) => MapEntry(e.key,
+                        "${sessions.containsKey(e.key) ? '${sessions[e.key]}|' : ''}${e.value}"))))
+                .then((data) {
+              teams = data;
               team = (data.keys.toList()..sort((a, b) => (sessions[a] ?? 0) - (sessions[b] ?? 0)))
                   .first;
             }))
-        .catchError((e) => team = _teams = null)
-        .whenComplete(() => notifyListeners());
+        .catchError((e) => teams = null);
   }
+
+  String? getMatchStr() => match == null ? null : stringifyMatchInfo(match!);
+  void setMatchStr(String? m) => match = parseMatchInfo(m); // invoke the other setter
 
   LinkedHashMap<int, String>? _teams;
   LinkedHashMap<int, String>? get teams => _teams;
-
-  int? _team;
-  int? get team => _team;
-  set team(int? team) {
-    if (team == _team) return;
-    _team = team;
-    notifyListeners();
-    if (_team != null) SupabaseInterface.setSession(match: _match, team: _team);
+  set teams(LinkedHashMap<int, String>? t) {
+    _teams = t;
+    team = null;
   }
 
-  void resetInfo() {
-    _match = _teams = _team = null;
-    notifyListeners();
+  ValueNotifier<int?> teamController;
+  int? get team => teamController.value;
+  set team(int? t) {
+    if (t == null) return teamController.value = null;
+    if (teams == null) return;
+    if (t == team || !teams!.containsKey(t)) return;
+    teamController.value = t;
+    if (team != null) SupabaseInterface.setSession(match: getMatchStr(), team: team);
   }
 
-  bool get isFilled => _match != null && _team != null;
+  void resetInfo() => match = null;
+
+  bool get isFilled => team != null;
 }
 
 class MatchScoutInfoFields extends StatelessWidget {
-  MatchScoutInfoFields({super.key, required this.info});
+  const MatchScoutInfoFields({super.key, required this.info});
   final MatchScoutInfo info;
-
-  final TextEditingController _matchSelectorController = TextEditingController();
 
   static final _robotPositionPattern =
       RegExp(r'^(?:(?<count>\d+)\|)?(?<color>red|blue)(?<number>[1-3])$');
@@ -334,89 +358,72 @@ class MatchScoutInfoFields extends StatelessWidget {
                 const Flexible(flex: 1, child: SizedBox(width: 12)),
                 Flexible(
                     flex: 4,
-                    child: ListenableBuilder(
-                        listenable: info,
-                        builder: (context, _) => Stack(fit: StackFit.passthrough, children: [
-                              TextFormField(
-                                  textAlignVertical: TextAlignVertical.center,
-                                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                                  controller: _matchSelectorController..text = info.match ?? "",
-                                  decoration: const InputDecoration(helperText: "Match"),
-                                  readOnly: info.matches?.isEmpty ?? true,
-                                  keyboardType: TextInputType.text,
-                                  textCapitalization: TextCapitalization.none,
-                                  enableInteractiveSelection: false,
-                                  selectionControls: EmptyTextSelectionControls(),
-                                  validator: (value) => value?.isEmpty ?? true
-                                      ? "Required"
-                                      : info.matches?.containsKey(value) ?? false
-                                          ? null
-                                          : "Invalid",
-                                  onFieldSubmitted: (String value) {
-                                    if (info.matches?.containsKey(value) ?? false) {
-                                      info.match = value;
-                                    } else {
-                                      _matchSelectorController.text = info.match ?? "";
-                                    }
-                                  }),
-                              Align(
-                                  alignment: Alignment.topRight,
-                                  child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                            onPressed: () {
-                                              if ((info.matches?.isEmpty ?? true) &&
-                                                  info.highestQual <= 0) return;
-                                              var matchInfo =
-                                                  parseMatchInfo(_matchSelectorController.text);
-                                              if (matchInfo != null &&
-                                                  matchInfo.index >= info.highestQual) return;
-                                              info.match = stringifyMatchInfo((
-                                                level: MatchLevel.qualification,
-                                                finalnum: null,
-                                                index: (matchInfo == null ? 1 : matchInfo.index + 1)
-                                                    .clamp(1, info.highestQual)
-                                              ));
-                                            },
-                                            constraints: const BoxConstraints(maxHeight: 22),
-                                            iconSize: 28,
-                                            icon: const Icon(Icons.arrow_drop_up_rounded),
-                                            visualDensity: VisualDensity.compact,
-                                            padding: EdgeInsets.zero),
-                                        IconButton(
-                                            onPressed: () {
-                                              if ((info.matches?.isEmpty ?? true) &&
-                                                  info.highestQual <= 0) return;
-                                              var matchInfo =
-                                                  parseMatchInfo(_matchSelectorController.text);
-                                              if (matchInfo != null && matchInfo.index <= 1) return;
-                                              info.match = stringifyMatchInfo((
-                                                level: MatchLevel.qualification,
-                                                finalnum: null,
-                                                index: (matchInfo == null
-                                                        ? info.highestQual
-                                                        : matchInfo.index - 1)
-                                                    .clamp(1, info.highestQual)
-                                              ));
-                                            },
-                                            constraints: const BoxConstraints(maxHeight: 22),
-                                            iconSize: 28,
-                                            icon: const Icon(Icons.arrow_drop_down_rounded),
-                                            visualDensity: VisualDensity.compact,
-                                            padding: EdgeInsets.zero)
-                                      ]))
-                            ]))),
+                    child: Stack(fit: StackFit.passthrough, children: [
+                      TextFormField(
+                          textAlignVertical: TextAlignVertical.center,
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          controller: info.matchController,
+                          decoration: const InputDecoration(helperText: "Match"),
+                          keyboardType: TextInputType.text,
+                          textCapitalization: TextCapitalization.none,
+                          enableInteractiveSelection: false,
+                          selectionControls: EmptyTextSelectionControls(),
+                          validator: (value) => value?.isEmpty ?? true
+                              ? "Required"
+                              : info.matches?.containsKey(value) ?? false
+                                  ? null
+                                  : "Invalid",
+                          onFieldSubmitted: info.setMatchStr),
+                      Align(
+                          alignment: Alignment.topRight,
+                          child: Column(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                    onPressed: () {
+                                      if (info.highestQual < 1) return;
+                                      info.match = (
+                                        level: MatchLevel.qualification,
+                                        finalnum: null,
+                                        index: (info.match == null ? 1 : info.match!.index + 1)
+                                            .clamp(1, info.highestQual)
+                                      );
+                                    },
+                                    constraints: const BoxConstraints(maxHeight: 22),
+                                    iconSize: 28,
+                                    icon: const Icon(Icons.arrow_drop_up_rounded),
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero),
+                                IconButton(
+                                    onPressed: () {
+                                      if (info.highestQual < 1) return;
+                                      info.match = (
+                                        level: MatchLevel.qualification,
+                                        finalnum: null,
+                                        index: (info.match == null
+                                                ? info.highestQual
+                                                : info.match!.index - 1)
+                                            .clamp(1, info.highestQual)
+                                      );
+                                    },
+                                    constraints: const BoxConstraints(maxHeight: 22),
+                                    iconSize: 28,
+                                    icon: const Icon(Icons.arrow_drop_down_rounded),
+                                    visualDensity: VisualDensity.compact,
+                                    padding: EdgeInsets.zero)
+                              ]))
+                    ])),
                 const Flexible(flex: 1, child: SizedBox(width: 12)),
                 Flexible(
                     flex: 5,
                     child: ListenableBuilder(
-                        listenable: info,
+                        listenable: info.teamController,
                         builder: (context, _) => DropdownButtonFormField(
                             alignment: Alignment.bottomCenter,
                             decoration: const InputDecoration(helperText: "Team"),
+                            focusColor: Colors.transparent,
                             value: info.team,
                             items: info.teams == null
                                 ? <DropdownMenuItem<int>>[]

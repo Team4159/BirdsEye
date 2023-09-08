@@ -4,6 +4,7 @@ import 'package:http/http.dart' show Client;
 import 'package:stock/stock.dart';
 
 import '../main.dart' show prefs;
+// import 'localstore.dart';
 
 final qualificationMatchInfoPattern = RegExp(r'^(?<level>qm)(?<index>\d+)$');
 final finalsMatchInfoPattern = RegExp(r'^(?<level>qf|sf|f)(?<finalnum>\d{1,2})m(?<index>\d+)$');
@@ -20,7 +21,8 @@ enum MatchLevel {
 }
 
 typedef MatchInfo = ({MatchLevel level, int? finalnum, int index});
-MatchInfo? parseMatchInfo(String s) {
+MatchInfo? parseMatchInfo(String? s) {
+  if (s == null || s.isEmpty) return null;
   RegExpMatch? match =
       qualificationMatchInfoPattern.firstMatch(s) ?? finalsMatchInfoPattern.firstMatch(s);
   if (match == null) return null;
@@ -32,6 +34,8 @@ MatchInfo? parseMatchInfo(String s) {
     index: int.parse(match.namedGroup("index")!)
   );
 }
+
+bool isQual(String s) => s.startsWith("qm");
 
 String stringifyMatchInfo(MatchInfo m) =>
     "${m.level.compLevel}${m.finalnum != null ? '${m.finalnum}m' : ''}${m.index}";
@@ -45,10 +49,37 @@ int compareMatchInfo(MatchInfo a, MatchInfo b) => a.level != b.level
 class BlueAlliance {
   static final _client = Client();
 
+  static DateTime? _lastChecked;
+  static bool _dirtyConnected = false;
+  static set dirtyConnected(bool d) {
+    _dirtyConnected = d;
+    _lastChecked = DateTime.now();
+  }
+
+  static bool get dirtyConnected {
+    if (_lastChecked != null &&
+        _lastChecked!.difference(DateTime.now()) < const Duration(seconds: 10)) {
+      return _dirtyConnected;
+    }
+    if (_dirtyConnected) {
+      isKeyValid(null);
+      return true;
+    }
+    return false;
+  }
+
   static Future _getJson(String path, {String? key}) => _client
-      .get(Uri.https("www.thebluealliance.com", "/api/v3/$path",
-          {"X-TBA-Auth-Key": key ?? prefs.getString("tbaKey")}))
-      .then((resp) => resp.statusCode < 400 ? json.decode(resp.body) : throw Exception(resp.body));
+          .get(Uri.https("www.thebluealliance.com", "/api/v3/$path",
+              {"X-TBA-Auth-Key": key ?? prefs.getString("tbaKey")}))
+          .then(
+              (resp) => resp.statusCode < 400 ? json.decode(resp.body) : throw Exception(resp.body))
+          .then((n) {
+        dirtyConnected = true;
+        return n;
+      }).catchError((n) {
+        dirtyConnected = false;
+        throw n;
+      });
 
   static final Set<String> _keyCache = {};
   static Future<bool> isKeyValid(String? key) {
@@ -61,6 +92,8 @@ class BlueAlliance {
   }
 
   static final stock = Stock<({int season, String? event, String? match}), Map<String, String>>(
+      // sourceOfTruth: LocalSourceOfTruth<({int season, String? event, String? match})>("tba")
+      // .mapTo<Map<String, String>>((p) => p.map((k, v) => MapEntry(k, v.toString())), (p) => p),
       sourceOfTruth: CachedSourceOfTruth(),
       fetcher: Fetcher.ofFuture((key) async {
         if (key.event == null) {

@@ -141,8 +141,11 @@ final router = GoRouter(
               : state.namedLocation(RoutePaths.landing.name, queryParameters: {})),
       GoRoute(
           path: '/scouting',
-          redirect: (context, state) =>
-              UserMetadata.isAuthenticated ? null : state.namedLocation(RoutePaths.landing.name),
+          redirect: (context, state) => UserMetadata.isAuthenticated
+              ? state.fullPath?.endsWith('/scouting') ?? true
+                  ? state.namedLocation(RoutePaths.configuration.name)
+                  : null
+              : state.namedLocation(RoutePaths.landing.name),
           routes: [
             ShellRoute(
                 navigatorKey: _shellNavigatorKey,

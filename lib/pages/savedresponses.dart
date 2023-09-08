@@ -12,8 +12,7 @@ class SavedResponsesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => RefreshIndicator.adaptive(
       child: CustomScrollView(physics: const BouncingScrollPhysics(), slivers: [
-        const SliverAppBar(
-            primary: true, pinned: true, title: Text("Saved Responses")),
+        const SliverAppBar(primary: true, pinned: true, title: Text("Saved Responses")),
         FutureBuilder(
             future: _list.sync(),
             builder: (context, snapshot) => !snapshot.hasData
@@ -23,15 +22,13 @@ class SavedResponsesPage extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                                Icon(Icons.warning_rounded,
-                                    color: Colors.red[700], size: 50),
+                                Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
                                 const SizedBox(height: 20),
                                 Text(snapshot.error.toString())
                               ])
                         : const Center(child: CircularProgressIndicator()))
                 : SliverPadding(
-                    padding:
-                        const EdgeInsets.only(left: 12, right: 12, top: 24),
+                    padding: const EdgeInsets.only(left: 12, right: 12, top: 24),
                     sliver: _RespList(snapshot.data!)))
       ]),
       onRefresh: () => _list.sync());
@@ -45,14 +42,10 @@ class _WrappedList {
   int get length => _list.length;
   String operator [](int index) => _list[index];
 
-  Future<bool> remove(String id) =>
-      LocalStoreInterface.remove(id).then((_) => _list.remove(id));
+  Future<bool> remove(String id) => LocalStoreInterface.remove(id).then((_) => _list.remove(id));
 
-  Future<_WrappedList> sync() => Future.wait(
-              {LocalStoreInterface.getMatches(), LocalStoreInterface.getPits()})
-          .then((s) => s.reduce((a, b) => a.union(b)).toList())
-          .then((value) {
-        _list = value;
+  Future<_WrappedList> sync() => LocalStoreInterface.getAll.then((value) {
+        _list = value.toList();
         return this;
       });
 }
@@ -106,20 +99,16 @@ class _RespListState extends State<_RespList> {
                       icon: const Icon(Icons.send_rounded),
                       performsFirstActionWithFullSwipe: true,
                       onTap: (CompletionHandler handler) async {
-                        Map<String, dynamic>? data =
-                            await LocalStoreInterface.get(id);
+                        Map<String, dynamic>? data = await LocalStoreInterface.get(id);
                         if (data == null) return handler(false);
                         await Future.wait({
                           widget.dataList.remove(id),
                           handler(true),
                           (id.startsWith("match")
-                              ? matchscout.submitInfo(data,
-                                  season: data.remove('season'))
+                              ? matchscout.submitInfo(data, season: data.remove('season'))
                               : id.startsWith("pit")
-                                  ? pitscout.submitInfo(data,
-                                      season: data.remove('season'))
-                                  : throw Exception(
-                                      "Invalid LocalStore ID: $id"))
+                                  ? pitscout.submitInfo(data, season: data.remove('season'))
+                                  : throw Exception("Invalid LocalStore ID: $id"))
                         });
                         await widget.dataList.sync();
                         setState(() {});
@@ -130,7 +119,6 @@ class _RespListState extends State<_RespList> {
                     child: SizedBox(
                         height: 30,
                         child: Text(id,
-                            style: Theme.of(context).textTheme.titleSmall,
-                            textScaleFactor: 1.5))));
+                            style: Theme.of(context).textTheme.titleSmall, textScaleFactor: 1.5))));
           });
 }
