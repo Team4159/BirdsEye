@@ -17,7 +17,7 @@ class MetadataPage extends StatelessWidget {
   MetadataPage({super.key, this.isRedirect = false}) {
     UserMetadata.instance.addListener(() {
       _nameController.text = UserMetadata.instance.name ?? "";
-      _teamController.text = UserMetadata.instance.team.toString();
+      _teamController.text = UserMetadata.instance.team?.toString() ?? "";
     });
   }
 

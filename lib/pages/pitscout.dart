@@ -49,13 +49,12 @@ class PitScoutPage extends StatefulWidget {
 
 class _PitScoutPageState extends State<PitScoutPage> {
   final GlobalKey<FormFieldState<String>> _teamFieldKey = GlobalKey();
-  String? _teamFieldError;
-  // TODO: replace with valuenotifiers to prevent full tree rebuild on setstate
-  int? _team;
+  final ValueNotifier<int?> _team = ValueNotifier(null);
+  String? _teamFieldError; // responds to _team's valuenotifier
   final Map<String, TextEditingController> _controllers = {};
   final ScrollController _scrollController = ScrollController();
 
-  List<int>? unfilled;
+  List<int>? unfilled; // cache
   Future<List<int>> _getUnfilled() {
     if (unfilled != null) return Future.value(unfilled);
     return pitScoutGetUnfilled().then((teams) {
@@ -108,69 +107,73 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                               (team) => team.toString().startsWith(value.text))),
                                       fieldViewBuilder: (context, textEditingController, focusNode,
                                               onSubmitted) =>
-                                          TextFormField(
-                                              key: _teamFieldKey,
-                                              controller: textEditingController,
-                                              focusNode: focusNode,
-                                              autovalidateMode: AutovalidateMode.always,
-                                              decoration: const InputDecoration(
-                                                  helperText: "Team", counterText: ""),
-                                              keyboardType: TextInputType.number,
-                                              inputFormatters: [
-                                                FilteringTextInputFormatter.digitsOnly
-                                              ],
-                                              maxLength: 4,
-                                              validator: (value) {
-                                                if (value?.isEmpty ?? true) {
-                                                  return "Required";
-                                                }
-                                                if (_teamFieldError != null) {
-                                                  return _teamFieldError!.isEmpty
-                                                      ? null
-                                                      : _teamFieldError;
-                                                }
-                                                return null;
-                                              },
-                                              onChanged: (value) {
-                                                if (_team != null) {
-                                                  setState(() => _team = null);
-                                                }
-                                                BlueAlliance.stock
-                                                    .get((
-                                                      season: Configuration.instance.season,
-                                                      event: Configuration.event,
-                                                      match: "*"
-                                                    ))
-                                                    .then((data) =>
-                                                        Set<String>.of(data.keys).contains(value))
-                                                    .then((isValid) {
-                                                      _teamFieldError = isValid ? "" : "Invalid";
-                                                      _teamFieldKey.currentState!.validate();
-                                                    })
-                                                    .catchError((e) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                          SnackBar(content: Text(e.toString())));
-                                                    });
-                                              },
-                                              onFieldSubmitted: (String? value) async {
-                                                if (value == null) return;
-                                                if (_teamFieldError?.isNotEmpty ?? true) return;
-                                                int team = int.parse(value);
-                                                onSubmitted();
-                                                Map<String, String>? prev =
-                                                    await pitScoutGetPrevious(team);
-                                                if (prev != null) {
-                                                  for (var MapEntry(:key, :value) in prev.entries) {
-                                                    _controllers[key] ??= TextEditingController();
-                                                    _controllers[key]!.text = value;
-                                                  }
-                                                }
-                                                setState(() => _team = team);
-                                              }),
-                                      onSelected: (int team) => setState(() {
-                                            _team = team;
-                                            _teamFieldError = "";
-                                          })))
+                                          ListenableBuilder(
+                                              listenable: _team,
+                                              builder: (context, _) => TextFormField(
+                                                  key: _teamFieldKey,
+                                                  controller: textEditingController,
+                                                  focusNode: focusNode,
+                                                  autovalidateMode: AutovalidateMode.always,
+                                                  decoration: const InputDecoration(
+                                                      helperText: "Team", counterText: ""),
+                                                  keyboardType: TextInputType.number,
+                                                  inputFormatters: [
+                                                    FilteringTextInputFormatter.digitsOnly
+                                                  ],
+                                                  maxLength: 4,
+                                                  validator: (value) {
+                                                    if (value?.isEmpty ?? true) {
+                                                      return "Required";
+                                                    }
+                                                    if (_teamFieldError != null) {
+                                                      return _teamFieldError!.isEmpty
+                                                          ? null
+                                                          : _teamFieldError;
+                                                    }
+                                                    return null;
+                                                  },
+                                                  onChanged: (value) {
+                                                    _team.value = null;
+                                                    BlueAlliance.stock
+                                                        .get((
+                                                          season: Configuration.instance.season,
+                                                          event: Configuration.event,
+                                                          match: "*"
+                                                        ))
+                                                        .then((data) => Set<String>.of(data.keys)
+                                                            .contains(value))
+                                                        .then((isValid) {
+                                                          _teamFieldError =
+                                                              isValid ? "" : "Invalid";
+                                                          _teamFieldKey.currentState!.validate();
+                                                        })
+                                                        .catchError((e) {
+                                                          ScaffoldMessenger.of(context)
+                                                              .showSnackBar(SnackBar(
+                                                                  content: Text(e.toString())));
+                                                        });
+                                                  },
+                                                  onFieldSubmitted: (String? value) async {
+                                                    if (value == null) return;
+                                                    if (_teamFieldError?.isNotEmpty ?? true) return;
+                                                    int team = int.parse(value);
+                                                    onSubmitted();
+                                                    Map<String, String>? prev =
+                                                        await pitScoutGetPrevious(team);
+                                                    if (prev != null) {
+                                                      for (var MapEntry(:key, :value)
+                                                          in prev.entries) {
+                                                        _controllers[key] ??=
+                                                            TextEditingController();
+                                                        _controllers[key]!.text = value;
+                                                      }
+                                                    }
+                                                    _team.value = team;
+                                                  })),
+                                      onSelected: (int team) {
+                                        _team.value = team;
+                                        _teamFieldError = "";
+                                      }))
                             ]))))
           ],
       body: FutureBuilder(
@@ -186,10 +189,13 @@ class _PitScoutPageState extends State<PitScoutPage> {
                           Text(snapshot.error.toString())
                         ])
                   : const Center(child: CircularProgressIndicator())
-              : AnimatedSlide(
-                  offset: (_team != null) ? Offset.zero : const Offset(0, 1),
-                  curve: Curves.easeInOutCirc,
-                  duration: const Duration(seconds: 1),
+              : ListenableBuilder(
+                  listenable: _team,
+                  builder: (context, child) => AnimatedSlide(
+                      offset: (_team.value != null) ? Offset.zero : const Offset(0, 1),
+                      curve: Curves.easeInOutCirc,
+                      duration: const Duration(seconds: 1),
+                      child: child),
                   child: CustomScrollView(cacheExtent: double.infinity, slivers: [
                     for (var MapEntry(:key, value: question) in snapshot.data!.entries)
                       SliverPadding(
@@ -240,18 +246,19 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                   onPressed: () {
                                     submitInfo({
                                       "event": Configuration.event,
-                                      "team": _team,
+                                      "team": _team.value,
                                       ..._controllers.map((key, value) => MapEntry(key, value.text))
                                     }).then((_) async {
                                       for (TextEditingController controller
                                           in _controllers.values) {
                                         controller.clear();
                                       }
+
                                       await _scrollController.animateTo(0,
                                           duration: const Duration(seconds: 1),
                                           curve: Curves.easeOutBack);
                                       _teamFieldKey.currentState!.didChange("");
-                                      setState(() => _team = _teamFieldError = null);
+                                      _team.value = _teamFieldError = null;
                                     }).catchError((e) {
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(SnackBar(content: Text(e.toString())));
@@ -268,7 +275,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                     duration: const Duration(seconds: 1),
                                     curve: Curves.easeOutBack);
                                 _teamFieldKey.currentState!.didChange("");
-                                setState(() => _team = _teamFieldError = null);
+                                _team.value = _teamFieldError = null;
                               })
                         ])))
                   ]))));

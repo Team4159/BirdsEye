@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:localstore/localstore.dart';
 import 'package:stock/stock.dart';
 
@@ -23,7 +25,7 @@ class LocalStoreInterface {
 }
 
 class LocalSourceOfTruth<Key> implements SourceOfTruth<Key, Map<String, dynamic>> {
-  // FIXME very strange connection bugs. maybe switch to sqlflite
+  // FIXME read/write aren't thread-safe, this won't work
   final CollectionRef collection;
   LocalSourceOfTruth(String key) : collection = LocalStoreInterface._db.collection(key);
 
@@ -35,7 +37,7 @@ class LocalSourceOfTruth<Key> implements SourceOfTruth<Key, Map<String, dynamic>
 
   @override
   Stream<Map<String, dynamic>?> reader(Key key) =>
-      Stream.fromFuture(collection.doc(key.hashCode.toString()).get());
+      collection.doc(key.hashCode.toString()).get().asStream();
 
   @override
   Future<void> write(Key key, Map<String, dynamic>? value) =>
