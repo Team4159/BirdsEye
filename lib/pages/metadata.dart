@@ -21,38 +21,6 @@ class MetadataPage extends StatelessWidget {
     });
   }
 
-  static Dialog _tbaInfoDialog(BuildContext context) => Dialog(
-      child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Text.rich(TextSpan(children: [
-            TextSpan(
-                text: "Getting a TheBlueAlliance API Key\n\n",
-                style: Theme.of(context).textTheme.titleLarge),
-            const TextSpan(text: "Visit the "),
-            TextSpan(
-                text: "account page",
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall!
-                    .copyWith(decoration: TextDecoration.underline, color: Colors.blue),
-                recognizer: TapGestureRecognizer()
-                  ..onTap = () => Clipboard.setData(
-                          const ClipboardData(text: "https://www.thebluealliance.com/account"))
-                      .then((_) => ScaffoldMessenger.of(context)
-                          .showSnackBar(const SnackBar(content: Text("Copied!"))))),
-            const TextSpan(text: " (may ask for sign-in)\n"),
-            const TextSpan(text: "Scroll down to "),
-            TextSpan(text: 'Read API Keys', style: Theme.of(context).textTheme.bodySmall),
-            const TextSpan(text: " and enter "),
-            TextSpan(text: 'BirdsEye', style: Theme.of(context).textTheme.bodySmall),
-            const TextSpan(text: " as the description\n"),
-            const TextSpan(text: "Click "),
-            TextSpan(text: 'Add New Key', style: Theme.of(context).textTheme.bodySmall),
-            const TextSpan(text: " then copy the "),
-            TextSpan(text: 'X-TBA-Auth-Key', style: Theme.of(context).textTheme.bodySmall),
-            const TextSpan(text: " text (base 64 string)")
-          ]))));
-
   @override
   Widget build(BuildContext context) => FutureBuilder(
       future: UserMetadata.instance.fetch().then((_) async {
@@ -97,8 +65,9 @@ class MetadataPage extends StatelessWidget {
                             labelText: "TBA API Key",
                             counterText: "",
                             suffixIcon: IconButton(
-                                onPressed: () =>
-                                    showDialog(context: context, builder: _tbaInfoDialog),
+                                onPressed: () => showDialog(
+                                    context: context,
+                                    builder: (context) => TBAInfoDialog(context: context)),
                                 tooltip: "Instructions",
                                 icon: const Icon(Icons.info_outline_rounded))),
                         keyboardType: TextInputType.none,
@@ -149,6 +118,41 @@ class MetadataPage extends StatelessWidget {
                                       child: const Text("Submit"))
                                 ])))
                   ]))));
+}
+
+class TBAInfoDialog extends Dialog {
+  TBAInfoDialog({super.key, required BuildContext context})
+      : super(
+            child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Text.rich(TextSpan(children: [
+                  TextSpan(
+                      text: "Getting a TheBlueAlliance API Key\n\n",
+                      style: Theme.of(context).textTheme.titleLarge),
+                  const TextSpan(text: "Visit the "),
+                  TextSpan(
+                      text: "account page",
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall!
+                          .copyWith(decoration: TextDecoration.underline, color: Colors.blue),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => Clipboard.setData(const ClipboardData(
+                                text: "https://www.thebluealliance.com/account"))
+                            .then((_) => ScaffoldMessenger.of(context)
+                                .showSnackBar(const SnackBar(content: Text("Copied!"))))),
+                  const TextSpan(text: " (may ask for sign-in)\n"),
+                  const TextSpan(text: "Scroll down to "),
+                  TextSpan(text: 'Read API Keys', style: Theme.of(context).textTheme.bodySmall),
+                  const TextSpan(text: " and enter "),
+                  TextSpan(text: 'BirdsEye', style: Theme.of(context).textTheme.bodySmall),
+                  const TextSpan(text: " as the description\n"),
+                  const TextSpan(text: "Click "),
+                  TextSpan(text: 'Add New Key', style: Theme.of(context).textTheme.bodySmall),
+                  const TextSpan(text: " then copy the "),
+                  TextSpan(text: 'X-TBA-Auth-Key', style: Theme.of(context).textTheme.bodySmall),
+                  const TextSpan(text: " text (base 64 string)")
+                ]))));
 }
 
 class UserMetadata extends ChangeNotifier {

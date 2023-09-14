@@ -1,9 +1,9 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../interfaces/bluealliance.dart';
+import '../interfaces/supabase.dart';
 import '../main.dart' show prefs;
 
 class ConfigurationPage extends StatefulWidget {
@@ -23,9 +23,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
         ConstrainedBox(
             constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height / 8),
             child: FutureBuilder(
-                future: Supabase.instance.client
-                    .rpc("getavailableseasons")
-                    .then((resp) => List<int>.from(resp)..sort()),
+                future: SupabaseInterface.getAvailableSeasons().then((list) => list..sort()),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return snapshot.hasError || (snapshot.data?.isEmpty ?? false)

@@ -34,7 +34,7 @@ class SavedResponsesPage extends StatelessWidget {
       onRefresh: () => _list.sync());
 }
 
-class _WrappedList {
+class _WrappedList extends ChangeNotifier {
   List<String> _list;
   _WrappedList(this._list);
 
@@ -42,25 +42,25 @@ class _WrappedList {
   int get length => _list.length;
   String operator [](int index) => _list[index];
 
-  Future<bool> remove(String id) => LocalStoreInterface.remove(id).then((_) => _list.remove(id));
+  Future<bool> remove(String id, {bool dontUpdate = false}) =>
+      LocalStoreInterface.remove(id).then((_) => _list.remove(id)).then((updated) {
+        if (updated && !dontUpdate) notifyListeners();
+        return updated;
+      });
 
   Future<_WrappedList> sync() => LocalStoreInterface.getAll.then((value) {
         _list = value.toList();
+        notifyListeners();
         return this;
       });
 }
 
-class _RespList extends StatefulWidget {
+class _RespList extends StatelessWidget {
   final _WrappedList dataList;
   const _RespList(this.dataList);
 
   @override
-  State<_RespList> createState() => _RespListState();
-}
-
-class _RespListState extends State<_RespList> {
-  @override
-  Widget build(BuildContext context) => widget.dataList.isEmpty
+  Widget build(BuildContext context) => dataList.isEmpty
       ? const SliverFillRemaining(
           child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -69,56 +69,54 @@ class _RespListState extends State<_RespList> {
               Icon(Icons.article_outlined, size: 50, color: Colors.grey),
               Text("No Saved Responses", style: TextStyle(color: Colors.grey))
             ]))
-      : SliverList.builder(
-          itemCount: widget.dataList.length,
-          itemBuilder: (context, i) {
-            String id = widget.dataList[i];
-            return SwipeActionCell(
-                key: ValueKey(id),
-                leadingActions: [
-                  SwipeAction(
-                      nestedAction: SwipeNestedAction(title: "Confirm"),
-                      color: Colors.red,
-                      widthSpace: 40,
-                      icon: const Icon(Icons.delete_outline_rounded),
-                      onTap: (CompletionHandler handler) async {
-                        await handler(true);
-                        widget.dataList.remove(id);
-                        setState(() {});
-                      }),
-                  SwipeAction(
-                      color: Colors.grey,
-                      widthSpace: 60,
-                      title: "Cancel",
-                      onTap: (handler) => handler(false))
-                ],
-                trailingActions: [
-                  SwipeAction(
-                      color: Colors.blue,
-                      widthSpace: 60,
-                      icon: const Icon(Icons.send_rounded),
-                      performsFirstActionWithFullSwipe: true,
-                      onTap: (CompletionHandler handler) async {
-                        Map<String, dynamic>? data = await LocalStoreInterface.get(id);
-                        if (data == null) return handler(false);
-                        await Future.wait({
-                          widget.dataList.remove(id),
-                          handler(true),
-                          (id.startsWith("match")
-                              ? matchscout.submitInfo(data, season: data.remove('season'))
-                              : id.startsWith("pit")
-                                  ? pitscout.submitInfo(data, season: data.remove('season'))
-                                  : throw Exception("Invalid LocalStore ID: $id"))
-                        });
-                        await widget.dataList.sync();
-                        setState(() {});
-                      })
-                ],
-                child: Padding(
-                    padding: const EdgeInsets.only(left: 10),
-                    child: SizedBox(
-                        height: 30,
-                        child: Text(id,
-                            style: Theme.of(context).textTheme.titleSmall, textScaleFactor: 1.5))));
-          });
+      : ListenableBuilder(
+          listenable: dataList,
+          builder: (context, _) => SliverList.builder(
+              itemCount: dataList.length,
+              itemBuilder: (context, i) {
+                String id = dataList[i];
+                return SwipeActionCell(
+                    key: ValueKey(id),
+                    leadingActions: [
+                      SwipeAction(
+                          nestedAction: SwipeNestedAction(title: "Confirm"),
+                          color: Colors.red,
+                          widthSpace: 40,
+                          icon: const Icon(Icons.delete_outline_rounded),
+                          onTap: (handler) => handler(true).then((_) => dataList.remove(id))),
+                      SwipeAction(
+                          color: Colors.grey,
+                          widthSpace: 60,
+                          title: "Cancel",
+                          onTap: (handler) => handler(false))
+                    ],
+                    trailingActions: [
+                      SwipeAction(
+                          color: Colors.blue,
+                          widthSpace: 60,
+                          icon: const Icon(Icons.send_rounded),
+                          performsFirstActionWithFullSwipe: true,
+                          onTap: (CompletionHandler handler) async {
+                            Map<String, dynamic>? data = await LocalStoreInterface.get(id);
+                            if (data == null) return handler(false);
+                            await Future.wait({
+                              dataList.remove(id, dontUpdate: true),
+                              handler(true),
+                              (id.startsWith("match")
+                                  ? matchscout.submitInfo(data, season: data.remove('season'))
+                                  : id.startsWith("pit")
+                                      ? pitscout.submitInfo(data, season: data.remove('season'))
+                                      : throw Exception("Invalid LocalStore ID: $id"))
+                            });
+                            await dataList.sync();
+                          })
+                    ],
+                    child: Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: SizedBox(
+                            height: 30,
+                            child: Text(id,
+                                style: Theme.of(context).textTheme.titleSmall,
+                                textScaleFactor: 1.5))));
+              }));
 }

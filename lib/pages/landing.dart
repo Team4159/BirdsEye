@@ -28,41 +28,27 @@ class LandingPage extends StatelessWidget {
           ]),
           persistentFooterAlignment: AlignmentDirectional.bottomCenter,
           persistentFooterButtons: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-              Expanded(
-                child: ListTile(
-                    tileColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    leading: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: SvgPicture.asset('assets/images/github.svg')),
-                    title: const Text('Sign In with Github', style: TextStyle(color: Colors.white)),
-                    onTap: () => Supabase.instance.client.auth.signInWithOAuth(Provider.github,
-                        authScreenLaunchMode: LaunchMode.externalApplication,
-                        context: context,
-                        redirectTo: "${Uri.base.scheme}://${Uri.base.authority}")),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                  child: ListTile(
-                      tileColor: const Color(0xff4285F4),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      leading: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: SvgPicture.asset('assets/images/google.svg')),
-                      title: const Text('Sign In with Google',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontFamily: "Roboto",
-                              fontWeight: FontWeight.w500)),
-                      onTap: () => Supabase.instance.client.auth.signInWithOAuth(Provider.google,
-                              authScreenLaunchMode: LaunchMode.inAppWebView,
-                              context: context,
-                              redirectTo: "${Uri.base.scheme}://${Uri.base.authority}",
-                              queryParams: {
-                                // "access_type": 'offline',
-                                // "prompt": 'consent',
-                              })))
-            ])
+            FloatingActionButton.extended(
+                onPressed: () => Supabase.instance.client.auth.signInWithOAuth(Provider.github,
+                    authScreenLaunchMode: LaunchMode.externalApplication,
+                    context: context,
+                    redirectTo: "${Uri.base.scheme}://${Uri.base.authority}"),
+                label: const Text('Sign In with Github', style: TextStyle(color: Colors.white)),
+                icon: SvgPicture.asset('assets/images/github.svg',
+                    height: 36, width: 36, fit: BoxFit.contain),
+                backgroundColor: Colors.black),
+            FloatingActionButton.extended(
+                onPressed: () => Supabase.instance.client.auth.signInWithOAuth(
+                      Provider.google,
+                      authScreenLaunchMode: LaunchMode.inAppWebView,
+                      context: context,
+                      redirectTo: "${Uri.base.scheme}://${Uri.base.authority}",
+                      // queryParams: {"access_type": 'offline', "prompt": 'consent'}
+                    ),
+                label: const Text('Sign In with Google',
+                    style: TextStyle(
+                        color: Colors.white, fontFamily: "Roboto", fontWeight: FontWeight.w500)),
+                icon: SvgPicture.asset('assets/images/google.svg'),
+                backgroundColor: const Color(0xff4285F4))
           ]);
 }

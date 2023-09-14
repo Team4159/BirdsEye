@@ -12,6 +12,13 @@ class SupabaseInterface {
       .then((_) => true)
       .catchError((_) => false);
 
+  static List<int>? _availableSeasons;
+  static Future<List<int>> getAvailableSeasons() => _availableSeasons != null
+      ? Future.value(_availableSeasons)
+      : Supabase.instance.client
+          .rpc("getavailableseasons")
+          .then((resp) => _availableSeasons = List<int>.from(resp));
+
   static Future<void> setSession({String? match, int? team}) =>
       Supabase.instance.client.from("sessions").upsert({
         "season": Configuration.instance.season,
@@ -28,6 +35,7 @@ class SupabaseInterface {
       .eq("season", Configuration.instance.season)
       .eq("event", Configuration.event)
       .eq("match", match)
+      .neq("scouter", Supabase.instance.client.auth.currentUser!.id)
       .then((resp) => resp.map((e) => e['team'] as int).toList())
       .then((sessions) => Map.fromEntries(
           sessions.toSet().map((team) => MapEntry(team, sessions.where((t) => t == team).length))));

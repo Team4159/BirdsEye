@@ -421,31 +421,31 @@ class MatchScoutInfoFields extends StatelessWidget {
                     child: ListenableBuilder(
                         listenable: info.teamController,
                         builder: (context, _) => DropdownButtonFormField(
-                              alignment: Alignment.bottomCenter,
-                              decoration: const InputDecoration(helperText: "Team"),
-                              focusColor: Colors.transparent,
-                              isExpanded: false,
-                              value: info.team,
-                              items: info.teams == null
-                                  ? <DropdownMenuItem<int>>[]
-                                  : [
-                                      for (var MapEntry(key: team, value: position)
-                                          in info.teams!.entries)
-                                        DropdownMenuItem(
-                                            value: team,
-                                            alignment: Alignment.center,
-                                            child: ConstrainedBox(
-                                                constraints: const BoxConstraints(maxWidth: 77),
-                                                child: Row(
-                                                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                                                    textBaseline: TextBaseline.alphabetic,
-                                                    children: [
-                                                      const SizedBox(width: 5),
-                                                      Expanded(child: Text(team.toString())),
-                                                      _generateRobotPositionChip(position)
-                                                    ])))
-                                    ],
-                              onChanged: (int? value) => info.team = value)                        ))
+                            alignment: Alignment.bottomCenter,
+                            decoration: const InputDecoration(helperText: "Team"),
+                            focusColor: Colors.transparent,
+                            isExpanded: false,
+                            value: info.team,
+                            items: info.teams == null
+                                ? <DropdownMenuItem<int>>[]
+                                : [
+                                    for (var MapEntry(key: team, value: position)
+                                        in info.teams!.entries)
+                                      DropdownMenuItem(
+                                          value: team,
+                                          alignment: Alignment.center,
+                                          child: ConstrainedBox(
+                                              constraints: const BoxConstraints(maxWidth: 77),
+                                              child: Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                                  textBaseline: TextBaseline.alphabetic,
+                                                  children: [
+                                                    const SizedBox(width: 5),
+                                                    Expanded(child: Text(team.toString())),
+                                                    _generateRobotPositionChip(position)
+                                                  ])))
+                                  ],
+                            onChanged: (int? value) => info.team = value)))
               ])));
 }
 
