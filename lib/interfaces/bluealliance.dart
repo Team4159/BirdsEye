@@ -1,5 +1,6 @@
 import 'dart:convert' show json;
 
+import 'package:birdseye/interfaces/localstore.dart';
 import 'package:http/http.dart' show Client;
 import 'package:stock/stock.dart';
 
@@ -42,6 +43,12 @@ int compareMatchInfo(MatchInfo a, MatchInfo b) => a.level != b.level
     : a.finalnum != null && b.finalnum != null && a.finalnum != b.finalnum
         ? b.finalnum! - a.finalnum!
         : b.index - a.index;
+
+typedef TBAInfo = ({int season, String? event, String? match});
+String stringifyTBAInfo(TBAInfo t) =>
+    t.season.toString() +
+    (t.event != null ? t.event! : "") +
+    (t.match != null ? "_${t.match!}" : "");
 
 class BlueAlliance {
   static final _client = Client();
@@ -88,10 +95,9 @@ class BlueAlliance {
     }).catchError((_) => false);
   }
 
-  static final stock = Stock<({int season, String? event, String? match}), Map<String, String>>(
-      // sourceOfTruth: LocalSourceOfTruth<({int season, String? event, String? match})>("tba")
-      // .mapTo<Map<String, String>>((p) => p.map((k, v) => MapEntry(k, v.toString())), (p) => p),
-      sourceOfTruth: CachedSourceOfTruth(),
+  static final stock = Stock<TBAInfo, Map<String, String>>(
+      sourceOfTruth: LocalSourceOfTruth("tba")
+          .mapTo<Map<String, String>>((p) => p.map((k, v) => MapEntry(k, v.toString())), (p) => p),
       fetcher: Fetcher.ofFuture((key) async {
         if (key.event == null) {
           // season

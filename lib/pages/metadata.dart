@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../interfaces/bluealliance.dart';
 import '../interfaces/supabase.dart';
@@ -137,10 +138,7 @@ class TBAInfoDialog extends Dialog {
                           .bodySmall!
                           .copyWith(decoration: TextDecoration.underline, color: Colors.blue),
                       recognizer: TapGestureRecognizer()
-                        ..onTap = () => Clipboard.setData(const ClipboardData(
-                                text: "https://www.thebluealliance.com/account"))
-                            .then((_) => ScaffoldMessenger.of(context)
-                                .showSnackBar(const SnackBar(content: Text("Copied!"))))),
+                        ..onTap = () => launchUrl(Uri.https("thebluealliance.com", "/account"))),
                   const TextSpan(text: " (may ask for sign-in)\n"),
                   const TextSpan(text: "Scroll down to "),
                   TextSpan(text: 'Read API Keys', style: Theme.of(context).textTheme.bodySmall),

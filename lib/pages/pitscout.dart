@@ -9,22 +9,7 @@ import '../interfaces/localstore.dart';
 import '../interfaces/supabase.dart';
 import '../widgets/deleteconfirmation.dart';
 
-Future<List<int>> pitScoutGetUnfilled() => BlueAlliance.stock
-    .get((season: Configuration.instance.season, event: Configuration.event, match: "*"))
-    .then((data) => Set<int>.of(data.keys.map(int.parse)))
-    .then((teams) async {
-      Set<int> filledteams = await Supabase.instance.client
-          .from("${Configuration.instance.season}_pit")
-          .select<List<Map<String, dynamic>>>("team")
-          .eq("event", Configuration.event)
-          .then((value) => value.map<int>((e) => e['team']).toSet());
-      if (UserMetadata.instance.team != null) {
-        filledteams.add(UserMetadata.instance.team!);
-      }
-      return teams.difference(filledteams).toList()..sort();
-    });
-
-Future<Map<String, String>?> pitScoutGetPrevious(int team) => Supabase.instance.client
+Future<Map<String, String>?> _getPrevious(int team) => Supabase.instance.client
     .from("${Configuration.instance.season}_pit")
     .select<Map<String, dynamic>?>()
     .eq("event", Configuration.event)
@@ -57,9 +42,24 @@ class _PitScoutPageState extends State<PitScoutPage> {
   List<int>? unfilled; // cache
   Future<List<int>> _getUnfilled() {
     if (unfilled != null) return Future.value(unfilled);
-    return pitScoutGetUnfilled().then((teams) {
-      return unfilled = teams;
-    }).catchError((e) => <int>[]);
+    return BlueAlliance.stock
+        .get((season: Configuration.instance.season, event: Configuration.event, match: "*"))
+        .then((data) => Set<int>.of(data.keys.map(int.parse)))
+        .then((teams) async {
+          Set<int> filledteams = await Supabase.instance.client
+              .from("${Configuration.instance.season}_pit")
+              .select<List<Map<String, dynamic>>>("team")
+              .eq("event", Configuration.event)
+              .then((value) => value.map<int>((e) => e['team']).toSet());
+          if (UserMetadata.instance.team != null) {
+            filledteams.add(UserMetadata.instance.team!);
+          }
+          return teams.difference(filledteams).toList()..sort();
+        })
+        .then((teams) {
+          return unfilled = teams;
+        })
+        .catchError((e) => <int>[]);
   }
 
   @override
@@ -159,7 +159,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                     int team = int.parse(value);
                                                     onSubmitted();
                                                     Map<String, String>? prev =
-                                                        await pitScoutGetPrevious(team);
+                                                        await _getPrevious(team);
                                                     if (prev != null) {
                                                       for (var MapEntry(:key, :value)
                                                           in prev.entries) {

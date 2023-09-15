@@ -211,41 +211,42 @@ class ScaffoldShell extends StatelessWidget {
       drawer: Drawer(
           width: 225,
           child: Column(children: [
-            ListenableBuilder(
-                listenable: UserMetadata.instance,
-                builder: (context, child) => UserAccountsDrawerHeader(
-                    decoration: Theme.of(context).brightness == Brightness.dark
-                        ? BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer)
-                        : null,
-                    currentAccountPicture: Icon(
-                        UserMetadata.isAuthenticated ? Icons.person : Icons.person_off_outlined,
-                        size: 64),
-                    accountName: Text(UserMetadata.instance.name ?? "User",
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
-                    accountEmail: Text(
-                        UserMetadata.instance.team != null
-                            ? "Team ${UserMetadata.instance.team}"
-                            : "No Team",
-                        style: const TextStyle(fontWeight: FontWeight.w300)),
-                    arrowColor: Colors.transparent,
-                    onDetailsPressed: () => showDialog(
-                        context: context,
-                        barrierDismissible: false,
-                        builder: (context) => AlertDialog(
-                              title: const Text("Sign Out"),
-                              content: const Text("Are you sure you want to sign out?"),
-                              actions: [
-                                OutlinedButton(
-                                    onPressed: () => GoRouter.of(context).pop(),
-                                    child: const Text("Cancel")),
-                                FilledButton(
-                                    onPressed: () {
-                                      Supabase.instance.client.auth.signOut().then((_) =>
-                                          GoRouter.of(context).goNamed(RoutePaths.landing.name));
-                                    },
-                                    child: const Text("Confirm"))
-                              ],
-                            )))),
+            if (MediaQuery.of(context).size.height > 400)
+              ListenableBuilder(
+                  listenable: UserMetadata.instance,
+                  builder: (context, child) => UserAccountsDrawerHeader(
+                      decoration: Theme.of(context).brightness == Brightness.dark
+                          ? BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer)
+                          : null,
+                      currentAccountPicture: Icon(
+                          UserMetadata.isAuthenticated ? Icons.person : Icons.person_off_outlined,
+                          size: 64),
+                      accountName: Text(UserMetadata.instance.name ?? "User",
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      accountEmail: Text(
+                          UserMetadata.instance.team != null
+                              ? "Team ${UserMetadata.instance.team}"
+                              : "No Team",
+                          style: const TextStyle(fontWeight: FontWeight.w300)),
+                      arrowColor: Colors.transparent,
+                      onDetailsPressed: () => showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => AlertDialog(
+                                  title: const Text("Sign Out"),
+                                  content: const Text("Are you sure you want to sign out?"),
+                                  actions: [
+                                    OutlinedButton(
+                                        onPressed: () => GoRouter.of(context).pop(),
+                                        child: const Text("Cancel")),
+                                    FilledButton(
+                                        onPressed: () {
+                                          Supabase.instance.client.auth.signOut().then((_) =>
+                                              GoRouter.of(context)
+                                                  .goNamed(RoutePaths.landing.name));
+                                        },
+                                        child: const Text("Confirm"))
+                                  ])))),
             FutureBuilder(
                 future: SupabaseInterface.canConnect,
                 builder: (context, snapshot) => ListTile(

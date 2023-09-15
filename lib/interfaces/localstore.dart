@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:birdseye/interfaces/bluealliance.dart';
 import 'package:localstore/localstore.dart';
 import 'package:stock/stock.dart';
 
@@ -24,22 +25,37 @@ class LocalStoreInterface {
       _db.collection("scout").get().then((value) => value?.keys.toSet() ?? {});
 }
 
-class LocalSourceOfTruth<Key> implements SourceOfTruth<Key, Map<String, dynamic>> {
-  // FIXME read/write aren't thread-safe, this won't work
+class LocalSourceOfTruth implements SourceOfTruth<TBAInfo, Map<String, dynamic>> {
   final CollectionRef collection;
+  final StreamController<({String key, Map<String, dynamic>? value})> _stream =
+      StreamController.broadcast();
   LocalSourceOfTruth(String key) : collection = LocalStoreInterface._db.collection(key);
 
   @override
-  Future<void> delete(Key key) => collection.doc(key.hashCode.toString()).delete();
+  Future<void> delete(TBAInfo key) {
+    String s = stringifyTBAInfo(key);
+    _stream.add((key: s, value: null));
+    return collection.doc(s).delete();
+  }
 
   @override
-  Future<void> deleteAll() => collection.delete();
+  Future<void> deleteAll() => collection.get().then((docs) {
+        for (String key in docs!.keys) {
+          _stream.add((key: key, value: null));
+        }
+      }).then((_) => collection.delete());
 
   @override
-  Stream<Map<String, dynamic>?> reader(Key key) =>
-      collection.doc(key.hashCode.toString()).get().asStream();
+  Stream<Map<String, dynamic>?> reader(TBAInfo key) async* {
+    String s = stringifyTBAInfo(key);
+    yield* collection.doc(s).get().asStream();
+    yield* _stream.stream.where((e) => e.key == s).map((e) => e.value);
+  }
 
   @override
-  Future<void> write(Key key, Map<String, dynamic>? value) =>
-      collection.doc(key.hashCode.toString()).set(value ?? {});
+  Future<void> write(TBAInfo key, Map<String, dynamic>? value) {
+    String s = stringifyTBAInfo(key);
+    _stream.add((key: s, value: value));
+    return collection.doc(s).set(value ?? {});
+  }
 }
