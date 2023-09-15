@@ -1,5 +1,6 @@
 import 'package:birdseye/main.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
 
 class LegalShell extends StatelessWidget {
@@ -19,24 +20,14 @@ class LegalShell extends StatelessWidget {
       ));
 }
 
-class PrivacyPolicy extends StatelessWidget {
-  const PrivacyPolicy({super.key});
+class MarkdownWidget extends StatelessWidget {
+  final String file;
+  const MarkdownWidget(this.file, {super.key});
 
   @override
-  Widget build(BuildContext context) => const Text.rich(TextSpan(
-      text:
-          """we collect data to ensure data integrity and application security
-we do not sell data
-email dev@team4159.org to request deletion, all data will be removed within 10 business days 
-we collect data you provide: name, email, frc team number
-we use cookies for authentication and caching but not tracking
-we retain data as long as needed to provide our services
-any changes to the policy will have 30 days' notice by email"""));
-}
-
-class TermsOfService extends StatelessWidget {
-  const TermsOfService({super.key});
-
-  @override
-  Widget build(BuildContext context) => const Text.rich(TextSpan(text: "be good"));
+  Widget build(BuildContext context) => FutureBuilder(
+      future: DefaultAssetBundle.of(context).loadString("assets/documents/$file.md"),
+      builder: ((context, snapshot) => !snapshot.hasData
+          ? const Center(child: CircularProgressIndicator())
+          : Markdown(data: snapshot.data!, selectable: true)));
 }

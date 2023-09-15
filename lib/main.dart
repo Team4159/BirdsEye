@@ -190,8 +190,9 @@ final router = GoRouter(
       ShellRoute(
           pageBuilder: (context, state, child) => MaterialPage(child: LegalShell(child)),
           routes: [
-            GoRoute(path: '/legal/privacy', builder: (context, state) => const PrivacyPolicy()),
-            GoRoute(path: '/legal/terms', builder: (context, state) => const TermsOfService())
+            GoRoute(path: '/legal/privacy', builder: (_, __) => const MarkdownWidget("privacy")),
+            GoRoute(path: '/legal/terms', builder: (_, __) => const MarkdownWidget("tos")),
+            GoRoute(path: '/legal/cookies', builder: (_, __) => const MarkdownWidget("cookies"))
           ])
     ],
     refreshListenable: UserMetadata.instance,
