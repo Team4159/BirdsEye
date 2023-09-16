@@ -3,7 +3,10 @@ import 'package:flutter_swipe_action_cell/core/cell.dart';
 
 import './matchscout.dart' as matchscout;
 import './pitscout.dart' as pitscout;
+import '../interfaces/bluealliance.dart';
 import '../interfaces/localstore.dart';
+import '../pages/configuration.dart';
+import '../widgets/deleteconfirmation.dart';
 
 class SavedResponsesPage extends StatelessWidget {
   final _list = _WrappedList([]);
@@ -12,7 +15,30 @@ class SavedResponsesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => RefreshIndicator.adaptive(
       child: CustomScrollView(physics: const BouncingScrollPhysics(), slivers: [
-        const SliverAppBar(primary: true, pinned: true, title: Text("Saved Responses")),
+        SliverAppBar(primary: true, pinned: true, title: const Text("Saved Responses"), actions: [
+          Padding(
+              padding: const EdgeInsets.all(8),
+              child: FloatingActionButton.extended(
+                  onPressed: () => showModalBottomSheet(
+                      context: context,
+                      constraints: BoxConstraints.loose(const Size.fromHeight(140)),
+                      enableDrag: false,
+                      builder: (context) => Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CacheAddWidget(),
+                                const VerticalDivider(),
+                                DeleteConfirmation(
+                                    reset: BlueAlliance.stockSoT.deleteAll,
+                                    context: context,
+                                    toConfirm: "clear the cache")
+                              ]))),
+                  icon: const Icon(Icons.download_for_offline_rounded),
+                  label: const Text("Cache Manager")))
+        ]),
         FutureBuilder(
             future: _list.sync(),
             builder: (context, snapshot) => !snapshot.hasData
@@ -119,4 +145,47 @@ class _RespList extends StatelessWidget {
                                 style: Theme.of(context).textTheme.titleSmall,
                                 textScaleFactor: 1.5))));
               }));
+}
+
+class CacheAddWidget extends StatelessWidget {
+  final ValueNotifier<String?> _dropdownValue = ValueNotifier(null);
+  final ValueNotifier<String> _cacheStatus = ValueNotifier("Cache Event");
+  CacheAddWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) => Column(mainAxisSize: MainAxisSize.min, children: [
+        ListenableBuilder(
+            listenable: _cacheStatus, builder: (context, _) => Text(_cacheStatus.value)),
+        const SizedBox(height: 8),
+        FutureBuilder(
+            future: BlueAlliance.stock.get((
+              season: Configuration.instance.season,
+              event: null,
+              match: null
+            )).then((events) => events.keys
+                .map((eventcode) => DropdownMenuItem(value: eventcode, child: Text(eventcode)))
+                .toList()),
+            builder: (context, snapshot) => ListenableBuilder(
+                listenable: _dropdownValue,
+                builder: (context, _) => Row(children: [
+                      DropdownButton<String>(
+                          value: _dropdownValue.value,
+                          items: snapshot.data,
+                          onChanged: (val) => _dropdownValue.value = val),
+                      IconButton(
+                          icon: const Icon(Icons.add_box_rounded),
+                          onPressed: !BlueAlliance.dirtyConnected ||
+                                  _dropdownValue.value == null ||
+                                  _cacheStatus.value != "Cache Event"
+                              ? null
+                              : () {
+                                  String event = _dropdownValue.value!;
+                                  _dropdownValue.value = null;
+                                  _cacheStatus.value = "Fetching $event";
+                                  BlueAlliance.batchFetch(Configuration.instance.season, event)
+                                      .then((_) => _cacheStatus.value = "Cache Event")
+                                      .catchError((e) => _cacheStatus.value = e.toString());
+                                })
+                    ])))
+      ]);
 }

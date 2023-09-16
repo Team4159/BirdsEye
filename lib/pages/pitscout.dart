@@ -50,7 +50,8 @@ class _PitScoutPageState extends State<PitScoutPage> {
               .from("${Configuration.instance.season}_pit")
               .select<List<Map<String, dynamic>>>("team")
               .eq("event", Configuration.event)
-              .then((value) => value.map<int>((e) => e['team']).toSet());
+              .then((value) => value.map<int>((e) => e['team']).toSet())
+              .catchError((_) => <int>{});
           if (UserMetadata.instance.team != null) {
             filledteams.add(UserMetadata.instance.team!);
           }

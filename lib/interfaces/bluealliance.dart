@@ -95,9 +95,10 @@ class BlueAlliance {
     }).catchError((_) => false);
   }
 
+  static final stockSoT = LocalSourceOfTruth("tba");
   static final stock = Stock<TBAInfo, Map<String, String>>(
-      sourceOfTruth: LocalSourceOfTruth("tba")
-          .mapTo<Map<String, String>>((p) => p.map((k, v) => MapEntry(k, v.toString())), (p) => p),
+      sourceOfTruth: stockSoT.mapTo<Map<String, String>>(
+          (p) => p.map((k, v) => MapEntry(k, v.toString())), (p) => p),
       fetcher: Fetcher.ofFuture((key) async {
         if (key.event == null) {
           // season
@@ -131,4 +132,29 @@ class BlueAlliance {
           return o;
         }
       }));
+
+  static Future<void> batchFetch(int season, String event) async {
+    var data = List<dynamic>.from(await _getJson("event/$season$event/matches/simple"));
+    Map<String, String> matches = {};
+    Map<String, String> pitTeams = {};
+    for (dynamic matchdata in data) {
+      Map<String, String> o = {};
+      for (MapEntry<String, dynamic> alliance
+          in Map<String, dynamic>.from(matchdata['alliances']).entries) {
+        for (MapEntry<int, String> team
+            in List<String>.from(alliance.value['team_keys']).asMap().entries) {
+          String teamkey = team.value.substring(3);
+          if (teamkey != "0") {
+            o[teamkey] = "${alliance.key}${team.key + 1}";
+            pitTeams[teamkey] = "*";
+          }
+        }
+      }
+      String matchkey = (matchdata['key'] as String).split("_").last;
+      matches[matchkey] = matchdata['key'];
+      await stockSoT.write((season: season, event: event, match: matchkey), o);
+    }
+    await stockSoT.write((season: season, event: event, match: null), matches);
+    await stockSoT.write((season: season, event: event, match: "*"), pitTeams);
+  }
 }
