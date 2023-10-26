@@ -37,25 +37,26 @@ class SavedResponsesPage extends StatelessWidget {
                                     toConfirm: "clear the cache")
                               ]))),
                   icon: const Icon(Icons.download_for_offline_rounded),
-                  label: const Text("Cache Manager")))
+                  label: const Text("Cache")))
         ]),
-        FutureBuilder(
-            future: _list.sync(),
-            builder: (context, snapshot) => !snapshot.hasData
-                ? SliverToBoxAdapter(
-                    child: snapshot.hasError
-                        ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                                Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
-                                const SizedBox(height: 20),
-                                Text(snapshot.error.toString())
-                              ])
-                        : const Center(child: CircularProgressIndicator()))
-                : SliverPadding(
-                    padding: const EdgeInsets.only(left: 12, right: 12, top: 24),
-                    sliver: _RespList(snapshot.data!)))
+        SliverSafeArea(
+            sliver: FutureBuilder(
+                future: _list.sync(),
+                builder: (context, snapshot) => !snapshot.hasData
+                    ? SliverToBoxAdapter(
+                        child: snapshot.hasError
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                    Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
+                                    const SizedBox(height: 20),
+                                    Text(snapshot.error.toString())
+                                  ])
+                            : const Center(child: CircularProgressIndicator()))
+                    : SliverPadding(
+                        padding: const EdgeInsets.only(left: 12, right: 12, top: 24),
+                        sliver: _RespList(snapshot.data!))))
       ]),
       onRefresh: () => _list.sync());
 }

@@ -9,7 +9,8 @@ import '../interfaces/localstore.dart';
 import '../interfaces/supabase.dart';
 import '../widgets/deleteconfirmation.dart';
 
-typedef MatchScoutQuestionSchema = Map<String, Map<String, MatchScoutQuestionTypes>>;
+typedef MatchScoutQuestionSchema
+    = LinkedHashMap<String, LinkedHashMap<String, MatchScoutQuestionTypes>>;
 
 enum MatchScoutQuestionTypes<T> {
   text<String>(sqlType: "text"),
@@ -74,147 +75,150 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                 primary: true, floating: true, snap: true, title: Text("Match Scouting")),
             SliverToBoxAdapter(child: MatchScoutInfoFields(info: info))
           ],
-      body: FutureBuilder(
-          future: SupabaseInterface.matchSchema,
-          builder: (context, snapshot) => !snapshot.hasData
-              ? snapshot.hasError
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                          Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
-                          const SizedBox(height: 20),
-                          Text(snapshot.error.toString())
-                        ])
-                  : const Center(child: CircularProgressIndicator())
-              : ListenableBuilder(
-                  listenable: info.teamController,
-                  builder: (context, child) => AnimatedSlide(
-                      offset: info.isFilled ? Offset.zero : const Offset(0, 1),
-                      curve: Curves.easeInOutCirc,
-                      duration: const Duration(seconds: 1),
-                      child: child),
-                  child: Form(
-                      key: _formKey,
-                      child: CustomScrollView(cacheExtent: double.infinity, slivers: [
-                        for (var MapEntry(key: section, value: contents)
-                            in snapshot.data!.entries) ...[
-                          SliverAppBar(
-                              primary: false,
-                              excludeHeaderSemantics: true,
-                              automaticallyImplyLeading: false,
-                              centerTitle: true,
-                              stretch: false,
-                              title: Text(section,
-                                  style: Theme.of(context).textTheme.headlineLarge,
-                                  textScaleFactor: 1.5)),
-                          SliverPadding(
-                              padding: const EdgeInsets.only(bottom: 12, left: 6, right: 6),
-                              sliver: SliverGrid.count(
-                                  crossAxisCount: 2,
-                                  childAspectRatio: MediaQuery.of(context).size.width > 450 ? 3 : 2,
-                                  mainAxisSpacing: 8,
-                                  crossAxisSpacing: 12,
-                                  children: [
-                                    for (var MapEntry(key: field, value: type) in contents.entries)
-                                      switch (type) {
-                                        MatchScoutQuestionTypes.text => TextFormField(
-                                            maxLines: null,
-                                            expands: true,
-                                            style: TextStyle(
-                                                color: Theme.of(context)
+      body: SafeArea(
+          child: FutureBuilder(
+              future: SupabaseInterface.matchSchema,
+              builder: (context, snapshot) => !snapshot.hasData
+                  ? snapshot.hasError
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                              Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
+                              const SizedBox(height: 20),
+                              Text(snapshot.error.toString())
+                            ])
+                      : const Center(child: CircularProgressIndicator())
+                  : ListenableBuilder(
+                      listenable: info.teamController,
+                      builder: (context, child) => AnimatedSlide(
+                          offset: info.isFilled ? Offset.zero : const Offset(0, 1),
+                          curve: Curves.easeInOutCirc,
+                          duration: const Duration(seconds: 1),
+                          child: child),
+                      child: Form(
+                          key: _formKey,
+                          child: CustomScrollView(cacheExtent: double.infinity, slivers: [
+                            for (var MapEntry(key: section, value: contents)
+                                in snapshot.data!.entries) ...[
+                              SliverAppBar(
+                                  primary: false,
+                                  excludeHeaderSemantics: true,
+                                  automaticallyImplyLeading: false,
+                                  centerTitle: true,
+                                  stretch: false,
+                                  title: Text(section,
+                                      style: Theme.of(context).textTheme.headlineLarge,
+                                      textScaleFactor: 1.5)),
+                              SliverPadding(
+                                  padding: const EdgeInsets.only(bottom: 12, left: 6, right: 6),
+                                  sliver: SliverGrid.count(
+                                      crossAxisCount: 2,
+                                      childAspectRatio:
+                                          MediaQuery.of(context).size.width > 450 ? 3 : 2,
+                                      mainAxisSpacing: 8,
+                                      crossAxisSpacing: 12,
+                                      children: [
+                                        for (var MapEntry(key: field, value: type)
+                                            in contents.entries)
+                                          switch (type) {
+                                            MatchScoutQuestionTypes.text => TextFormField(
+                                                maxLines: null,
+                                                expands: true,
+                                                style: TextStyle(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSecondaryContainer),
+                                                cursorColor: Theme.of(context)
                                                     .colorScheme
-                                                    .onSecondaryContainer),
-                                            cursorColor:
-                                                Theme.of(context).colorScheme.onSecondaryContainer,
-                                            decoration: InputDecoration(
+                                                    .onSecondaryContainer,
+                                                decoration: InputDecoration(
+                                                    labelText: field
+                                                        .split("_")
+                                                        .map((s) =>
+                                                            s[0].toUpperCase() + s.substring(1))
+                                                        .join(" "),
+                                                    filled: true,
+                                                    fillColor: Theme.of(context)
+                                                        .colorScheme
+                                                        .secondaryContainer
+                                                        .withAlpha(75),
+                                                    labelStyle: TextStyle(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSecondaryContainer,
+                                                        fontWeight: FontWeight.w500),
+                                                    enabledBorder: OutlineInputBorder(
+                                                        borderSide: BorderSide(
+                                                            color:
+                                                                Theme.of(context).colorScheme.secondaryContainer,
+                                                            width: 3)),
+                                                    focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).colorScheme.secondaryContainer, width: 2))),
+                                                onSaved: (i) => _fields["${section}_$field"] = i),
+                                            MatchScoutQuestionTypes.counter => CounterFormField(
                                                 labelText: field
                                                     .split("_")
                                                     .map((s) => s[0].toUpperCase() + s.substring(1))
                                                     .join(" "),
-                                                filled: true,
-                                                fillColor: Theme.of(context)
-                                                    .colorScheme
-                                                    .secondaryContainer
-                                                    .withAlpha(75),
-                                                labelStyle: TextStyle(
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .onSecondaryContainer,
-                                                    fontWeight: FontWeight.w500),
-                                                enabledBorder: OutlineInputBorder(
-                                                    borderSide: BorderSide(
-                                                        color: Theme.of(context)
-                                                            .colorScheme
-                                                            .secondaryContainer,
-                                                        width: 3)),
-                                                focusedBorder: OutlineInputBorder(
-                                                    borderSide: BorderSide(color: Theme.of(context).colorScheme.secondaryContainer, width: 2))),
-                                            onSaved: (i) => _fields["${section}_$field"] = i),
-                                        MatchScoutQuestionTypes.counter => CounterFormField(
-                                            labelText: field
-                                                .split("_")
-                                                .map((s) => s[0].toUpperCase() + s.substring(1))
-                                                .join(" "),
-                                            onSaved: (i) => _fields["${section}_$field"] = i),
-                                        MatchScoutQuestionTypes.slider => RatingFormField(
-                                            labelText: field
-                                                .split("_")
-                                                .map((s) => s[0].toUpperCase() + s.substring(1))
-                                                .join(" "),
-                                            onSaved: (i) => _fields["${section}_$field"] = i),
-                                        MatchScoutQuestionTypes.toggle => ToggleFormField(
-                                            labelText: field
-                                                .split("_")
-                                                .map((s) => s[0].toUpperCase() + s.substring(1))
-                                                .join(" "),
-                                            onSaved: (i) => _fields["${section}_$field"] = i),
-                                        MatchScoutQuestionTypes.error => Material(
-                                            type: MaterialType.button,
-                                            borderRadius: BorderRadius.circular(4),
-                                            color: Theme.of(context).colorScheme.errorContainer,
-                                            child: Center(child: Text(field)))
-                                      }
-                                  ]))
-                        ],
-                        SliverPadding(
-                            padding: const EdgeInsets.all(20),
-                            sliver: SliverToBoxAdapter(
-                                child: Row(children: [
-                              Expanded(
-                                  child: FilledButton(
-                                      child: const Text("Submit"),
-                                      onPressed: () {
-                                        _fields.clear();
-                                        _formKey.currentState!.save();
-                                        submitInfo({
-                                          "event": Configuration.event,
-                                          "match": info.getMatchStr(),
-                                          "team": info.team,
-                                          ..._fields
-                                        }).then((_) async {
-                                          _formKey.currentState!.reset();
-                                          await _scrollController.animateTo(0,
-                                              duration: const Duration(seconds: 1),
-                                              curve: Curves.easeOutBack);
-                                          info.resetInfo();
-                                        }).catchError((e) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(SnackBar(content: Text(e.toString())));
-                                        });
-                                      })),
-                              const SizedBox(width: 10),
-                              DeleteConfirmation(
-                                  context: context,
-                                  reset: () async {
-                                    _formKey.currentState!.reset();
-                                    await _scrollController.animateTo(0,
-                                        duration: const Duration(milliseconds: 1500),
-                                        curve: Curves.easeOutBack);
-                                    info.resetInfo();
-                                  })
-                            ])))
-                      ])))));
+                                                onSaved: (i) => _fields["${section}_$field"] = i),
+                                            MatchScoutQuestionTypes.slider => RatingFormField(
+                                                labelText: field
+                                                    .split("_")
+                                                    .map((s) => s[0].toUpperCase() + s.substring(1))
+                                                    .join(" "),
+                                                onSaved: (i) => _fields["${section}_$field"] = i),
+                                            MatchScoutQuestionTypes.toggle => ToggleFormField(
+                                                labelText: field
+                                                    .split("_")
+                                                    .map((s) => s[0].toUpperCase() + s.substring(1))
+                                                    .join(" "),
+                                                onSaved: (i) => _fields["${section}_$field"] = i),
+                                            MatchScoutQuestionTypes.error => Material(
+                                                type: MaterialType.button,
+                                                borderRadius: BorderRadius.circular(4),
+                                                color: Theme.of(context).colorScheme.errorContainer,
+                                                child: Center(child: Text(field)))
+                                          }
+                                      ]))
+                            ],
+                            SliverPadding(
+                                padding: const EdgeInsets.all(20),
+                                sliver: SliverToBoxAdapter(
+                                    child: Row(children: [
+                                  Expanded(
+                                      child: FilledButton(
+                                          child: const Text("Submit"),
+                                          onPressed: () {
+                                            _fields.clear();
+                                            _formKey.currentState!.save();
+                                            submitInfo({
+                                              "event": Configuration.event,
+                                              "match": info.getMatchStr(),
+                                              "team": info.team,
+                                              ..._fields
+                                            }).then((_) async {
+                                              _formKey.currentState!.reset();
+                                              await _scrollController.animateTo(0,
+                                                  duration: const Duration(seconds: 1),
+                                                  curve: Curves.easeOutBack);
+                                              info.resetInfo();
+                                            }).catchError((e) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text(e.toString())));
+                                            });
+                                          })),
+                                  const SizedBox(width: 10),
+                                  DeleteConfirmation(
+                                      context: context,
+                                      reset: () async {
+                                        _formKey.currentState!.reset();
+                                        await _scrollController.animateTo(0,
+                                            duration: const Duration(milliseconds: 1500),
+                                            curve: Curves.easeOutBack);
+                                        info.resetInfo();
+                                      })
+                                ])))
+                          ]))))));
 }
 
 class MatchScoutInfo {

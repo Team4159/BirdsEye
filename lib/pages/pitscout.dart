@@ -114,7 +114,8 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                   key: _teamFieldKey,
                                                   controller: textEditingController,
                                                   focusNode: focusNode,
-                                                  autovalidateMode: AutovalidateMode.always,
+                                                  autovalidateMode:
+                                                      AutovalidateMode.onUserInteraction,
                                                   decoration: const InputDecoration(
                                                       helperText: "Team", counterText: ""),
                                                   keyboardType: TextInputType.number,
@@ -177,107 +178,109 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                       }))
                             ]))))
           ],
-      body: FutureBuilder(
-          future: SupabaseInterface.pitSchema,
-          builder: (context, snapshot) => !snapshot.hasData
-              ? snapshot.hasError
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                          Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
-                          const SizedBox(height: 20),
-                          Text(snapshot.error.toString())
-                        ])
-                  : const Center(child: CircularProgressIndicator())
-              : ListenableBuilder(
-                  listenable: _team,
-                  builder: (context, child) => AnimatedSlide(
-                      offset: (_team.value != null) ? Offset.zero : const Offset(0, 1),
-                      curve: Curves.easeInOutCirc,
-                      duration: const Duration(seconds: 1),
-                      child: child),
-                  child: CustomScrollView(cacheExtent: double.infinity, slivers: [
-                    for (var MapEntry(:key, value: question) in snapshot.data!.entries)
-                      SliverPadding(
-                          padding: const EdgeInsets.only(top: 12, left: 12, right: 12),
-                          sliver: SliverToBoxAdapter(
-                              child: Material(
-                                  type: MaterialType.button,
-                                  borderRadius: BorderRadius.circular(4),
-                                  color: Theme.of(context).colorScheme.secondaryContainer,
-                                  child: Padding(
-                                      padding: const EdgeInsets.all(24),
-                                      child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(question,
-                                                style: Theme.of(context).textTheme.titleSmall,
-                                                textScaleFactor: 1.5),
-                                            const SizedBox(height: 16),
-                                            TextField(
-                                                controller: _controllers[key] ??=
-                                                    TextEditingController(),
-                                                keyboardType: TextInputType.multiline,
-                                                maxLines: null,
-                                                maxLength: 65535,
-                                                style: TextStyle(
-                                                    color: Theme.of(context)
+      body: SafeArea(
+          child: FutureBuilder(
+              future: SupabaseInterface.pitSchema,
+              builder: (context, snapshot) => !snapshot.hasData
+                  ? snapshot.hasError
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                              Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
+                              const SizedBox(height: 20),
+                              Text(snapshot.error.toString())
+                            ])
+                      : const Center(child: CircularProgressIndicator())
+                  : ListenableBuilder(
+                      listenable: _team,
+                      builder: (context, child) => AnimatedSlide(
+                          offset: (_team.value != null) ? Offset.zero : const Offset(0, 1),
+                          curve: Curves.easeInOutCirc,
+                          duration: const Duration(seconds: 1),
+                          child: child),
+                      child: CustomScrollView(cacheExtent: double.infinity, slivers: [
+                        for (var MapEntry(:key, value: question) in snapshot.data!.entries)
+                          SliverPadding(
+                              padding: const EdgeInsets.only(top: 12, left: 12, right: 12),
+                              sliver: SliverToBoxAdapter(
+                                  child: Material(
+                                      type: MaterialType.button,
+                                      borderRadius: BorderRadius.circular(4),
+                                      color: Theme.of(context).colorScheme.secondaryContainer,
+                                      child: Padding(
+                                          padding: const EdgeInsets.all(24),
+                                          child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(question,
+                                                    style: Theme.of(context).textTheme.titleSmall,
+                                                    textScaleFactor: 1.5),
+                                                const SizedBox(height: 16),
+                                                TextField(
+                                                    controller: _controllers[key] ??=
+                                                        TextEditingController(),
+                                                    keyboardType: TextInputType.multiline,
+                                                    maxLines: null,
+                                                    maxLength: 65535,
+                                                    style: TextStyle(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSecondaryContainer),
+                                                    cursorColor: Theme.of(context)
                                                         .colorScheme
-                                                        .onSecondaryContainer),
-                                                cursorColor: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSecondaryContainer,
-                                                decoration: InputDecoration(
-                                                    hintText: "Type answer",
-                                                    counterText: "",
-                                                    focusedBorder: UnderlineInputBorder(
-                                                        borderSide: BorderSide(
-                                                            color: Theme.of(context)
-                                                                .colorScheme
-                                                                .onSecondaryContainer))))
-                                          ]))))),
-                    SliverPadding(
-                        padding: const EdgeInsets.all(20),
-                        sliver: SliverToBoxAdapter(
-                            child: Row(children: [
-                          Expanded(
-                              child: FilledButton(
-                                  child: const Text("Submit"),
-                                  onPressed: () {
-                                    submitInfo({
-                                      "event": Configuration.event,
-                                      "team": _team.value,
-                                      ..._controllers.map((key, value) => MapEntry(key, value.text))
-                                    }).then((_) async {
-                                      for (TextEditingController controller
-                                          in _controllers.values) {
-                                        controller.clear();
-                                      }
+                                                        .onSecondaryContainer,
+                                                    decoration: InputDecoration(
+                                                        hintText: "Type answer",
+                                                        counterText: "",
+                                                        focusedBorder: UnderlineInputBorder(
+                                                            borderSide: BorderSide(
+                                                                color: Theme.of(context)
+                                                                    .colorScheme
+                                                                    .onSecondaryContainer))))
+                                              ]))))),
+                        SliverPadding(
+                            padding: const EdgeInsets.all(20),
+                            sliver: SliverToBoxAdapter(
+                                child: Row(children: [
+                              Expanded(
+                                  child: FilledButton(
+                                      child: const Text("Submit"),
+                                      onPressed: () {
+                                        submitInfo({
+                                          "event": Configuration.event,
+                                          "team": _team.value,
+                                          ..._controllers
+                                              .map((key, value) => MapEntry(key, value.text))
+                                        }).then((_) async {
+                                          for (TextEditingController controller
+                                              in _controllers.values) {
+                                            controller.clear();
+                                          }
 
-                                      await _scrollController.animateTo(0,
-                                          duration: const Duration(seconds: 1),
-                                          curve: Curves.easeOutBack);
-                                      _teamFieldKey.currentState!.didChange("");
-                                      _team.value = _teamFieldError = null;
-                                    }).catchError((e) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(SnackBar(content: Text(e.toString())));
-                                    });
-                                  })),
-                          const SizedBox(width: 10),
-                          DeleteConfirmation(
-                              context: context,
-                              reset: () async {
-                                for (TextEditingController controller in _controllers.values) {
-                                  controller.clear();
-                                }
-                                await _scrollController.animateTo(0,
-                                    duration: const Duration(seconds: 1),
-                                    curve: Curves.easeOutBack);
-                                _teamFieldKey.currentState!.didChange("");
-                                _team.value = _teamFieldError = null;
-                              })
-                        ])))
-                  ]))));
+                                          await _scrollController.animateTo(0,
+                                              duration: const Duration(seconds: 1),
+                                              curve: Curves.easeOutBack);
+                                          _teamFieldKey.currentState!.didChange("");
+                                          _team.value = _teamFieldError = null;
+                                        }).catchError((e) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(SnackBar(content: Text(e.toString())));
+                                        });
+                                      })),
+                              const SizedBox(width: 10),
+                              DeleteConfirmation(
+                                  context: context,
+                                  reset: () async {
+                                    for (TextEditingController controller in _controllers.values) {
+                                      controller.clear();
+                                    }
+                                    await _scrollController.animateTo(0,
+                                        duration: const Duration(seconds: 1),
+                                        curve: Curves.easeOutBack);
+                                    _teamFieldKey.currentState!.didChange("");
+                                    _team.value = _teamFieldError = null;
+                                  })
+                            ])))
+                      ])))));
 }

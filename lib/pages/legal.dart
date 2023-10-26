@@ -1,7 +1,8 @@
-import 'package:birdseye/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
+
+import '../main.dart';
 
 class LegalShell extends StatelessWidget {
   final Widget child;

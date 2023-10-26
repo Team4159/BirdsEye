@@ -296,5 +296,5 @@ class ScaffoldShell extends StatelessWidget {
                                   fontFamily: "HemiHead", fontSize: 32, color: cardinalred),
                             )))))
           ])),
-      body: SafeArea(child: child));
+      body: child);
 }

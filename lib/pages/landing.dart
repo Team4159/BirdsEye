@@ -27,10 +27,11 @@ class LandingPage extends StatelessWidget {
       ]),
       persistentFooterAlignment: AlignmentDirectional.bottomCenter,
       body: Center(
-          child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+          child: SafeArea(
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
             FloatingActionButton.extended(
                 onPressed: () => Supabase.instance.client.auth.signInWithOAuth(Provider.github,
                     authScreenLaunchMode: LaunchMode.externalApplication,
@@ -54,5 +55,5 @@ class LandingPage extends StatelessWidget {
                         color: Colors.white, fontFamily: "Roboto", fontWeight: FontWeight.w500)),
                 icon: SvgPicture.asset('assets/images/google.svg', height: 36, width: 36),
                 backgroundColor: const Color(0xff4285F4))
-          ])));
+          ]))));
 }
