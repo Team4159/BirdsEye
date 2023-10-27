@@ -28,8 +28,7 @@ void main() {
       return Response("No Data Found for ${params['season']}${params['event']}",
           status: HttpStatus.notFound);
     }
-    bool isText = params.containsKey("type") && params["type"] == "text";
-    if (isText) {
+    if (params.containsKey("type") && params["type"] == "text") {
       // Data Aggregation
       Map<int, Map<String, Map<String, String>>> agg = {}; // {team: {match: {question: value}}}
       for (Map<String, dynamic> scoutingEntry in data) {

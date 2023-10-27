@@ -43,8 +43,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Supabase Edge
-supabase/functions
-
 # dev todo list
 plans/
