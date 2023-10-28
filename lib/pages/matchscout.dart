@@ -192,10 +192,10 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                                             _fields.clear();
                                             _formKey.currentState!.save();
                                             submitInfo({
+                                              ..._fields,
                                               "event": Configuration.event,
                                               "match": info.getMatchStr(),
-                                              "team": info.team,
-                                              ..._fields
+                                              "team": info.team
                                             }).then((_) async {
                                               _formKey.currentState!.reset();
                                               await _scrollController.animateTo(0,

@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 // import { Database } from './database.types.ts'
+import { AllianceInfo, MatchInfo } from "./tba.types.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,10 +44,10 @@ Deno.serve(async (req: Request) => {
   }
   if (params.get("type") === "text") {
     // Data Aggregation
-    const agg: { [key: number]: { [key: string]: { [key: string]: string } } } =
+    const agg: { [key: string]: { [key: string]: { [key: string]: string } } } =
       {}; // {team: {match: {question: value}}}
     for (const scoutingEntry of data) {
-      const team: number = parseInt(scoutingEntry["team"]);
+      const team: string = scoutingEntry["team"];
       if (agg[team] == null) agg[team] = {};
       const match: string = scoutingEntry["match"];
       if (agg[team][match] == null) agg[team][match] = {};
@@ -68,15 +69,34 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   } else {
+    // TBA Fetching
+    const tbadataraw: MatchInfo[] = await fetch(`https://www.thebluealliance.com/api/v3/event/${params.get("season")}${params.get("event")}/matches`,
+    {headers: {"X-TBA-Auth-Key": Deno.env.get("TBA_KEY")!}}).then(resp => resp.json())
+    const tbadata: {[key: string]: MatchInfo} = Object.fromEntries(tbadataraw.map(match => [match.key.split("_").at(-1), match]))
+
     // Data Aggregation
     const agg: {
-      [key: string]: { [key: number]: { [key: string]: Set<number> } };
+      [key: string]: { [key: string]: { [key: string]: Set<number> } };
     } = {}; // {match: {team: {scoretype: value}}}
     for (const scoutingEntry of data) {
       const match: string = scoutingEntry["match"];
       if (agg[match] == null) agg[match] = {};
-      const team: number = parseInt(scoutingEntry["team"]);
+      const team: string = scoutingEntry["team"];
       if (agg[match][team] == null) agg[match][team] = {};
+
+      if (!(match in tbadata)) continue;
+      const { alliance, index } = getRobotPosition(tbadata[match].alliances, team);
+      // deno-lint-ignore no-explicit-any
+      const scoreBreak: {[key: string]: any} = tbadata[match].score_breakdown[alliance];
+      agg[match][team]["auto_mobility"] = new Set([scoreBreak[`mobilityRobot${index}`] === "Yes" ? 1 : 0]);
+      const autodocked = scoreBreak[`autoChargeStationRobot${index}`] === "Docked";
+      agg[match][team]["auto_docked"] = new Set([autodocked ? 1 : 0]);
+      agg[match][team]["auto_engaged"] = new Set([autodocked && scoreBreak.autoBridgeState === "Level" ? 1 : 0]);
+      agg[match][team]["endgame_parked"] = new Set([scoreBreak[`endGameChargeStationRobot${index}`] === "Park" ? 1 : 0]);
+      const endgamedocked = scoreBreak[`endGameChargeStationRobot${index}`] === "Docked";
+      agg[match][team]["endgame_docked"] = new Set([endgamedocked ? 1 : 0]);
+      agg[match][team]["endgame_engaged"] = new Set([endgamedocked && scoreBreak.endGameBridgeState === "Level" ? 1 : 0]);
+      
       ["event", "match", "team", "scouter"].forEach((k) =>
         delete scoutingEntry[k]
       );
@@ -120,3 +140,11 @@ Deno.serve(async (req: Request) => {
     });
   }
 });
+
+function getRobotPosition(alliances: {red: AllianceInfo, blue: AllianceInfo}, team: string): {alliance: "red" | "blue", index: number} {
+  for (const [alliance, info] of Object.entries(alliances)) {
+    const i = info.team_keys.indexOf(`frc${team}`)
+    if (i !== -1) return {"alliance": alliance as "red" | "blue", index: i+1}
+  }
+  throw new Error("Invalid Robot Position")
+}

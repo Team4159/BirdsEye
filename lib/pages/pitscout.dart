@@ -248,10 +248,10 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                       child: const Text("Submit"),
                                       onPressed: () {
                                         submitInfo({
-                                          "event": Configuration.event,
-                                          "team": _team.value,
                                           ..._controllers
-                                              .map((key, value) => MapEntry(key, value.text))
+                                              .map((key, value) => MapEntry(key, value.text)),
+                                          "event": Configuration.event,
+                                          "team": _team.value
                                         }).then((_) async {
                                           for (TextEditingController controller
                                               in _controllers.values) {

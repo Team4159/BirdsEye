@@ -20,9 +20,8 @@ void main() async {
   await Supabase.initialize(
     debug: false,
     url: 'https://zcckkiwosxzupxblocff.supabase.co',
-    anonKey: const String.fromEnvironment('SUPABASE_KEY',
-        defaultValue:
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjY2traXdvc3h6dXB4YmxvY2ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODY4NDk3MzMsImV4cCI6MjAwMjQyNTczM30.IVIT9yIxQ9JiwbDB6v10ZI8eP7c1oQhwoWZejoODllQ"),
+    anonKey:
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjY2traXdvc3h6dXB4YmxvY2ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODY4NDk3MzMsImV4cCI6MjAwMjQyNTczM30.IVIT9yIxQ9JiwbDB6v10ZI8eP7c1oQhwoWZejoODllQ",
   );
   UserMetadata.initialize();
   runApp(MaterialApp.router(
@@ -298,12 +297,11 @@ class ScaffoldShell extends StatelessWidget {
                   ..pop()
                   ..goNamed(RoutePaths.savedresp.name)),
             ListTile(
-              leading: const Icon(Icons.auto_graph_rounded),
-              title: const Text("Data Analysis"),
-              onTap: () => GoRouter.of(context)
-                ..pop()
-                ..goNamed(RoutePaths.analysis.name),
-            ),
+                leading: const Icon(Icons.auto_graph_rounded),
+                title: const Text("Data Analysis"),
+                onTap: () => GoRouter.of(context)
+                  ..pop()
+                  ..goNamed(RoutePaths.analysis.name)),
             const Expanded(
                 child: Align(
                     alignment: Alignment.bottomLeft,

@@ -21,10 +21,7 @@ class AnalysisPage extends StatelessWidget {
           const SizedBox(width: 12),
           FieldButton(label: "Event", onChange: (value) => info.event = value),
           const SizedBox(width: 12),
-          FieldButton(
-              label: "Team",
-              intOnly: true,
-              onChange: (value) => info.team = value == null ? null : int.parse(value)),
+          FieldButton(label: "Team", onChange: (value) => info.team = value),
           const SizedBox(width: 12),
         ]),
         const SizedBox(height: 24),
@@ -88,9 +85,9 @@ class AnalysisInfo extends ChangeNotifier {
     notifyListeners();
   }
 
-  int? _team;
-  int? get team => _team;
-  set team(int? team) {
+  String? _team;
+  String? get team => _team;
+  set team(String? team) {
     _team = team;
     notifyListeners();
   }
@@ -112,41 +109,49 @@ class FieldButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IntrinsicWidth(
-          child: TextField(
-        enableSuggestions: false,
-        spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
-        decoration: InputDecoration(
-            hintText: label,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            filled: true,
-            isDense: true,
-            constraints: BoxConstraints.tight(const Size.fromHeight(40)),
-            border: OutlineInputBorder(
-                borderSide: BorderSide.none,
-                borderRadius: BorderRadius.circular((FilledButtonTheme.of(context)
-                            .style
-                            ?.fixedSize
-                            ?.resolve({MaterialState.disabled})?.height ??
-                        48) /
-                    2))),
-        textAlign: TextAlign.center,
-        textAlignVertical: TextAlignVertical.center,
-        textCapitalization: TextCapitalization.none,
-        inputFormatters: intOnly ? [FilteringTextInputFormatter.digitsOnly] : null,
-        focusNode: _focus,
-        controller: _controller,
-        onSubmitted: onChange,
-      ));
+      child: TextField(
+          autocorrect: false,
+          enableSuggestions: false,
+          spellCheckConfiguration: const SpellCheckConfiguration.disabled(),
+          decoration: InputDecoration(
+              hintText: label,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              filled: true,
+              isDense: true,
+              constraints: BoxConstraints.tight(const Size.fromHeight(40)),
+              border: OutlineInputBorder(
+                  borderSide: BorderSide.none,
+                  borderRadius: BorderRadius.circular((FilledButtonTheme.of(context)
+                              .style
+                              ?.fixedSize
+                              ?.resolve({MaterialState.disabled})?.height ??
+                          48) /
+                      2))),
+          textAlign: TextAlign.center,
+          textAlignVertical: TextAlignVertical.center,
+          textCapitalization: TextCapitalization.none,
+          inputFormatters: intOnly ? [FilteringTextInputFormatter.digitsOnly] : null,
+          keyboardType: intOnly ? TextInputType.number : TextInputType.text,
+          focusNode: _focus,
+          controller: _controller,
+          onSubmitted: (String value) {
+            value = value.trim().toLowerCase();
+            _controller.value = TextEditingValue(text: value);
+            onChange(value);
+          }));
 }
 
 class TeamAtEventGraph extends StatelessWidget {
-  final int season, team;
+  final int season;
+  final String team;
   final Set<MapEntry<MatchInfo, Map<String, int>>> data;
   TeamAtEventGraph({super.key, required this.season, required this.team, required dynamic response})
-      : data = (Map<String, dynamic>.from(response).map((key, value) => MapEntry(
-                key, Map<String, dynamic>.from(value).map((k1, v1) => MapEntry(int.parse(k1), v1))))
+      : data = (Map<String, dynamic>.from(response) // match:
+                .map((key, value) => MapEntry(key, Map<String, dynamic>.from(value) // team:
+                    ))
               ..removeWhere((key, value) => !value.containsKey(team)))
-            .map((key, value) => MapEntry(parseMatchInfo(key)!, Map<String, int>.from(value[team])))
+            .map((key, value) => MapEntry(parseMatchInfo(key)!,
+                Map<String, int>.from(value[team]))) // match: {scoretype: value}
             .entries
             .toSet();
 
@@ -170,7 +175,7 @@ class TeamAtEventGraph extends StatelessWidget {
                           : const SizedBox())),
               leftTitles: const AxisTitles(
                   axisNameWidget: Text("Score"),
-                  sideTitles: SideTitles(showTitles: true, reservedSize: 35))),
+                  sideTitles: SideTitles(showTitles: true, reservedSize: 32))),
           minY: 0,
           borderData: FlBorderData(show: false),
           gridData: const FlGridData(drawVerticalLine: false),
