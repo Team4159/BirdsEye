@@ -21,7 +21,7 @@ class SupabaseInterface {
           .rpc("getavailableseasons")
           .then((resp) => _availableSeasons = List<int>.from(resp));
 
-  static Future<void> setSession({String? match, int? team}) =>
+  static Future<void> setSession({String? match, String? team}) =>
       Supabase.instance.client.from("sessions").upsert({
         "season": Configuration.instance.season,
         "event": Configuration.event,
@@ -31,14 +31,14 @@ class SupabaseInterface {
 
   static Future<void> clearSession() => Supabase.instance.client.from("sessions").delete();
 
-  static Future<Map<int, int>> getSessions({required String match}) => Supabase.instance.client
+  static Future<Map<String, int>> getSessions({required String match}) => Supabase.instance.client
       .from("sessions")
       .select<List<Map<String, dynamic>>>("team")
       .eq("season", Configuration.instance.season)
       .eq("event", Configuration.event)
       .eq("match", match)
       .neq("scouter", Supabase.instance.client.auth.currentUser!.id)
-      .then((resp) => resp.map((e) => e['team'] as int).toList())
+      .then((resp) => resp.map((e) => e['team'] as String).toList())
       .then((sessions) => Map.fromEntries(
           sessions.toSet().map((team) => MapEntry(team, sessions.where((t) => t == team).length))));
 

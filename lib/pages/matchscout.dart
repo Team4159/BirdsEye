@@ -277,7 +277,7 @@ class MatchScoutInfo {
                 // WARNING untested: filter unfilled (finals) matches out
                 .then((teamsData) => LinkedHashMap.fromEntries((teamsData.entries.toList()
                       ..sort((a, b) => a.value.compareTo(b.value)))
-                    .map((e) => MapEntry(int.parse(e.key), e.value))
+                    .map((e) => MapEntry(e.key, e.value))
                     .map((e) => MapEntry(e.key,
                         "${sessions.containsKey(e.key) ? '${sessions[e.key]}|' : ''}${e.value}"))))
                 .then((data) {
@@ -291,16 +291,16 @@ class MatchScoutInfo {
   String? getMatchStr() => match == null ? null : stringifyMatchInfo(match!);
   void setMatchStr(String? m) => match = parseMatchInfo(m); // invoke the other setter
 
-  LinkedHashMap<int, String>? _teams;
-  LinkedHashMap<int, String>? get teams => _teams;
-  set teams(LinkedHashMap<int, String>? t) {
+  LinkedHashMap<String, String>? _teams;
+  LinkedHashMap<String, String>? get teams => _teams;
+  set teams(LinkedHashMap<String, String>? t) {
     _teams = t;
     team = null;
   }
 
-  ValueNotifier<int?> teamController;
-  int? get team => teamController.value;
-  set team(int? t) {
+  ValueNotifier<String?> teamController;
+  String? get team => teamController.value;
+  set team(String? t) {
     if (t == null) return teamController.value = null;
     if (teams == null) return;
     if (t == team || !teams!.containsKey(t)) return;
@@ -431,7 +431,7 @@ class MatchScoutInfoFields extends StatelessWidget {
                             isExpanded: false,
                             value: info.team,
                             items: info.teams == null
-                                ? <DropdownMenuItem<int>>[]
+                                ? <DropdownMenuItem<String>>[]
                                 : [
                                     for (var MapEntry(key: team, value: position)
                                         in info.teams!.entries)
@@ -449,7 +449,7 @@ class MatchScoutInfoFields extends StatelessWidget {
                                                     _generateRobotPositionChip(position)
                                                   ])))
                                   ],
-                            onChanged: (int? value) => info.team = value)))
+                            onChanged: (String? value) => info.team = value)))
               ])));
 }
 
