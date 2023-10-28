@@ -1,0 +1,10 @@
+{
+  "folders": [
+    {
+      "path": "."
+    },
+    {
+      "path": "supabase/functions/match_aggregator_js"
+    }
+  ]
+}

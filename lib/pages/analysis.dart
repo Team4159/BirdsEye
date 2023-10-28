@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,9 +37,8 @@ class AnalysisPage extends StatelessWidget {
                       if (info.season != null && info.event != null && info.team != null) {
                         return FutureBuilder(
                             future: Supabase.instance.client.functions.invoke(
-                                "match_aggregator_js?season=${info.season}&event=${info.event}",
-                                headers: Supabase.instance.client.auth
-                                    .headers), // workaround for lack of query params
+                                "match_aggregator_js?season=${info.season}&event=${info.event}", // workaround for lack of query params
+                                responseType: ResponseType.text),
                             builder: (context, snapshot) => !snapshot.hasData
                                 ? snapshot.hasError
                                     ? Column(
@@ -50,10 +51,22 @@ class AnalysisPage extends StatelessWidget {
                                             Text(snapshot.error.toString())
                                           ])
                                     : const Center(child: CircularProgressIndicator())
-                                : TeamAtEventGraph(
-                                    season: info.season!,
-                                    team: info.team!,
-                                    response: snapshot.data!.data));
+                                : (snapshot.data!.status != null && snapshot.data!.status! >= 400)
+                                    ? Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                            Icon(Icons.dangerous_rounded,
+                                                color: Colors.red[700], size: 50),
+                                            const SizedBox(height: 20),
+                                            Text(snapshot.data!.data),
+                                            Text("Error ${snapshot.data!.status!}",
+                                                style: Theme.of(context).textTheme.labelLarge)
+                                          ])
+                                    : TeamAtEventGraph(
+                                        season: info.season!,
+                                        team: info.team!,
+                                        response: jsonDecode(snapshot.data!.data)));
                       }
                       return const Center(child: Text("Not implemented"));
                     })))
