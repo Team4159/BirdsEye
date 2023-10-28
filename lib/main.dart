@@ -1,3 +1,4 @@
+import 'package:birdseye/pages/analysis.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -114,7 +115,16 @@ late final SharedPreferences prefs;
 
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
-enum RoutePaths { landing, metadata, configuration, scouting, matchscout, pitscout, savedresp }
+enum RoutePaths {
+  landing,
+  metadata,
+  configuration,
+  scouting,
+  matchscout,
+  pitscout,
+  savedresp,
+  analysis
+}
 
 final router = GoRouter(
     initialLocation: '/',
@@ -184,7 +194,13 @@ final router = GoRouter(
                           MaterialPage(child: SavedResponsesPage(), name: "Saved Responses"),
                       redirect: (context, state) async => await Configuration.instance.isValid
                           ? null
-                          : state.namedLocation(RoutePaths.configuration.name))
+                          : state.namedLocation(RoutePaths.configuration.name)),
+                  GoRoute(
+                      parentNavigatorKey: _shellNavigatorKey,
+                      path: 'analysis',
+                      name: RoutePaths.analysis.name,
+                      pageBuilder: (context, state) =>
+                          MaterialPage(child: AnalysisPage(), name: "Analysis")),
                 ])
           ]),
       ShellRoute(
@@ -281,6 +297,13 @@ class ScaffoldShell extends StatelessWidget {
                 onTap: () => GoRouter.of(context)
                   ..pop()
                   ..goNamed(RoutePaths.savedresp.name)),
+            ListTile(
+              leading: const Icon(Icons.auto_graph_rounded),
+              title: const Text("Data Analysis"),
+              onTap: () => GoRouter.of(context)
+                ..pop()
+                ..goNamed(RoutePaths.analysis.name),
+            ),
             const Expanded(
                 child: Align(
                     alignment: Alignment.bottomLeft,

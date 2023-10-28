@@ -1,4 +1,5 @@
 import 'dart:convert' show json;
+import 'dart:ui';
 
 import 'package:birdseye/interfaces/localstore.dart';
 import 'package:http/http.dart' show Client;
@@ -38,11 +39,65 @@ MatchInfo? parseMatchInfo(String? s) {
 String stringifyMatchInfo(MatchInfo m) =>
     "${m.level.compLevel}${m.finalnum != null ? '${m.finalnum}m' : ''}${m.index}";
 
+int hashMatchInfo(MatchInfo m) {
+  if ((m.finalnum != null && m.finalnum! > 16) || m.index > 256) {
+    throw Exception("MatchInfo not hashable - Values too large");
+  }
+  int out = m.level.index;
+  out <<= 4; // finalnum can't be more than 16
+  out += m.finalnum ?? 0;
+  out <<= 8; // index can't be more than 256
+  out += m.index;
+  return out; // 00000000 index, 0000 finalnum, 00... level
+}
+
+MatchInfo unhashMatchInfo(int h) {
+  int index = h & ((1 << 8) - 1);
+  h >>= 8;
+  int? fnum = h & ((1 << 4) - 1);
+  if (fnum == 0) fnum = null;
+  h >>= 4;
+  int lvl = h;
+  if (MatchLevel.values.length <= lvl) throw Exception("MatchInfo not unhashable - Hash too large");
+  return (index: index, finalnum: fnum, level: MatchLevel.values[lvl]);
+}
+
 int compareMatchInfo(MatchInfo a, MatchInfo b) => a.level != b.level
     ? b.level.index - a.level.index
     : a.finalnum != null && b.finalnum != null && a.finalnum != b.finalnum
         ? b.finalnum! - a.finalnum!
         : b.index - a.index;
+
+enum GamePeriod {
+  auto(Color.fromARGB(128, 200, 50, 50)),
+  teleop(Color.fromARGB(128, 50, 200, 50)),
+  endgame(Color.fromARGB(128, 50, 50, 200)),
+  others(Color.fromARGB(128, 50, 50, 50));
+
+  final Color graphColor;
+  const GamePeriod(this.graphColor);
+}
+
+int scoreTotal(Map<String, int> scores, {required int season, GamePeriod? period}) {
+  var entries = scores.entries;
+  if (period != null) {
+    if (period == GamePeriod.others) {
+      for (GamePeriod p in GamePeriod.values) {
+        entries = entries.where((e) => !e.key.startsWith("${p.name}_"));
+      }
+    } else {
+      entries = entries.where((e) => e.key.startsWith("${period.name}_"));
+    }
+  }
+  if (entries.isEmpty) return 0;
+  return switch (season) {
+    2023 => entries
+        .where((e) => scoringpoints2023.containsKey(e.key) && e.value != 0)
+        .map((e) => scoringpoints2023[e.key]! * e.value)
+        .followedBy([0]).reduce((v, e) => v + e),
+    _ => throw Exception("Can't total scores - Unrecognized Season")
+  };
+}
 
 typedef TBAInfo = ({int season, String? event, String? match});
 String stringifyTBAInfo(TBAInfo t) =>
@@ -74,7 +129,7 @@ class BlueAlliance {
 
   static Future _getJson(String path, {String? key}) => _client
           .get(Uri.https("www.thebluealliance.com", "/api/v3/$path",
-              {"X-TBA-Auth-Key": key ?? prefs.getString("tbaKey")}))
+              {"X-TBA-Auth-Key": key ?? prefs.getString('tbaKey')}))
           .then(
               (resp) => resp.statusCode < 400 ? json.decode(resp.body) : throw Exception(resp.body))
           .then((n) {
@@ -158,3 +213,25 @@ class BlueAlliance {
     await stockSoT.write((season: season, event: event, match: "*"), pitTeams);
   }
 }
+
+const scoringpoints2023 = {
+  "auto_cone_low": 3,
+  "auto_cone_mid": 4,
+  "auto_cone_high": 6,
+  "auto_cube_low": 3,
+  "auto_cube_mid": 4,
+  "auto_cube_high": 6,
+  "auto_mobility": 3,
+  "auto_docked": 8,
+  "auto_engaged": 4,
+  "teleop_cone_low": 2,
+  "teleop_cone_mid": 3,
+  "teleop_cone_high": 5,
+  "teleop_cube_low": 2,
+  "teleop_cube_mid": 3,
+  "teleop_cube_high": 5,
+  "endgame_parked": 2,
+  "endgame_docked": 6,
+  "endgame_engaged": 4,
+  "comments_fouls": -5
+};

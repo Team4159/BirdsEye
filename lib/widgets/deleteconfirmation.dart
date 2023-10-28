@@ -8,7 +8,6 @@ class DeleteConfirmation extends IconButton {
       required BuildContext context,
       String toConfirm = "reset"})
       : super(
-            focusNode: FocusNode(skipTraversal: true),
             icon: Icon(Icons.delete, color: Colors.red[800]),
             tooltip: toConfirm,
             onPressed: () => showDialog(

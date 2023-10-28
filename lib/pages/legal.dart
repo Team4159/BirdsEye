@@ -9,16 +9,15 @@ class LegalShell extends StatelessWidget {
   const LegalShell(this.child, {super.key});
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-          child: Scaffold(
-        body: Padding(padding: const EdgeInsets.all(16), child: child),
+  Widget build(BuildContext context) => Scaffold(
+        body: SafeArea(minimum: const EdgeInsets.all(16), child: child),
         floatingActionButtonLocation: FloatingActionButtonLocation.miniStartTop,
         floatingActionButton: IconButton.filledTonal(
             onPressed: () => GoRouter.of(context).canPop()
                 ? GoRouter.of(context).pop()
                 : GoRouter.of(context).goNamed(RoutePaths.landing.name),
             icon: const Icon(Icons.arrow_back_rounded)),
-      ));
+      );
 }
 
 class MarkdownWidget extends StatelessWidget {
