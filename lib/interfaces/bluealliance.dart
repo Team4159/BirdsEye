@@ -1,11 +1,11 @@
 import 'dart:convert' show json;
 import 'dart:ui';
 
-import 'package:birdseye/interfaces/localstore.dart';
 import 'package:http/http.dart' show Client;
 import 'package:stock/stock.dart';
 
 import '../main.dart' show prefs;
+import 'localstore.dart';
 
 final qualificationMatchInfoPattern = RegExp(r'^(?<level>qm)(?<index>\d+)$');
 final finalsMatchInfoPattern = RegExp(r'^(?<level>qf|sf|f)(?<finalnum>\d{1,2})m(?<index>\d+)$');

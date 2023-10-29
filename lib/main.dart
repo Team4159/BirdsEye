@@ -1,10 +1,10 @@
-import 'package:birdseye/pages/analysis.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import './interfaces/supabase.dart';
+import './pages/analysis.dart';
 import './pages/configuration.dart';
 import './pages/landing.dart';
 import './pages/legal.dart';

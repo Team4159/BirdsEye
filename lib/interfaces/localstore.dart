@@ -1,8 +1,9 @@
 import 'dart:async';
 
-import 'package:birdseye/interfaces/bluealliance.dart';
 import 'package:localstore/localstore.dart';
 import 'package:stock/stock.dart';
+
+import 'bluealliance.dart';
 
 class LocalStoreInterface {
   static final _db = Localstore.instance;

@@ -150,8 +150,10 @@ class TeamAtEventGraph extends StatelessWidget {
                 .map((key, value) => MapEntry(key, Map<String, dynamic>.from(value) // team:
                     ))
               ..removeWhere((key, value) => !value.containsKey(team)))
-            .map((key, value) => MapEntry(parseMatchInfo(key)!,
-                Map<String, int>.from(value[team]))) // match: {scoretype: value}
+            .map((key, value) => MapEntry(
+                parseMatchInfo(key)!,
+                Map<String, int>.from(value[team]
+                  ..removeWhere((key, value) => value is! int)))) // match: {scoretype: value}
             .entries
             .toSet();
 
