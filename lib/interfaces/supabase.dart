@@ -38,7 +38,7 @@ class SupabaseInterface {
       .eq("event", Configuration.event)
       .eq("match", match)
       .neq("scouter", Supabase.instance.client.auth.currentUser!.id)
-      .then((resp) => resp.map((e) => e['team'] as String).toList())
+      .then((resp) => resp.map((e) => e['team']).toList())
       .then((sessions) => Map.fromEntries(
           sessions.toSet().map((team) => MapEntry(team, sessions.where((t) => t == team).length))));
 

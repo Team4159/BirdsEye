@@ -9,7 +9,7 @@ const corsHeaders = {
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-
+  try {
   const supabase = createClient( // <Database>
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -139,6 +139,9 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
   }
+} catch (e) {
+  return new Response(e.toString(), { status: 500, headers: { ...corsHeaders, "Content-Type": "text/plain"}})
+}
 });
 
 function getRobotPosition(alliances: {red: AllianceInfo, blue: AllianceInfo}, team: string): {alliance: "red" | "blue", index: number} {

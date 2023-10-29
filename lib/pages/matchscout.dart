@@ -271,13 +271,12 @@ class MatchScoutInfo {
             match: mstr
           )); // keep fetching latest info for finals
     SupabaseInterface.canConnect
-        .then((conn) => conn ? SupabaseInterface.getSessions(match: mstr) : Future.value({}))
+        .then((conn) => conn ? SupabaseInterface.getSessions(match: mstr) : Future.value(<String, int>{}))
         .then((sessions) => tbaDataFuture
                 .then((td) => td.length < 6 ? throw Exception("Incorrect Team Count!") : td)
                 // WARNING untested: filter unfilled (finals) matches out
                 .then((teamsData) => LinkedHashMap.fromEntries((teamsData.entries.toList()
                       ..sort((a, b) => a.value.compareTo(b.value)))
-                    .map((e) => MapEntry(e.key, e.value))
                     .map((e) => MapEntry(e.key,
                         "${sessions.containsKey(e.key) ? '${sessions[e.key]}|' : ''}${e.value}"))))
                 .then((data) {
