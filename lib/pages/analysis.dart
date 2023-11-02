@@ -151,7 +151,7 @@ class _TeamAtEventGraphState extends State<TeamAtEventGraph> {
               .where((match) => match != null)
               .map((match) => parseMatchInfo(match)!)
               .toList()
-            ..sort(compareMatchInfo))
+            ..sort((a, b) => compareMatchInfo(b, a)))
     ])
         .then((results) => setState(() {
               data = results[0] as Set<MapEntry<MatchInfo, Map<String, int>>>;

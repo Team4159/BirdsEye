@@ -166,7 +166,7 @@ final router = GoRouter(
                       path: 'configuration',
                       name: RoutePaths.configuration.name,
                       pageBuilder: (context, state) =>
-                          const MaterialPage(child: ConfigurationPage(), name: "Configuration")),
+                          MaterialPage(child: ConfigurationPage(), name: "Configuration")),
                   GoRoute(
                       parentNavigatorKey: _shellNavigatorKey,
                       path: 'match',

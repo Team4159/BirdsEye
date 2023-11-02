@@ -6,15 +6,9 @@ import '../interfaces/bluealliance.dart';
 import '../interfaces/supabase.dart';
 import '../main.dart' show prefs;
 
-class ConfigurationPage extends StatefulWidget {
-  const ConfigurationPage({super.key});
-
-  @override
-  State<StatefulWidget> createState() => _ConfigurationPageState();
-}
-
-class _ConfigurationPageState extends State<ConfigurationPage> {
+class ConfigurationPage extends StatelessWidget {
   final _eventCarouselController = CarouselController();
+  ConfigurationPage({super.key});
 
   @override
   Widget build(BuildContext context) =>
@@ -39,7 +33,8 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                   int index = snapshot.data!
                       .indexWhere((element) => element == Configuration.instance.season);
                   if (Configuration.instance.season < 0 || index < 0) {
-                    Configuration.instance.season = snapshot.data![index = 0];
+                    WidgetsBinding.instance.addPostFrameCallback(
+                        (_) => Configuration.instance.season = snapshot.data![index = 0]);
                   }
                   return Padding(
                       padding: MediaQuery.of(context).size.height > 500
@@ -100,6 +95,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                                 prefs.setString("event", entries[index = 0].key);
                               }
                               return Stack(
+                                  // this could be animated
                                   fit: StackFit.expand,
                                   alignment: Alignment.center,
                                   children: [
