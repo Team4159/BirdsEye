@@ -191,13 +191,22 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                                           onPressed: () {
                                             _fields.clear();
                                             _formKey.currentState!.save();
+                                            MatchInfo currmatch = info.match!;
                                             submitInfo({
                                               ..._fields,
                                               "event": Configuration.event,
-                                              "match": info.getMatchStr(),
+                                              "match": stringifyMatchInfo(currmatch),
                                               "team": info.team
                                             }).then((_) async {
                                               _formKey.currentState!.reset();
+                                              if (currmatch.level == MatchLevel.qualification &&
+                                                  currmatch.index < info.highestQual) {
+                                                info.match = (
+                                                  level: MatchLevel.qualification,
+                                                  finalnum: null,
+                                                  index: currmatch.index + 1
+                                                );
+                                              }
                                               await _scrollController.animateTo(0,
                                                   duration: const Duration(seconds: 1),
                                                   curve: Curves.easeOutBack);
@@ -225,12 +234,14 @@ class MatchScoutInfo {
   MatchScoutInfo()
       : matchController = TextEditingController(),
         teamController = ValueNotifier(null) {
-    BlueAlliance.stock
-        .get((season: Configuration.instance.season, event: Configuration.event, match: null)).then(
-            (matchesdata) => matches = LinkedHashMap.fromEntries(
-                matchesdata.keys.map((k) => MapEntry(k, parseMatchInfo(k)!)).toList()
-                  ..sort((a, b) => compareMatchInfo(a.value, b.value))));
+    refreshMatches(BlueAlliance.stock
+        .get((season: Configuration.instance.season, event: Configuration.event, match: null)));
   }
+
+  Future<void> refreshMatches(Future<Map<String, String>> resp) =>
+      resp.then((matchesdata) => matches = LinkedHashMap.fromEntries(
+          matchesdata.keys.map((k) => MapEntry(k, parseMatchInfo(k)!)).toList()
+            ..sort((a, b) => compareMatchInfo(a.value, b.value))));
 
   int highestQual = -1;
   LinkedHashMap<String, MatchInfo>? _matches;
@@ -271,7 +282,8 @@ class MatchScoutInfo {
             match: mstr
           )); // keep fetching latest info for finals
     SupabaseInterface.canConnect
-        .then((conn) => conn ? SupabaseInterface.getSessions(match: mstr) : Future.value(<String, int>{}))
+        .then((conn) =>
+            conn ? SupabaseInterface.getSessions(match: mstr) : Future.value(<String, int>{}))
         .then((sessions) => tbaDataFuture
                 .then((td) => td.length < 6 ? throw Exception("Incorrect Team Count!") : td)
                 // WARNING untested: filter unfilled (finals) matches out
@@ -370,12 +382,13 @@ class MatchScoutInfoFields extends StatelessWidget {
                           keyboardType: TextInputType.text,
                           textCapitalization: TextCapitalization.none,
                           enableInteractiveSelection: false,
+                          autocorrect: false,
                           selectionControls: EmptyTextSelectionControls(),
                           validator: (value) => value?.isEmpty ?? true
                               ? "Required"
                               : info.matches?.containsKey(value) ?? false
                                   ? null
-                                  : "Invalid",
+                                  : "Invalid", // TODO fails at varifying non-qual matches because cache doesn't refresh
                           onFieldSubmitted: info.setMatchStr),
                       Align(
                           alignment: Alignment.topRight,

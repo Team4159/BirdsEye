@@ -62,96 +62,102 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
             child: SafeArea(
                 child: ListenableBuilder(
                     listenable: Configuration.instance,
-                    builder: (context, child) => FutureBuilder(
-                        future: BlueAlliance.stock
-                            .get((season: Configuration.instance.season, event: null, match: null)),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return snapshot.hasError
-                                ? Column(
+                    builder: (context, child) => Configuration.instance.season < 0
+                        ? const Center(child: CircularProgressIndicator())
+                        : FutureBuilder(
+                            future: BlueAlliance.stock.get(
+                                (season: Configuration.instance.season, event: null, match: null)),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return snapshot.hasError
+                                    ? Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                            Icon(Icons.warning_rounded,
+                                                color: Colors.red[700], size: 50),
+                                            const SizedBox(height: 20),
+                                            Text(snapshot.error.toString())
+                                          ])
+                                    : const Center(child: CircularProgressIndicator());
+                              }
+                              List<MapEntry<String, String>> entries =
+                                  snapshot.data!.entries.toList();
+                              if (entries.isEmpty) {
+                                return Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
-                                        Icon(Icons.warning_rounded,
-                                            color: Colors.red[700], size: 50),
-                                        const SizedBox(height: 20),
-                                        Text(snapshot.error.toString())
-                                      ])
-                                : const Center(child: CircularProgressIndicator());
-                          }
-                          List<MapEntry<String, String>> entries = snapshot.data!.entries.toList();
-                          if (entries.isEmpty) {
-                            return Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.warning_rounded, color: Colors.yellow[600], size: 50),
-                                  const SizedBox(height: 20),
-                                  const Text("No Events Found")
-                                ]);
-                          }
-                          int index =
-                              entries.indexWhere((element) => element.key == Configuration.event);
-                          if (!prefs.containsKey("event") || index < 0) {
-                            prefs.setString("event", entries[index = 0].key);
-                          }
-                          return Stack(
-                              fit: StackFit.expand,
-                              alignment: Alignment.center,
-                              children: [
-                                CarouselSlider(
-                                    carouselController: _eventCarouselController,
-                                    items: entries
-                                        .asMap()
-                                        .entries
-                                        .map<Widget>((enumeratedEntry) => ListTile(
-                                            visualDensity: VisualDensity.adaptivePlatformDensity,
-                                            title: Text(
-                                              enumeratedEntry.value.value,
-                                              overflow: kIsWeb
-                                                  ? TextOverflow.ellipsis
-                                                  : TextOverflow.fade,
-                                              softWrap: false,
-                                              maxLines: 1,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .headlineSmall!
-                                                  .copyWith(fontSize: 22),
-                                            ),
-                                            trailing: IntrinsicWidth(
-                                                child: Text(enumeratedEntry.value.key,
-                                                    textAlign: TextAlign.right,
-                                                    style:
-                                                        Theme.of(context).textTheme.titleMedium)),
-                                            onTap: () => _eventCarouselController.animateToPage(
-                                                enumeratedEntry.key,
-                                                curve: Curves.easeOutQuart)))
-                                        .toList(),
-                                    options: CarouselOptions(
-                                        aspectRatio: 1 / 5,
-                                        viewportFraction:
-                                            40 / (MediaQuery.of(context).size.height * 7 / 8),
-                                        scrollDirection: Axis.vertical,
-                                        initialPage: index,
-                                        onPageChanged: (i, _) =>
-                                            prefs.setString('event', entries[i].key))),
-                                Center(
-                                    child: GestureDetector(
-                                        behavior: HitTestBehavior.translucent,
-                                        child: IgnorePointer(
-                                            child: Container(
-                                                height: 35,
-                                                margin: const EdgeInsets.only(top: 12),
-                                                color: Colors.grey.withAlpha(100)))))
-                              ]);
-                        }))))
+                                      Icon(Icons.warning_rounded,
+                                          color: Colors.yellow[600], size: 50),
+                                      const SizedBox(height: 20),
+                                      const Text("No Events Found")
+                                    ]);
+                              }
+                              int index = entries
+                                  .indexWhere((element) => element.key == Configuration.event);
+                              if (!prefs.containsKey("event") || index < 0) {
+                                prefs.setString("event", entries[index = 0].key);
+                              }
+                              return Stack(
+                                  fit: StackFit.expand,
+                                  alignment: Alignment.center,
+                                  children: [
+                                    CarouselSlider(
+                                        carouselController: _eventCarouselController,
+                                        items: entries
+                                            .asMap()
+                                            .entries
+                                            .map<Widget>((enumeratedEntry) => ListTile(
+                                                visualDensity:
+                                                    VisualDensity.adaptivePlatformDensity,
+                                                title: Text(
+                                                  enumeratedEntry.value.value,
+                                                  overflow: kIsWeb
+                                                      ? TextOverflow.ellipsis
+                                                      : TextOverflow.fade,
+                                                  softWrap: false,
+                                                  maxLines: 1,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .headlineSmall!
+                                                      .copyWith(fontSize: 22),
+                                                ),
+                                                trailing: IntrinsicWidth(
+                                                    child: Text(enumeratedEntry.value.key,
+                                                        textAlign: TextAlign.right,
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .titleMedium)),
+                                                onTap: () => _eventCarouselController.animateToPage(
+                                                    enumeratedEntry.key,
+                                                    curve: Curves.easeOutQuart)))
+                                            .toList(),
+                                        options: CarouselOptions(
+                                            aspectRatio: 1 / 5,
+                                            viewportFraction:
+                                                40 / (MediaQuery.of(context).size.height * 7 / 8),
+                                            scrollDirection: Axis.vertical,
+                                            initialPage: index,
+                                            onPageChanged: (i, _) =>
+                                                prefs.setString('event', entries[i].key))),
+                                    Center(
+                                        child: GestureDetector(
+                                            behavior: HitTestBehavior.translucent,
+                                            child: IgnorePointer(
+                                                child: Container(
+                                                    height: 35,
+                                                    margin: const EdgeInsets.only(top: 12),
+                                                    color: Colors.grey.withAlpha(100)))))
+                                  ]);
+                            }))))
       ]);
 }
 
 class Configuration extends ChangeNotifier {
   static Configuration instance = Configuration();
 
-  int _season = DateTime.now().year;
+  int _season = -1;
 
   int get season => _season;
   set season(int season) {

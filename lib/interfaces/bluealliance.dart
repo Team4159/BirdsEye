@@ -1,6 +1,6 @@
 import 'dart:convert' show json;
-import 'dart:ui';
 
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' show Client;
 import 'package:stock/stock.dart';
 
@@ -39,34 +39,13 @@ MatchInfo? parseMatchInfo(String? s) {
 String stringifyMatchInfo(MatchInfo m) =>
     "${m.level.compLevel}${m.finalnum != null ? '${m.finalnum}m' : ''}${m.index}";
 
-int hashMatchInfo(MatchInfo m) {
-  if ((m.finalnum != null && m.finalnum! > 16) || m.index > 256) {
-    throw Exception("MatchInfo not hashable - Values too large");
-  }
-  int out = m.level.index;
-  out <<= 4; // finalnum can't be more than 16
-  out += m.finalnum ?? 0;
-  out <<= 8; // index can't be more than 256
-  out += m.index;
-  return out; // 00000000 index, 0000 finalnum, 00... level
-}
-
-MatchInfo unhashMatchInfo(int h) {
-  int index = h & ((1 << 8) - 1);
-  h >>= 8;
-  int? fnum = h & ((1 << 4) - 1);
-  if (fnum == 0) fnum = null;
-  h >>= 4;
-  int lvl = h;
-  if (MatchLevel.values.length <= lvl) throw Exception("MatchInfo not unhashable - Hash too large");
-  return (index: index, finalnum: fnum, level: MatchLevel.values[lvl]);
-}
-
 int compareMatchInfo(MatchInfo a, MatchInfo b) => a.level != b.level
     ? b.level.index - a.level.index
     : a.finalnum != null && b.finalnum != null && a.finalnum != b.finalnum
         ? b.finalnum! - a.finalnum!
         : b.index - a.index;
+
+bool stringMatchIsLevel(String s, MatchLevel l) => s.startsWith(l.compLevel);
 
 enum GamePeriod {
   auto(Color.fromARGB(128, 200, 50, 50)),
@@ -121,6 +100,7 @@ class BlueAlliance {
       return _dirtyConnected;
     }
     if (_dirtyConnected) {
+      // warning: you can get marked disconnected after reconnect because this doesnt recheck
       isKeyValid(null);
       return true;
     }

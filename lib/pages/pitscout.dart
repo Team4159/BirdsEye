@@ -114,6 +114,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                   key: _teamFieldKey,
                                                   controller: textEditingController,
                                                   focusNode: focusNode,
+                                                  autocorrect: false,
                                                   autovalidateMode:
                                                       AutovalidateMode.onUserInteraction,
                                                   decoration: const InputDecoration(
