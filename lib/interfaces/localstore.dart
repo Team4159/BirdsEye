@@ -41,7 +41,8 @@ class LocalSourceOfTruth implements SourceOfTruth<TBAInfo, Map<String, dynamic>>
 
   @override
   Future<void> deleteAll() => collection.get().then((docs) {
-        for (String key in docs!.keys) {
+        if (docs == null) return;
+        for (String key in docs.keys) {
           _stream.add((key: key, value: null));
         }
       }).then((_) => collection.delete());

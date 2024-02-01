@@ -144,7 +144,7 @@ class _RespList extends StatelessWidget {
                             height: 30,
                             child: Text(id,
                                 style: Theme.of(context).textTheme.titleSmall,
-                                textScaleFactor: 1.5))));
+                                textScaler: const TextScaler.linear(1.5)))));
               }));
 }
 

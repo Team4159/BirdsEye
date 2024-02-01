@@ -3,15 +3,15 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import './interfaces/supabase.dart';
-import './pages/analysis.dart';
-import './pages/configuration.dart';
-import './pages/landing.dart';
-import './pages/legal.dart';
-import './pages/matchscout.dart';
-import './pages/metadata.dart';
-import './pages/pitscout.dart';
-import './pages/savedresponses.dart';
+import 'interfaces/supabase.dart';
+import 'pages/admin/admin.dart' show adminGoRoute;
+import 'pages/configuration.dart';
+import 'pages/landing.dart';
+import 'pages/legal.dart';
+import 'pages/matchscout.dart';
+import 'pages/metadata.dart';
+import 'pages/pitscout.dart';
+import 'pages/savedresponses.dart';
 
 const cardinalred = Color(0xffcf2e2e);
 void main() async {
@@ -122,10 +122,10 @@ enum RoutePaths {
   matchscout,
   pitscout,
   savedresp,
-  analysis
+  adminportal
 }
 
-final router = GoRouter(
+final GoRouter router = GoRouter(
     initialLocation: '/',
     routes: [
       GoRoute(
@@ -194,14 +194,9 @@ final router = GoRouter(
                       redirect: (context, state) async => await Configuration.instance.isValid
                           ? null
                           : state.namedLocation(RoutePaths.configuration.name)),
-                  GoRoute(
-                      parentNavigatorKey: _shellNavigatorKey,
-                      path: 'analysis',
-                      name: RoutePaths.analysis.name,
-                      pageBuilder: (context, state) =>
-                          MaterialPage(child: AnalysisPage(), name: "Analysis")),
                 ])
           ]),
+      adminGoRoute,
       ShellRoute(
           pageBuilder: (context, state, child) => MaterialPage(child: LegalShell(child)),
           routes: [
@@ -211,12 +206,7 @@ final router = GoRouter(
           ])
     ],
     refreshListenable: UserMetadata.instance,
-    onException: (_, state, router) {
-      if (state.uri.fragment.startsWith("access_token")) {
-        router.goNamed(RoutePaths.metadata.name, queryParameters: {"redirect": "true"});
-      }
-      router.goNamed(RoutePaths.landing.name);
-    });
+    onException: (_, state, router) => router.goNamed(RoutePaths.landing.name));
 
 class ScaffoldShell extends StatelessWidget {
   final Widget child;
@@ -296,12 +286,16 @@ class ScaffoldShell extends StatelessWidget {
                 onTap: () => GoRouter.of(context)
                   ..pop()
                   ..goNamed(RoutePaths.savedresp.name)),
-            ListTile(
-                leading: const Icon(Icons.auto_graph_rounded),
-                title: const Text("Data Analysis"),
-                onTap: () => GoRouter.of(context)
-                  ..pop()
-                  ..goNamed(RoutePaths.analysis.name)),
+            ListenableBuilder(
+                listenable: UserMetadata.instance.cachedPermissions,
+                builder: (context, _) => UserMetadata.instance.hasAnyAdminPerms
+                    ? ListTile(
+                        leading: const Icon(Icons.bar_chart_rounded),
+                        title: const Text("Admin Tools"),
+                        onTap: () => GoRouter.of(context)
+                          ..pop()
+                          ..goNamed(RoutePaths.adminportal.name))
+                    : const SizedBox()),
             const Expanded(
                 child: Align(
                     alignment: Alignment.bottomLeft,

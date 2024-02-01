@@ -33,11 +33,12 @@ class SupabaseInterface {
 
   static Future<Map<String, int>> getSessions({required String match}) => Supabase.instance.client
       .from("sessions")
-      .select<List<Map<String, dynamic>>>("team")
+      .select("team")
       .eq("season", Configuration.instance.season)
-      .eq("event", Configuration.event)
+      .eq("event", Configuration.event!)
       .eq("match", match)
       .neq("scouter", Supabase.instance.client.auth.currentUser!.id)
+      .gte('updated', DateTime.now().subtract(const Duration(minutes: 5)))
       .then((resp) => resp.map((e) => e['team']).toList())
       .then((sessions) => Map.fromEntries(
           sessions.toSet().map((team) => MapEntry(team, sessions.where((t) => t == team).length))));

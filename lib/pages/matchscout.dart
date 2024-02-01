@@ -109,7 +109,7 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                                   stretch: false,
                                   title: Text(section,
                                       style: Theme.of(context).textTheme.headlineLarge,
-                                      textScaleFactor: 1.5)),
+                                      textScaler: const TextScaler.linear(1.5))),
                               SliverPadding(
                                   padding: const EdgeInsets.only(bottom: 12, left: 6, right: 6),
                                   sliver: SliverGrid.count(
@@ -286,7 +286,7 @@ class MatchScoutInfo {
             conn ? SupabaseInterface.getSessions(match: mstr) : Future.value(<String, int>{}))
         .then((sessions) => tbaDataFuture
                 .then((td) => td.length < 6 ? throw Exception("Incorrect Team Count!") : td)
-                // WARNING untested: filter unfilled (finals) matches out
+                // FIXME untested: filter unfilled (finals) matches out
                 .then((teamsData) => LinkedHashMap.fromEntries((teamsData.entries.toList()
                       ..sort((a, b) => a.value.compareTo(b.value)))
                     .map((e) => MapEntry(e.key,

@@ -28,8 +28,7 @@ class MetadataPage extends StatelessWidget {
         if (isRedirect && UserMetadata.isAuthenticated) {
           return UserMetadata.instance.isValid.then((valid) {
             if (!valid) return true;
-            GoRouter.of(context).goNamed(RoutePaths.configuration.name);
-            // replaceNamed throws a Unexpected null value if used here
+            GoRouter.of(context).replaceNamed(RoutePaths.configuration.name);
             return null;
           });
         }
@@ -153,6 +152,13 @@ class TBAInfoDialog extends Dialog {
                 ]))));
 }
 
+typedef PermissionSet = ({
+  bool achievementApprover,
+  bool graphViewer,
+  bool economyManager,
+  bool qualitativeAnalyzer
+});
+
 class UserMetadata extends ChangeNotifier {
   static void initialize() => Supabase.instance.client.auth.onAuthStateChange.listen((event) {
         switch (event.event) {
@@ -160,13 +166,16 @@ class UserMetadata extends ChangeNotifier {
                 AuthChangeEvent.passwordRecovery ||
                 AuthChangeEvent.tokenRefreshed:
             break;
-          case AuthChangeEvent.signedOut:
+          case AuthChangeEvent.signedOut || AuthChangeEvent.userDeleted:
             SupabaseInterface.clearSession();
             UserMetadata.instance._name = UserMetadata.instance._team = null;
             break;
-          default:
+          case AuthChangeEvent.signedIn || AuthChangeEvent.userUpdated:
             assert(isAuthenticated);
+          case AuthChangeEvent.initialSession:
             UserMetadata.instance.fetch();
+            UserMetadata.instance.fetchPerms();
+            break;
         }
       });
   static UserMetadata instance = UserMetadata();
@@ -185,14 +194,14 @@ class UserMetadata extends ChangeNotifier {
     return Supabase.instance.client
         .from("users")
         .update({"name": _name ?? "User", "team": _team ?? 0})
-        .eq("id", id)
+        .eq("id", id!)
         .then((_) => notifyListeners());
   }
 
   Future<void> fetch({bool hard = false}) => Supabase.instance.client
           .from("users")
-          .select<Map<String, dynamic>?>('name, team')
-          .eq('id', id)
+          .select('name, team')
+          .eq('id', id!)
           .maybeSingle()
           .then((value) {
         if (value == null) throw Exception("No User Found");
@@ -212,4 +221,31 @@ class UserMetadata extends ChangeNotifier {
       _team != null &&
       prefs.containsKey("tbaKey") &&
       await BlueAlliance.isKeyValid(prefs.getString("tbaKey"));
+
+  final ValueNotifier<PermissionSet> cachedPermissions = ValueNotifier((
+    achievementApprover: false,
+    graphViewer: false,
+    economyManager: false,
+    qualitativeAnalyzer: false
+  ));
+
+  get hasAnyAdminPerms =>
+      UserMetadata.instance.cachedPermissions.value.achievementApprover ||
+      UserMetadata.instance.cachedPermissions.value.economyManager ||
+      UserMetadata.instance.cachedPermissions.value.graphViewer ||
+      UserMetadata.instance.cachedPermissions.value.qualitativeAnalyzer;
+
+  Future<void> fetchPerms() => Supabase.instance.client
+      .from("permissions")
+      .select("*")
+      .eq("id", id!)
+      .maybeSingle()
+      .withConverter((data) => data == null ? null : Map<String, bool>.from(data..remove("id")))
+      .then((value) => (
+            achievementApprover: value?["achievement_approver"] ?? false,
+            graphViewer: value?["graph_viewer"] ?? false,
+            economyManager: value?["economy_manager"] ?? false,
+            qualitativeAnalyzer: value?["qualitative_analyzer"] ?? false
+          ))
+      .then((perms) => cachedPermissions.value = perms);
 }

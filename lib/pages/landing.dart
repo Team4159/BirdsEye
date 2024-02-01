@@ -33,9 +33,8 @@ class LandingPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
             FloatingActionButton.extended(
-                onPressed: () => Supabase.instance.client.auth.signInWithOAuth(Provider.github,
+                onPressed: () => Supabase.instance.client.auth.signInWithOAuth(OAuthProvider.github,
                     authScreenLaunchMode: LaunchMode.externalApplication,
-                    context: context,
                     redirectTo: "${Uri.base.scheme}://${Uri.base.authority}"),
                 label: const Text('Sign In with Github', style: TextStyle(color: Colors.white)),
                 icon: SvgPicture.asset('assets/images/github.svg',
@@ -44,9 +43,8 @@ class LandingPage extends StatelessWidget {
             const SizedBox(height: 12),
             FloatingActionButton.extended(
                 onPressed: () => Supabase.instance.client.auth.signInWithOAuth(
-                      Provider.google,
+                      OAuthProvider.google,
                       authScreenLaunchMode: LaunchMode.inAppWebView,
-                      context: context,
                       redirectTo: "${Uri.base.scheme}://${Uri.base.authority}",
                       // queryParams: {"access_type": 'offline', "prompt": 'consent'}
                     ),

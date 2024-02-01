@@ -11,10 +11,10 @@ import '../widgets/deleteconfirmation.dart';
 
 Future<Map<String, String>?> _getPrevious(int team) => Supabase.instance.client
     .from("${Configuration.instance.season}_pit")
-    .select<Map<String, dynamic>?>()
-    .eq("event", Configuration.event)
+    .select()
+    .eq("event", Configuration.event!)
     .eq("team", team)
-    .eq("scouter", UserMetadata.instance.id)
+    .eq("scouter", UserMetadata.instance.id!)
     .maybeSingle()
     .then((value) => value == null
         ? {}
@@ -48,8 +48,8 @@ class _PitScoutPageState extends State<PitScoutPage> {
         .then((teams) async {
           Set<int> filledteams = await Supabase.instance.client
               .from("${Configuration.instance.season}_pit")
-              .select<List<Map<String, dynamic>>>("team")
-              .eq("event", Configuration.event)
+              .select("team")
+              .eq("event", Configuration.event!)
               .then((value) => value.map<int>((e) => e['team']).toSet())
               .catchError((_) => <int>{});
           if (UserMetadata.instance.team != null) {
@@ -198,7 +198,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                       builder: (context, child) => AnimatedSlide(
                           offset: (_team.value != null) ? Offset.zero : const Offset(0, 1),
                           curve: Curves.easeInOutCirc,
-                          duration: const Duration(seconds: 1),
+                          duration: Durations.extralong3,
                           child: child),
                       child: CustomScrollView(cacheExtent: double.infinity, slivers: [
                         for (var MapEntry(:key, value: question) in snapshot.data!.entries)
@@ -216,7 +216,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                               children: [
                                                 Text(question,
                                                     style: Theme.of(context).textTheme.titleSmall,
-                                                    textScaleFactor: 1.5),
+                                                    textScaler: const TextScaler.linear(1.5)),
                                                 const SizedBox(height: 16),
                                                 TextField(
                                                     controller: _controllers[key] ??=

@@ -8,6 +8,7 @@ import '../main.dart' show prefs;
 
 class ConfigurationPage extends StatelessWidget {
   final _eventCarouselController = CarouselController();
+  final ValueNotifier<bool> _isBeingMoved = ValueNotifier(false);
   ConfigurationPage({super.key});
 
   @override
@@ -50,6 +51,8 @@ class ConfigurationPage extends StatelessWidget {
                               viewportFraction: 1 / 3,
                               enableInfiniteScroll: false,
                               initialPage: index,
+                              onScrolled: (n) =>
+                                  _isBeingMoved.value = n == null ? true : n % 1 > 0.05,
                               onPageChanged: (i, _) =>
                                   Configuration.instance.season = snapshot.data![i])));
                 })),
@@ -94,58 +97,63 @@ class ConfigurationPage extends StatelessWidget {
                               if (!prefs.containsKey("event") || index < 0) {
                                 prefs.setString("event", entries[index = 0].key);
                               }
-                              return Stack(
-                                  // this could be animated
-                                  fit: StackFit.expand,
-                                  alignment: Alignment.center,
-                                  children: [
-                                    CarouselSlider(
-                                        carouselController: _eventCarouselController,
-                                        items: entries
-                                            .asMap()
-                                            .entries
-                                            .map<Widget>((enumeratedEntry) => ListTile(
-                                                visualDensity:
-                                                    VisualDensity.adaptivePlatformDensity,
-                                                title: Text(
-                                                  enumeratedEntry.value.value,
-                                                  overflow: kIsWeb
-                                                      ? TextOverflow.ellipsis
-                                                      : TextOverflow.fade,
-                                                  softWrap: false,
-                                                  maxLines: 1,
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .headlineSmall!
-                                                      .copyWith(fontSize: 22),
-                                                ),
-                                                trailing: IntrinsicWidth(
-                                                    child: Text(enumeratedEntry.value.key,
-                                                        textAlign: TextAlign.right,
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .titleMedium)),
-                                                onTap: () => _eventCarouselController.animateToPage(
-                                                    enumeratedEntry.key,
-                                                    curve: Curves.easeOutQuart)))
-                                            .toList(),
-                                        options: CarouselOptions(
-                                            aspectRatio: 1 / 5,
-                                            viewportFraction:
-                                                40 / (MediaQuery.of(context).size.height * 7 / 8),
-                                            scrollDirection: Axis.vertical,
-                                            initialPage: index,
-                                            onPageChanged: (i, _) =>
-                                                prefs.setString('event', entries[i].key))),
-                                    Center(
-                                        child: GestureDetector(
-                                            behavior: HitTestBehavior.translucent,
-                                            child: IgnorePointer(
-                                                child: Container(
-                                                    height: 35,
-                                                    margin: const EdgeInsets.only(top: 12),
-                                                    color: Colors.grey.withAlpha(100)))))
-                                  ]);
+                              return ListenableBuilder(
+                                  listenable: _isBeingMoved,
+                                  builder: (context, child) => AnimatedOpacity(
+                                      opacity: _isBeingMoved.value ? 0 : 1,
+                                      duration: Durations.short3,
+                                      child: child),
+                                  child: Stack(
+                                      fit: StackFit.expand,
+                                      alignment: Alignment.center,
+                                      children: [
+                                        CarouselSlider(
+                                            carouselController: _eventCarouselController,
+                                            items: entries
+                                                .asMap()
+                                                .entries
+                                                .map<Widget>((enumeratedEntry) => ListTile(
+                                                    visualDensity:
+                                                        VisualDensity.adaptivePlatformDensity,
+                                                    title: Text(
+                                                      enumeratedEntry.value.value,
+                                                      overflow: kIsWeb
+                                                          ? TextOverflow.ellipsis
+                                                          : TextOverflow.fade,
+                                                      softWrap: false,
+                                                      maxLines: 1,
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .headlineSmall!
+                                                          .copyWith(fontSize: 22),
+                                                    ),
+                                                    trailing: IntrinsicWidth(
+                                                        child: Text(enumeratedEntry.value.key,
+                                                            textAlign: TextAlign.right,
+                                                            style: Theme.of(context)
+                                                                .textTheme
+                                                                .titleMedium)),
+                                                    onTap: () => _eventCarouselController
+                                                        .animateToPage(enumeratedEntry.key,
+                                                            curve: Curves.easeOutQuart)))
+                                                .toList(),
+                                            options: CarouselOptions(
+                                                aspectRatio: 1 / 5,
+                                                viewportFraction: 40 /
+                                                    (MediaQuery.of(context).size.height * 7 / 8),
+                                                scrollDirection: Axis.vertical,
+                                                initialPage: index,
+                                                onPageChanged: (i, _) =>
+                                                    prefs.setString('event', entries[i].key))),
+                                        Center(
+                                            child: GestureDetector(
+                                                behavior: HitTestBehavior.translucent,
+                                                child: IgnorePointer(
+                                                    child: Container(
+                                                        height: 35,
+                                                        margin: const EdgeInsets.only(top: 12),
+                                                        color: Colors.grey.withAlpha(100)))))
+                                      ]));
                             }))))
       ]);
 }
@@ -164,6 +172,7 @@ class Configuration extends ChangeNotifier {
   static String? get event => prefs.containsKey("event") ? prefs.getString("event") : null;
 
   Future<bool> get isValid async =>
+      season >= 0 &&
       event != null &&
       await BlueAlliance.stock.get((season: season, event: null, match: null)).then(
           (value) => value.containsKey(event));

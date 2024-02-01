@@ -1,15 +1,15 @@
-import 'dart:convert';
-
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../interfaces/bluealliance.dart';
+import '../../interfaces/bluealliance.dart';
 
-class AnalysisPage extends StatelessWidget {
+// FIXME the fl_chart package is explicitly set to a prior version because 0.66.1 doesn't work on web.
+
+class StatGraphPage extends StatelessWidget {
   final AnalysisInfo info = AnalysisInfo();
-  AnalysisPage({super.key});
+  StatGraphPage({super.key});
 
   @override
   Widget build(BuildContext context) => Column(children: [
@@ -129,11 +129,11 @@ class _TeamAtEventGraphState extends State<TeamAtEventGraph> {
     Future.wait([
       Supabase.instance.client.functions
           .invoke(
-              "match_aggregator_js?season=${widget.season}&event=${widget.event}", // workaround for lack of query params
-              responseType: ResponseType.text)
-          .then((resp) => resp.status != null && resp.status! >= 400
+            "match_aggregator_js?season=${widget.season}&event=${widget.event}", // workaround for lack of query params
+          )
+          .then((resp) => resp.status >= 400
               ? throw Exception("HTTP Error ${resp.status}")
-              : (Map<String, dynamic>.from(jsonDecode(resp.data)) // match:
+              : (Map<String, dynamic>.from(resp.data) // match:
                       .map((key, value) => MapEntry(key, Map<String, dynamic>.from(value))) // team:
                     ..removeWhere((key, value) => !value.containsKey(widget.team)))
                   .map((key, value) => MapEntry(
