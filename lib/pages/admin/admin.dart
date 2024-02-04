@@ -31,19 +31,7 @@ final adminGoRoute = GoRoute(
                 parentNavigatorKey: _adminNavigatorKey,
                 path: 'home',
                 name: RoutePaths.adminportal.name,
-                pageBuilder: (context, state) => MaterialPage(
-                        child: Column(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                          const DrawerButton(),
-                          Icon(
-                              IconData(rnd.nextInt(62685 - 57344) + 57344,
-                                  fontFamily: 'MaterialIcons'),
-                              color: Color.fromARGB(
-                                  255, rnd.nextInt(255), rnd.nextInt(255), rnd.nextInt(255)),
-                              size: rnd.nextInt(40) + 50)
-                        ]))),
+                pageBuilder: (context, state) => const MaterialPage(child: DrawerButton())),
             GoRoute(
                 parentNavigatorKey: _adminNavigatorKey,
                 path: AdminRoutePaths.achiqueue.name,
