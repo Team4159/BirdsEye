@@ -13,7 +13,8 @@ class DeleteConfirmation extends IconButton {
             onPressed: () => showDialog(
                 context: context,
                 builder: (BuildContext context) => AlertDialog(
-                        title: Text("Confirm $toConfirm"),
+                        title:
+                            Text("Confirm ${toConfirm[0].toUpperCase()}${toConfirm.substring(1)}"),
                         content: Text("Are you sure you want to $toConfirm?"),
                         actions: [
                           OutlinedButton(

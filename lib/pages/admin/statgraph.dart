@@ -13,7 +13,7 @@ class StatGraphPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(children: [
-        AppBar(title: const Text("Data Analysis"), actions: [
+        AppBar(title: const Text("Statistic Graphs"), actions: [
           FieldButton(
               label: "Season",
               intOnly: true,

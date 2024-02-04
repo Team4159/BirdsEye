@@ -170,9 +170,11 @@ class UserMetadata extends ChangeNotifier {
             SupabaseInterface.clearSession();
             UserMetadata.instance._name = UserMetadata.instance._team = null;
             break;
+          case AuthChangeEvent.initialSession:
+            if (isAuthenticated) continue fetchCase;
+          fetchCase:
           case AuthChangeEvent.signedIn || AuthChangeEvent.userUpdated:
             assert(isAuthenticated);
-          case AuthChangeEvent.initialSession:
             UserMetadata.instance.fetch();
             UserMetadata.instance.fetchPerms();
             break;

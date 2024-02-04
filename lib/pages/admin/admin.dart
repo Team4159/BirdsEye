@@ -49,7 +49,7 @@ final adminGoRoute = GoRoute(
                 path: AdminRoutePaths.achiqueue.name,
                 name: AdminRoutePaths.achiqueue.name,
                 pageBuilder: (context, state) =>
-                    const MaterialPage(child: AchievementQueuePage(), name: "Achievement Queue"),
+                    MaterialPage(child: AchievementQueuePage(), name: "Achievement Queue"),
                 redirect: (context, state) =>
                     UserMetadata.instance.cachedPermissions.value.achievementApprover
                         ? null
