@@ -1,3 +1,4 @@
+import 'package:birdseye/interfaces/supabase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_swipe_action_cell/core/cell.dart';
 
@@ -32,7 +33,10 @@ class SavedResponsesPage extends StatelessWidget {
                                 CacheAddWidget(),
                                 const VerticalDivider(),
                                 DeleteConfirmation(
-                                    reset: BlueAlliance.stockSoT.deleteAll,
+                                    reset: () {
+                                      SupabaseInterface.clearAchievements();
+                                      BlueAlliance.stockSoT.deleteAll();
+                                    },
                                     context: context,
                                     toConfirm: "clear the cache")
                               ]))),

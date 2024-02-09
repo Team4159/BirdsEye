@@ -80,4 +80,35 @@ class SupabaseInterface {
   static Future<Map<String, String>> get pitSchema async => await canConnect
       ? pitscoutStock.fresh(Configuration.instance.season)
       : pitscoutStock.get(Configuration.instance.season);
+
+  static Set<Achievement>? _achievements;
+  static Future<Set<Achievement>?> get achievements async =>
+      (_achievements == null && await canConnect)
+          ? Supabase.instance.client
+              .from("achievements")
+              .select("*")
+              .withConverter((resp) => resp
+                  .map((record) => (
+                        id: record["id"] as int,
+                        name: record["name"] as String,
+                        description: record["description"] as String,
+                        requirements: record["requirements"] as String,
+                        points: record["points"] as int,
+                        season: record["season"] as int?,
+                        event: record["event"] as String?
+                      ))
+                  .toSet())
+              .then((data) => _achievements = data)
+          : Future.value(_achievements);
+  static void clearAchievements() => _achievements = null;
 }
+
+typedef Achievement = ({
+  int id,
+  String name,
+  String description,
+  String requirements,
+  int points,
+  int? season,
+  String? event
+});

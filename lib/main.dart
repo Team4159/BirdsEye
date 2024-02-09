@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'interfaces/supabase.dart';
+import 'pages/achievements.dart';
 import 'pages/admin/admin.dart' show adminGoRoute;
 import 'pages/configuration.dart';
 import 'pages/landing.dart';
@@ -119,6 +120,7 @@ enum RoutePaths {
   landing,
   metadata,
   configuration,
+  achievements,
   scouting,
   matchscout,
   pitscout,
@@ -195,6 +197,15 @@ final GoRouter router = GoRouter(
                       redirect: (context, state) async => await Configuration.instance.isValid
                           ? null
                           : state.namedLocation(RoutePaths.configuration.name)),
+                  GoRoute(
+                      parentNavigatorKey: _shellNavigatorKey,
+                      path: 'achievements',
+                      name: RoutePaths.achievements.name,
+                      pageBuilder: (context, state) =>
+                          MaterialPage(child: AchievementsPage(), name: "Achievements"),
+                      redirect: (context, state) async => await Configuration.instance.isValid
+                          ? null
+                          : state.namedLocation(RoutePaths.configuration.name)),
                 ])
           ]),
       adminGoRoute,
@@ -227,7 +238,10 @@ class ScaffoldShell extends StatelessWidget {
                           : null,
                       currentAccountPicture: Icon(
                           UserMetadata.isAuthenticated ? Icons.person : Icons.person_off_outlined,
-                          size: 64),
+                          size: 64,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? null
+                              : Colors.white),
                       accountName: Text(UserMetadata.instance.name ?? "User",
                           style: const TextStyle(fontWeight: FontWeight.w600)),
                       accountEmail: Text(
@@ -259,6 +273,7 @@ class ScaffoldShell extends StatelessWidget {
                 builder: (context, snapshot) => ListTile(
                     leading: const Icon(Icons.app_registration_outlined),
                     title: const Text("Metadata"),
+                    dense: MediaQuery.of(context).size.height <= 400,
                     enabled: snapshot.hasData && snapshot.data!,
                     onTap: () => GoRouter.of(context)
                       ..pop()
@@ -266,33 +281,45 @@ class ScaffoldShell extends StatelessWidget {
             ListTile(
                 leading: const Icon(Icons.settings_rounded),
                 title: const Text("Configuration"),
+                dense: MediaQuery.of(context).size.height <= 400,
                 onTap: () => GoRouter.of(context)
                   ..pop()
                   ..goNamed(RoutePaths.configuration.name)),
             ListTile(
                 leading: const Icon(Icons.assignment_rounded),
                 title: const Text("Match Scouting"),
+                dense: MediaQuery.of(context).size.height <= 400,
                 onTap: () => GoRouter.of(context)
                   ..pop()
                   ..goNamed(RoutePaths.matchscout.name)),
             ListTile(
                 leading: const Icon(Icons.list_rounded),
                 title: const Text("Pit Scouting"),
+                dense: MediaQuery.of(context).size.height <= 400,
                 onTap: () => GoRouter.of(context)
                   ..pop()
                   ..goNamed(RoutePaths.pitscout.name)),
             ListTile(
                 leading: const Icon(Icons.download_for_offline_rounded),
                 title: const Text("Saved Responses"),
+                dense: MediaQuery.of(context).size.height <= 400,
                 onTap: () => GoRouter.of(context)
                   ..pop()
                   ..goNamed(RoutePaths.savedresp.name)),
+            ListTile(
+                leading: const Icon(Icons.emoji_events_rounded),
+                title: const Text("Achievements"),
+                dense: MediaQuery.of(context).size.height <= 400,
+                onTap: () => GoRouter.of(context)
+                  ..pop()
+                  ..goNamed(RoutePaths.achievements.name)),
             ListenableBuilder(
                 listenable: UserMetadata.instance.cachedPermissions,
                 builder: (context, _) => UserMetadata.instance.hasAnyAdminPerms
                     ? ListTile(
                         leading: const Icon(Icons.bar_chart_rounded),
                         title: const Text("Admin Tools"),
+                        dense: MediaQuery.of(context).size.height <= 400,
                         onTap: () => GoRouter.of(context)
                           ..pop()
                           ..goNamed(RoutePaths.adminportal.name))
@@ -301,7 +328,7 @@ class ScaffoldShell extends StatelessWidget {
                 child: Align(
                     alignment: Alignment.bottomLeft,
                     child: SizedBox(
-                        height: 70,
+                        height: 65,
                         child: DrawerHeader(
                             margin: EdgeInsets.zero,
                             child: Text(

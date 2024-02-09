@@ -17,7 +17,8 @@ class AchievementQueuePage extends StatelessWidget {
         String user,
         int season,
         String event,
-        String details
+        String details,
+        NetworkImage? image
       })> _items = UniqueNotifyingList();
   AchievementQueuePage({super.key}) {
     _fetch();
@@ -40,7 +41,7 @@ class AchievementQueuePage extends StatelessWidget {
             season: record['season'] as int,
             event: record['event'] as String,
             details: (record["details"] as String).trim(),
-            // image: NetworkImage(record["image"])
+            image: record["image"] == null ? null : NetworkImage(record["image"])
           ))))
       .then((items) => _items.setAll(items));
 
@@ -86,6 +87,23 @@ class AchievementQueuePage extends StatelessWidget {
                                 key: ObjectKey(e),
                                 title: Text(e.achname),
                                 subtitle: Text("${e.user} @ ${e.season}${e.event}"),
+                                leading: e.image == null
+                                    ? null
+                                    : ClipRRect(
+                                        borderRadius: BorderRadius.circular(4),
+                                        clipBehavior: Clip.hardEdge,
+                                        child: GestureDetector(
+                                          child: Image(
+                                            image: e.image!,
+                                            isAntiAlias: false,
+                                          ),
+                                          onTap: () => showDialog(
+                                              context: context,
+                                              builder: (context) => Dialog(
+                                                  child: Image(
+                                                      image: e.image!,
+                                                      filterQuality: FilterQuality.medium))),
+                                        )),
                                 controlAffinity: ListTileControlAffinity.trailing,
                                 expandedCrossAxisAlignment: CrossAxisAlignment.start,
                                 childrenPadding:
@@ -101,7 +119,6 @@ class AchievementQueuePage extends StatelessWidget {
                                     leading: const Icon(Icons.person_search_rounded),
                                     title: const Text("User Description"),
                                     subtitle: Text(e.details, softWrap: true),
-                                    // leading: e.image,
                                     dense: true,
                                     trailing: Row(
                                         mainAxisSize: MainAxisSize.min,
@@ -195,7 +212,7 @@ class UniqueNotifyingList<E> extends ChangeNotifier {
     return false;
   }
 
-  operator [](int i) => _internal.elementAt(i);
+  E operator [](int i) => _internal.elementAt(i);
   get length => _internal.length;
   get isEmpty => _internal.isEmpty;
 }
