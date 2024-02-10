@@ -16,7 +16,7 @@ Future<Map<String, String>?> _getPrevious(int team) => Supabase.instance.client
     .eq("team", team)
     .eq("scouter", UserMetadata.instance.id!)
     .maybeSingle()
-    .then((value) => value == null
+    .withConverter((value) => value == null
         ? {}
         : Map.castFrom(value..removeWhere((k, _) => {"event", "team"}.contains(k))));
 
@@ -50,7 +50,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
               .from("${Configuration.instance.season}_pit")
               .select("team")
               .eq("event", Configuration.event!)
-              .then((value) => value.map<int>((e) => e['team']).toSet())
+              .withConverter((value) => value.map<int>((e) => e['team']).toSet())
               .catchError((_) => <int>{});
           if (UserMetadata.instance.team != null) {
             filledteams.add(UserMetadata.instance.team!);

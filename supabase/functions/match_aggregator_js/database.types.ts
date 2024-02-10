@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       "2023_match": {
@@ -49,7 +49,7 @@ export interface Database {
           comments_fouls?: number | null
           event: string
           match: string
-          scouter?: string
+          scouter: string
           team: string
           teleop_cone_high?: number | null
           teleop_cone_low?: number | null
@@ -92,6 +92,7 @@ export interface Database {
           {
             foreignKeyName: "2023_match_scouter_fkey"
             columns: ["scouter"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           }
@@ -138,6 +139,104 @@ export interface Database {
           {
             foreignKeyName: "2023_pit_scouter_fkey"
             columns: ["scouter"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      "2024_match": {
+        Row: {
+          auto_amp: number
+          auto_amp_missed: number
+          auto_speaker: number
+          auto_speaker_missed: number
+          comments_contribution: number | null
+          comments_defensive: boolean
+          comments_fouls: number
+          event: string
+          match: string
+          scouter: string
+          team: number
+          teleop_amp: number
+          teleop_amp_missed: number
+          teleop_loudspeaker: number
+          teleop_speaker: number
+          teleop_speaker_missed: number
+          teleop_trap: number
+        }
+        Insert: {
+          auto_amp?: number
+          auto_amp_missed: number
+          auto_speaker?: number
+          auto_speaker_missed: number
+          comments_contribution?: number | null
+          comments_defensive: boolean
+          comments_fouls?: number
+          event: string
+          match: string
+          scouter?: string
+          team: number
+          teleop_amp?: number
+          teleop_amp_missed: number
+          teleop_loudspeaker?: number
+          teleop_speaker?: number
+          teleop_speaker_missed: number
+          teleop_trap: number
+        }
+        Update: {
+          auto_amp?: number
+          auto_amp_missed?: number
+          auto_speaker?: number
+          auto_speaker_missed?: number
+          comments_contribution?: number | null
+          comments_defensive?: boolean
+          comments_fouls?: number
+          event?: string
+          match?: string
+          scouter?: string
+          team?: number
+          teleop_amp?: number
+          teleop_amp_missed?: number
+          teleop_loudspeaker?: number
+          teleop_speaker?: number
+          teleop_speaker_missed?: number
+          teleop_trap?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "2024_match_scouter_fkey"
+            columns: ["scouter"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      "2024_pit": {
+        Row: {
+          comments_generic: string | null
+          event: string
+          scouter: string
+          team: number
+        }
+        Insert: {
+          comments_generic?: string | null
+          event: string
+          scouter?: string
+          team: number
+        }
+        Update: {
+          comments_generic?: string | null
+          event?: string
+          scouter?: string
+          team?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "2024_pit_scouter_fkey"
+            columns: ["scouter"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           }
@@ -145,28 +244,28 @@ export interface Database {
       }
       achievement_queue: {
         Row: {
-          achievement: string
-          approved: boolean
+          achievement: number
+          approved: boolean | null
           created_at: string
-          description: string | null
+          details: string | null
           event: string
           season: number
           user: string
         }
         Insert: {
-          achievement: string
-          approved?: boolean
+          achievement: number
+          approved?: boolean | null
           created_at?: string
-          description?: string | null
+          details?: string | null
           event: string
           season: number
-          user: string
+          user?: string
         }
         Update: {
-          achievement?: string
-          approved?: boolean
+          achievement?: number
+          approved?: boolean | null
           created_at?: string
-          description?: string | null
+          details?: string | null
           event?: string
           season?: number
           user?: string
@@ -175,12 +274,14 @@ export interface Database {
           {
             foreignKeyName: "achievement_queue_achievement_fkey"
             columns: ["achievement"]
+            isOneToOne: false
             referencedRelation: "achievements"
-            referencedColumns: ["name"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "achievement_queue_user_fkey"
             columns: ["user"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           }
@@ -189,23 +290,64 @@ export interface Database {
       achievements: {
         Row: {
           description: string | null
+          event: string | null
+          id: number
           name: string
           points: number
           requirements: string
+          season: number | null
         }
         Insert: {
           description?: string | null
+          event?: string | null
+          id?: number
           name: string
           points: number
           requirements: string
+          season?: number | null
         }
         Update: {
           description?: string | null
+          event?: string | null
+          id?: number
           name?: string
           points?: number
           requirements?: string
+          season?: number | null
         }
         Relationships: []
+      }
+      permissions: {
+        Row: {
+          achievement_approver: boolean
+          economy_manager: boolean
+          graph_viewer: boolean
+          id: string
+          qualitative_analyzer: boolean
+        }
+        Insert: {
+          achievement_approver?: boolean
+          economy_manager?: boolean
+          graph_viewer?: boolean
+          id: string
+          qualitative_analyzer?: boolean
+        }
+        Update: {
+          achievement_approver?: boolean
+          economy_manager?: boolean
+          graph_viewer?: boolean
+          id?: string
+          qualitative_analyzer?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permissions_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       sessions: {
         Row: {
@@ -236,6 +378,7 @@ export interface Database {
           {
             foreignKeyName: "sessions_scouter_fkey"
             columns: ["scouter"]
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           }
@@ -245,8 +388,6 @@ export interface Database {
         Row: {
           created_at: string | null
           id: string
-          isachievementadmin: boolean
-          isanalysisadmin: boolean
           name: string
           team: number
           updated: string | null
@@ -254,8 +395,6 @@ export interface Database {
         Insert: {
           created_at?: string | null
           id: string
-          isachievementadmin?: boolean
-          isanalysisadmin?: boolean
           name?: string
           team: number
           updated?: string | null
@@ -263,8 +402,6 @@ export interface Database {
         Update: {
           created_at?: string | null
           id?: string
-          isachievementadmin?: boolean
-          isanalysisadmin?: boolean
           name?: string
           team?: number
           updated?: string | null
@@ -273,6 +410,7 @@ export interface Database {
           {
             foreignKeyName: "users_id_fkey"
             columns: ["id"]
+            isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
           }
@@ -306,3 +444,83 @@ export interface Database {
     }
   }
 }
+
+export type Tables<
+  PublicTableNameOrOptions extends
+    | keyof (Database["public"]["Tables"] & Database["public"]["Views"])
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+        Database[PublicTableNameOrOptions["schema"]]["Views"])
+    : never = never
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"] &
+      Database["public"]["Views"])
+  ? (Database["public"]["Tables"] &
+      Database["public"]["Views"])[PublicTableNameOrOptions] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : never
+
+export type TablesInsert<
+  PublicTableNameOrOptions extends
+    | keyof Database["public"]["Tables"]
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+    : never = never
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
+  ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : never
+
+export type TablesUpdate<
+  PublicTableNameOrOptions extends
+    | keyof Database["public"]["Tables"]
+    | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+    : never = never
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
+  ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : never
+
+export type Enums<
+  PublicEnumNameOrOptions extends
+    | keyof Database["public"]["Enums"]
+    | { schema: keyof Database },
+  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
+    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+    : never = never
+> = PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
+  ? Database["public"]["Enums"][PublicEnumNameOrOptions]
+  : never

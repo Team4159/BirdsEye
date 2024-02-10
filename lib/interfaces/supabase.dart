@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../pages/configuration.dart';
 import '../pages/matchscout.dart' hide MatchScoutPage;
 
-// "Aren't supabase functions all over the code?" Yes, but here are the ones that require big think
+// "Aren't supabase functions all over the code?" Yes, but here are the ones that require big think (and big caching)
 class SupabaseInterface {
   static Future<bool> get canConnect => Supabase.instance.client
       .rpc('ping')
@@ -32,20 +32,23 @@ class SupabaseInterface {
   static Future<void> clearSession() => Supabase.instance.client.from("sessions").delete();
 
   static Future<Map<String, int>> getSessions({required String match}) => Supabase.instance.client
-      .from("sessions")
-      .select("team")
-      .eq("season", Configuration.instance.season)
-      .eq("event", Configuration.event!)
-      .eq("match", match)
-      .neq("scouter", Supabase.instance.client.auth.currentUser!.id)
-      .gte('updated', DateTime.now().subtract(const Duration(minutes: 5)))
-      .then((resp) => resp.map((e) => e['team']).toList())
-      .then((sessions) => Map.fromEntries(
-          sessions.toSet().map((team) => MapEntry(team, sessions.where((t) => t == team).length))));
+          .from("sessions")
+          .select("team")
+          .eq("season", Configuration.instance.season)
+          .eq("event", Configuration.event!)
+          .eq("match", match)
+          .neq("scouter", Supabase.instance.client.auth.currentUser!.id)
+          .gte('updated', DateTime.now().subtract(const Duration(minutes: 5)))
+          .withConverter((resp) {
+        var sessions = resp.map((e) => e['team']);
+        return Map.fromEntries(sessions
+            .toSet()
+            .map((team) => MapEntry(team, sessions.where((t) => t == team).length)));
+      });
 
   static final matchscoutStock = Stock<int, MatchScoutQuestionSchema>(
-      fetcher: Fetcher.ofFuture((key) => Supabase.instance.client
-              .rpc('gettableschema', params: {"tablename": "${key}_match"}).then((resp) {
+      fetcher: Fetcher.ofFuture((season) => Supabase.instance.client
+              .rpc('gettableschema', params: {"tablename": "${season}_match"}).then((resp) {
             var schema = (Map<String, dynamic>.from(resp)
                   ..removeWhere((key, _) => {"event", "match", "team", "scouter"}.contains(key)))
                 .map((key, value) => MapEntry(key, value["type"]!));
