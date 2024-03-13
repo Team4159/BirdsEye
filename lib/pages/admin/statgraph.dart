@@ -227,6 +227,9 @@ class StatGraphPage extends StatelessWidget {
                           if (info.season != null && info.team != null) {
                             return TeamInSeasonGraph(season: info.season!, team: info.team!);
                           }
+                          if (info.season != null && info.event != null) {
+                            return EventInSeasonRankings(season: info.season!, event: info.event!);
+                          }
                           return const Center(child: Text("Not implemented"));
                         })))
           ])));
@@ -620,6 +623,7 @@ class TeamInSeasonGraph extends StatelessWidget {
                             .map((e) => PieChartSectionData(
                                 value: e.value,
                                 title: e.key,
+                                color: Theme.of(context).colorScheme.primaryContainer,
                                 showTitle: true,
                                 titleStyle: Theme.of(context).textTheme.labelSmall,
                                 borderSide:
@@ -661,4 +665,13 @@ class TeamInSeasonGraph extends StatelessWidget {
                                       ])))))
                       .toList())
           ]).toList()));
+}
+
+class EventInSeasonRankings extends StatelessWidget {
+  final int season;
+  final String event;
+  const EventInSeasonRankings({super.key, required this.season, required this.event});
+
+  @override
+  Widget build(BuildContext context) => const Placeholder();
 }
