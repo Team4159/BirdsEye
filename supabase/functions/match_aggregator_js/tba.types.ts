@@ -26,3 +26,16 @@ export interface AllianceInfo {
   "surrogate_team_keys": string[];
   "team_keys": string[];
 }
+
+export function getRobotPosition(
+  alliances: { red: AllianceInfo; blue: AllianceInfo },
+  team: string,
+): { alliance: "red" | "blue"; index: number } {
+  for (const [alliance, info] of Object.entries(alliances)) {
+    const i = info.team_keys.indexOf(`frc${team}`);
+    if (i !== -1) {
+      return { "alliance": alliance as "red" | "blue", index: i + 1 };
+    }
+  }
+  throw new Error("Invalid Robot Position");
+}

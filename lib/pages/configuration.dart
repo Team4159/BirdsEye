@@ -1,3 +1,4 @@
+import 'package:birdseye/utils.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,7 @@ import '../main.dart' show prefs;
 
 class ConfigurationPage extends StatelessWidget {
   final _eventCarouselController = CarouselController();
-  final ValueNotifier<bool> _isBeingMoved = ValueNotifier(false);
+  final BinaryValueNotifier _carouselProgress = BinaryValueNotifier(0);
   ConfigurationPage({super.key});
 
   @override
@@ -34,8 +35,9 @@ class ConfigurationPage extends StatelessWidget {
                   int index = snapshot.data!
                       .indexWhere((element) => element == Configuration.instance.season);
                   if (Configuration.instance.season < 0 || index < 0) {
+                    index = snapshot.data!.length - 1;
                     WidgetsBinding.instance.addPostFrameCallback(
-                        (_) => Configuration.instance.season = snapshot.data![index = 0]);
+                        (_) => Configuration.instance.season = snapshot.data![index]);
                   }
                   return Padding(
                       padding: MediaQuery.of(context).size.height > 500
@@ -45,14 +47,13 @@ class ConfigurationPage extends StatelessWidget {
                           items: snapshot.data!
                               .map((year) => Text(year.toString(),
                                   style: Theme.of(context).textTheme.headlineMedium))
-                              .toList(),
+                              .toList(growable: false),
                           options: CarouselOptions(
                               aspectRatio: 12 / 1,
                               viewportFraction: 1 / 3,
                               enableInfiniteScroll: false,
                               initialPage: index,
-                              onScrolled: (n) =>
-                                  _isBeingMoved.value = n == null ? true : n % 1 > 0.05,
+                              onScrolled: (n) => _carouselProgress.value = n == null ? 0 : n % 1,
                               onPageChanged: (i, _) =>
                                   Configuration.instance.season = snapshot.data![i])));
                 })),
@@ -80,7 +81,7 @@ class ConfigurationPage extends StatelessWidget {
                                     : const Center(child: CircularProgressIndicator());
                               }
                               List<MapEntry<String, String>> entries =
-                                  snapshot.data!.entries.toList();
+                                  snapshot.data!.entries.toList(growable: false);
                               if (entries.isEmpty) {
                                 return Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
@@ -92,16 +93,18 @@ class ConfigurationPage extends StatelessWidget {
                                       const Text("No Events Found")
                                     ]);
                               }
-                              int index = entries
-                                  .indexWhere((element) => element.key == Configuration.event);
-                              if (!prefs.containsKey("event") || index < 0) {
-                                prefs.setString("event", entries[index = 0].key);
+                              int index = 0;
+                              if (Configuration.event == null) {
+                                Configuration.event = entries[index].key;
+                              } else {
+                                index = snapshot.data!.keys.toList().indexOf(Configuration.event!);
+                                if (index < 0) index = 0;
                               }
                               return ListenableBuilder(
-                                  listenable: _isBeingMoved,
+                                  listenable: _carouselProgress,
                                   builder: (context, child) => AnimatedOpacity(
-                                      opacity: _isBeingMoved.value ? 0 : 1,
-                                      duration: Durations.short3,
+                                      opacity: 1 - _carouselProgress.value,
+                                      duration: Durations.short1,
                                       child: child),
                                   child: Stack(
                                       fit: StackFit.expand,
@@ -112,7 +115,7 @@ class ConfigurationPage extends StatelessWidget {
                                             items: entries
                                                 .asMap()
                                                 .entries
-                                                .map<Widget>((enumeratedEntry) => ListTile(
+                                                .map((enumeratedEntry) => ListTile(
                                                     visualDensity:
                                                         VisualDensity.adaptivePlatformDensity,
                                                     title: Text(
@@ -136,7 +139,7 @@ class ConfigurationPage extends StatelessWidget {
                                                     onTap: () => _eventCarouselController
                                                         .animateToPage(enumeratedEntry.key,
                                                             curve: Curves.easeOutQuart)))
-                                                .toList(),
+                                                .toList(growable: false),
                                             options: CarouselOptions(
                                                 aspectRatio: 1 / 5,
                                                 viewportFraction: 40 /
@@ -170,6 +173,7 @@ class Configuration extends ChangeNotifier {
   }
 
   static String? get event => prefs.containsKey("event") ? prefs.getString("event") : null;
+  static set event(String? e) => e == null ? prefs.remove("event") : prefs.setString("event", e);
 
   Future<bool> get isValid async =>
       season >= 0 &&

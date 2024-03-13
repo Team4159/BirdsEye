@@ -1,7 +1,8 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Database } from "./database.types.ts";
 import { MatchInfo } from "./tba.types.ts";
 import process2023TBA from "./season2023.ts";
+import process2024TBA from "./season2024.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,9 +28,9 @@ Deno.serve(async (req: Request) => {
     // Request Argument Validation
     const params: URLSearchParams = new URL(req.url).searchParams;
     // for (const entry of await req.json()) params.append(entry[0], entry[1]);
-    if (!params.has("season") || !params.has("event")) {
+    if (!params.has("season") || !(params.has("event") || params.has("team"))) {
       return new Response(
-        "Missing Required Parameters\nseason: valid frc season year (e.g. 2023)\nevent: valid tba event code (e.g. casf)",
+        "Missing Required Parameters\nseason: valid frc season year (e.g. 2023)\n\nevent: valid tba event code (e.g. casf)\nOR\nteam: valid frc team number (e.g. 4159)",
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
@@ -37,38 +38,38 @@ Deno.serve(async (req: Request) => {
       );
     }
     // Database Fetching
-    const { data } = await supabase
-      .from(`${params.get("season")}_match`)
-      .select()
-      .eq("event", params.get("event")!);
+    let query = supabase.from(`${params.get("season")}_match`).select();
+    if (params.has("event")) query = query.eq("event", params.get("event")!)
+    if (params.has("team")) query = query.eq("team", params.get("team")!)
+    const { data, error } = await query;
     if (!data || data.length === 0) {
       return new Response(
-        `No Data Found for ${params.get("season")}${params.get("event")}`,
+        `No Data Found for ${params.has("team") ? params.get("team")+"@ " : ""}${params.get("season")}${params.has("event") ? params.get("event") : ""}\n${error?.message}`,
         {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "text/plain" },
-        },
+        }
       );
     }
     if (params.get("type") === "text") {
       // Data Aggregation
       const agg: {
         [key: string]: { [key: string]: { [key: string]: string } };
-      } = {}; // {team: {match: {question: value}}}
+      } = {}; // {team / event: {match: {question: value}}}
       for (const scoutingEntry of data) {
-        const team: string = scoutingEntry["team"];
-        if (agg[team] == null) agg[team] = {};
+        const mkey: string = !params.has("event") ? scoutingEntry["event"] : scoutingEntry["team"];
+        if (agg[mkey] == null) agg[mkey] = {};
         const match: string = scoutingEntry["match"];
-        if (agg[team][match] == null) agg[team][match] = {};
+        if (agg[mkey][match] == null) agg[mkey][match] = {};
         const scouter: string | undefined = scoutingEntry["scouter"];
         ["event", "match", "team", "scouter"].forEach((k) =>
           delete scoutingEntry[k]
         );
         for (const [key, value] of Object.entries(scoutingEntry)) {
           if (!(typeof value === "string") || value.length === 0) continue;
-          if (agg[team][match][key] == null) agg[team][match][key] = "";
-          agg[team][match][key] = `${
-            agg[team][match][key]
+          if (agg[mkey][match][key] == null) agg[mkey][match][key] = "";
+          agg[mkey][match][key] = `${
+            agg[mkey][match][key]
           }\n${scouter}: ${value}`;
         }
       }
@@ -77,12 +78,10 @@ Deno.serve(async (req: Request) => {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    } else {
+    } else if (params.has("event")) {
       // TBA Fetching
       const tbadataraw: MatchInfo[] = await fetch(
-        `https://www.thebluealliance.com/api/v3/event/${params.get("season")}${
-          params.get("event")
-        }/matches`,
+        `https://www.thebluealliance.com/api/v3/event/${params.get("season")}${params.get("event")}/matches`,
         { headers: { "X-TBA-Auth-Key": Deno.env.get("TBA_KEY")! } },
       ).then((resp) => resp.json());
       const tbadata: { [key: string]: MatchInfo } = Object.fromEntries(
@@ -96,16 +95,10 @@ Deno.serve(async (req: Request) => {
       for (const scoutingEntry of data) {
         const match: string = scoutingEntry["match"];
         if (agg[match] == null) agg[match] = {};
-        const team: string = scoutingEntry["team"]; // TODO pretty sure this does not work with B teams
+        const team: string = scoutingEntry["team"];
         if (agg[match][team] == null) agg[match][team] = {};
 
         if (!(match in tbadata)) continue;
-        switch (params.get("season")) {
-          case "2023":
-            process2023TBA(agg[match][team], team, tbadata[match]);
-            break;
-        }
-
         ["event", "match", "team", "scouter"].forEach((k) =>
           delete scoutingEntry[k]
         );
@@ -115,9 +108,92 @@ Deno.serve(async (req: Request) => {
           if (agg[match][team][key] == null) agg[match][team][key] = new Set();
           agg[match][team][key]!.add(value);
         }
+
+        switch (params.get("season")) {
+          case "2023":
+            process2023TBA(agg[match][team], team, tbadata[match]);
+            break;
+          case "2024":
+            process2024TBA(agg[match][team], team, tbadata[match]);
+            break;
+        }
       }
       // Data Aggregation 2: Electric Boogaloo
       const isMedian: boolean = params.get("mode") === "median";
+      // match: {team: {scoretype: aggregate_value}}
+      const matches: {
+        [key: string]: { [key: number]: { [key: string]: number } };
+      } = Object.fromEntries(
+        Object.entries(agg).map((
+          [k1, v1]: [string, { [key: number]: { [key: string]: Set<number> } }],
+        ) => [
+          k1,
+          Object.fromEntries(
+            Object.entries(v1).map((
+              [k2, v2]: [string, { [key: string]: Set<number> }],
+            ) => [
+              k2,
+              Object.fromEntries(
+                Object.entries(v2).map(([k3, v3]: [string, Set<number>]) => [
+                  k3,
+                  isMedian
+                    ? [...v3].sort()[Math.floor(v3.size / 2)]
+                    : [...v3].reduce((v, c) => v + c) / v3.size,
+                ]),
+              ),
+            ]),
+          ),
+        ]),
+      );
+      // Return
+      return Response.json(matches, {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } else {
+      // TBA Fetching
+      const tbadataraw: MatchInfo[] = await fetch(
+        `https://www.thebluealliance.com/api/v3/team/frc${params.get("team")}/matches/${params.get("season")}`,
+        { headers: { "X-TBA-Auth-Key": Deno.env.get("TBA_KEY")! } },
+      ).then((resp) => resp.json());
+      const tbadata: { [key: string]: MatchInfo } = Object.fromEntries(
+        tbadataraw.map((match) => [match.key.split("_").at(-1), match]),
+      );
+
+      // Data Aggregation
+      const agg: {
+        [key: string]: { [key: string]: { [key: string]: Set<number> } };
+      } = {}; // {event: {match: {scoretype: [values]}}}
+      const team = params.get("team")!;
+      for (const scoutingEntry of data) {
+        const event: string = scoutingEntry["event"];
+        if (agg[event] == null) agg[event] = {};
+        const match: string = scoutingEntry["match"];
+        if (agg[event][match] == null) agg[event][match] = {};
+
+        ["event", "match", "team", "scouter"].forEach((k) =>
+          delete scoutingEntry[k]
+        );
+        for (let [key, value] of Object.entries(scoutingEntry)) {
+          if (typeof value === "boolean") value = value ? 1 : 0;
+          if (typeof value !== "number") continue;
+          if (agg[event][match][key] == null) agg[event][match][key] = new Set();
+          agg[event][match][key]!.add(value);
+        }
+
+        if (!(match in tbadata)) continue;
+        switch (params.get("season")) {
+          case "2023":
+            process2023TBA(agg[event][match], team, tbadata[match]);
+            break;
+          case "2024":
+            process2024TBA(agg[event][match], team, tbadata[match]);
+            break;
+        }
+      }
+      // Data Aggregation 2: Electric Boogaloo
+      const isMedian: boolean = params.get("mode") === "median";
+      // event: {match: {scoretype: aggregate_value}}
       const matches: {
         [key: string]: { [key: number]: { [key: string]: number } };
       } = Object.fromEntries(
@@ -149,7 +225,8 @@ Deno.serve(async (req: Request) => {
       });
     }
   } catch (e) {
-    return new Response(e.toString(), {
+    console.error(e);
+    return new Response("Internal Server Error", {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "text/plain" },
     });

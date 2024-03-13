@@ -35,9 +35,7 @@ class AchievementsPage extends StatelessWidget {
   AchievementsPage({super.key});
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-      minimum: const EdgeInsets.only(bottom: 12),
-      child: Column(children: [
+  Widget build(BuildContext context) => Column(children: [
         AppBar(title: const Text("Achievements")),
         Padding(
             padding: const EdgeInsets.all(12),
@@ -82,7 +80,7 @@ class AchievementsPage extends StatelessWidget {
                                         .where((achievement) => achievement.achievement.name
                                             .toLowerCase()
                                             .contains(_searchedText.text.toLowerCase()))
-                                        .toList();
+                                        .toList(growable: false);
                                 return CarouselSlider(
                                   items: data.map((achdata) {
                                     var autoscrollcontroller = ScrollController();
@@ -158,7 +156,7 @@ class AchievementsPage extends StatelessWidget {
                                                                     .bodyLarge)))
                                                   ]))
                                         ]));
-                                  }).toList(),
+                                  }).toList(growable: false),
                                   options: CarouselOptions(
                                       viewportFraction:
                                           max(300 / MediaQuery.of(context).size.width, 0.6),
@@ -211,8 +209,8 @@ class AchievementsPage extends StatelessWidget {
                                           labelText: "Details (Optional)",
                                           border: OutlineInputBorder()),
                                       controller: _detailsController)))),
-                      Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                      SafeArea(
+                          minimum: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
                           child: Row(children: [
                             IconButton(
                                 onPressed: () {}, icon: const Icon(Icons.attach_file_rounded)),
@@ -246,7 +244,7 @@ class AchievementsPage extends StatelessWidget {
                                     label: const Text("Submit")))
                           ]))
                     ]))),
-      ]));
+      ]);
 }
 
 enum AchievementApprovalStatus { approved, rejected, pending }

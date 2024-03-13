@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils.dart';
 import './configuration.dart';
 import './metadata.dart';
 import '../interfaces/bluealliance.dart';
 import '../interfaces/localstore.dart';
 import '../interfaces/supabase.dart';
-import '../widgets/deleteconfirmation.dart';
 
 Future<Map<String, String>?> _getPrevious(int team) => Supabase.instance.client
     .from("${Configuration.instance.season}_pit")
@@ -39,7 +39,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
   final Map<String, TextEditingController> _controllers = {};
   final ScrollController _scrollController = ScrollController();
 
-  List<int>? unfilled; // cache
+  List<int>? unfilled; // memory cache
   Future<List<int>> _getUnfilled() {
     if (unfilled != null) return Future.value(unfilled);
     return BlueAlliance.stock

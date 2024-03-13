@@ -2,12 +2,12 @@ import 'package:birdseye/interfaces/supabase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_swipe_action_cell/core/cell.dart';
 
+import '../utils.dart';
 import './matchscout.dart' as matchscout;
 import './pitscout.dart' as pitscout;
 import '../interfaces/bluealliance.dart';
 import '../interfaces/localstore.dart';
 import '../pages/configuration.dart';
-import '../widgets/deleteconfirmation.dart';
 
 class SavedResponsesPage extends StatelessWidget {
   final _list = _WrappedList([]);
@@ -36,6 +36,7 @@ class SavedResponsesPage extends StatelessWidget {
                                     reset: () {
                                       SupabaseInterface.clearAchievements();
                                       BlueAlliance.stockSoT.deleteAll();
+                                      BlueAlliance.refreshOPRs(null);
                                     },
                                     context: context,
                                     toConfirm: "clear the cache")
@@ -169,7 +170,7 @@ class CacheAddWidget extends StatelessWidget {
               match: null
             )).then((events) => events.keys
                 .map((eventcode) => DropdownMenuItem(value: eventcode, child: Text(eventcode)))
-                .toList()),
+                .toList(growable: false)),
             builder: (context, snapshot) => ListenableBuilder(
                 listenable: _dropdownValue,
                 builder: (context, _) => Row(children: [

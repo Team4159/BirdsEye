@@ -167,9 +167,9 @@ export type Database = {
         }
         Insert: {
           auto_amp?: number
-          auto_amp_missed: number
+          auto_amp_missed?: number
           auto_speaker?: number
-          auto_speaker_missed: number
+          auto_speaker_missed?: number
           comments_contribution?: number | null
           comments_defensive: boolean
           comments_fouls?: number
@@ -178,11 +178,11 @@ export type Database = {
           scouter?: string
           team: number
           teleop_amp?: number
-          teleop_amp_missed: number
+          teleop_amp_missed?: number
           teleop_loudspeaker?: number
           teleop_speaker?: number
-          teleop_speaker_missed: number
-          teleop_trap: number
+          teleop_speaker_missed?: number
+          teleop_trap?: number
         }
         Update: {
           auto_amp?: number
@@ -289,7 +289,7 @@ export type Database = {
       }
       achievements: {
         Row: {
-          description: string | null
+          description: string
           event: string | null
           id: number
           name: string
@@ -298,7 +298,7 @@ export type Database = {
           season: number | null
         }
         Insert: {
-          description?: string | null
+          description: string
           event?: string | null
           id?: number
           name: string
@@ -307,7 +307,7 @@ export type Database = {
           season?: number | null
         }
         Update: {
-          description?: string | null
+          description?: string
           event?: string | null
           id?: number
           name?: string

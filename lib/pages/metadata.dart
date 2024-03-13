@@ -231,7 +231,7 @@ class UserMetadata extends ChangeNotifier {
     qualitativeAnalyzer: false
   ));
 
-  get hasAnyAdminPerms =>
+  bool get hasAnyAdminPerms =>
       UserMetadata.instance.cachedPermissions.value.achievementApprover ||
       UserMetadata.instance.cachedPermissions.value.economyManager ||
       UserMetadata.instance.cachedPermissions.value.graphViewer ||

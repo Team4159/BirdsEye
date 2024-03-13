@@ -3,11 +3,11 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../utils.dart';
 import './configuration.dart';
 import '../interfaces/bluealliance.dart';
 import '../interfaces/localstore.dart';
 import '../interfaces/supabase.dart';
-import '../widgets/deleteconfirmation.dart';
 
 typedef MatchScoutQuestionSchema
     = LinkedHashMap<String, LinkedHashMap<String, MatchScoutQuestionTypes>>;
@@ -201,16 +201,18 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                                               _formKey.currentState!.reset();
                                               if (currmatch.level == MatchLevel.qualification &&
                                                   currmatch.index < info.highestQual) {
+                                                info.team = null;
                                                 info.match = (
                                                   level: MatchLevel.qualification,
                                                   finalnum: null,
                                                   index: currmatch.index + 1
                                                 );
+                                              } else {
+                                                info.resetInfo();
                                               }
                                               await _scrollController.animateTo(0,
                                                   duration: const Duration(seconds: 1),
                                                   curve: Curves.easeOutBack);
-                                              info.resetInfo();
                                             }).catchError((e) {
                                               ScaffoldMessenger.of(context).showSnackBar(
                                                   SnackBar(content: Text(e.toString())));
@@ -228,6 +230,34 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                                       })
                                 ])))
                           ]))))));
+}
+
+typedef MatchRobotPositionInfo = ({bool isRedAlliance, int ordinal, int currentScouters});
+
+class RobotPositionChip extends Container {
+  RobotPositionChip(MatchRobotPositionInfo position, {super.key})
+      : super(
+            decoration: BoxDecoration(
+                color: (position.isRedAlliance ? const Color(0xffed1c24) : const Color(0xff0066b3))
+                    .withOpacity(1 / (position.currentScouters + 1)),
+                border: Border.all(width: 1, color: Colors.grey[800]!),
+                borderRadius: BorderRadius.circular(8)),
+            width: 20,
+            height: 24,
+            padding: const EdgeInsets.symmetric(horizontal: 3),
+            alignment: Alignment.topCenter,
+            child: Center(child: Text(position.ordinal.toString())));
+
+  static final _robotPositionPattern = RegExp(r'^(?<color>red|blue)(?<number>[1-3])$');
+  static MatchRobotPositionInfo robotPositionFromString(String posStr, {int scouters = 0}) {
+    RegExpMatch? patternMatch = _robotPositionPattern.firstMatch(posStr);
+    if (patternMatch == null) throw Exception("Malformed Robot Position '$posStr'");
+    return (
+      isRedAlliance: patternMatch.namedGroup("color") == "red",
+      ordinal: int.parse(patternMatch.namedGroup("number")!),
+      currentScouters: scouters
+    );
+  }
 }
 
 class MatchScoutInfo {
@@ -272,11 +302,11 @@ class MatchScoutInfo {
     matchController.text = mstr;
     _match = m;
     teams = null;
-    Future<Map<String, String>> tbaDataFuture = m.level == MatchLevel.qualification ||
-            !BlueAlliance.dirtyConnected
+    Future<Map<String, String>> tbaDataFuture = m.level != MatchLevel.qualification &&
+            BlueAlliance.dirtyConnected
         ? BlueAlliance.stock
-            .get((season: Configuration.instance.season, event: Configuration.event, match: mstr))
-        : BlueAlliance.stock.fresh((
+            .fresh((season: Configuration.instance.season, event: Configuration.event, match: mstr))
+        : BlueAlliance.stock.get((
             season: Configuration.instance.season,
             event: Configuration.event,
             match: mstr
@@ -284,34 +314,33 @@ class MatchScoutInfo {
     SupabaseInterface.canConnect
         .then((conn) =>
             conn ? SupabaseInterface.getSessions(match: mstr) : Future.value(<String, int>{}))
-        .then((sessions) => tbaDataFuture
-                .then((td) => td.length < 6 ? throw Exception("Incorrect Team Count!") : td)
-                // FIXME untested: filter unfilled (finals) matches out
-                .then((teamsData) => LinkedHashMap.fromEntries((teamsData.entries.toList()
-                      ..sort((a, b) => a.value.compareTo(b.value)))
-                    .map((e) => MapEntry(e.key,
-                        "${sessions.containsKey(e.key) ? '${sessions[e.key]}|' : ''}${e.value}"))))
-                .then((data) {
-              teams = data;
-              team = (data.keys.toList()..sort((a, b) => (sessions[a] ?? 0) - (sessions[b] ?? 0)))
-                  .first;
-            }))
-        .catchError((e) => teams = null);
+        .then((sessions) => tbaDataFuture.then((teamsData) => LinkedHashMap.fromEntries(
+            (teamsData.entries.toList()..sort((a, b) => a.value.compareTo(b.value))).map((e) =>
+                MapEntry(
+                    e.key,
+                    RobotPositionChip.robotPositionFromString(e.value,
+                        scouters: sessions.containsKey(e.key) ? sessions[e.key]! : 0))))))
+        .then((data) {
+      teams = data;
+    }).catchError((e) => teams = null);
   }
 
   String? getMatchStr() => match == null ? null : stringifyMatchInfo(match!);
   void setMatchStr(String? m) => match = parseMatchInfo(m); // invoke the other setter
 
-  LinkedHashMap<String, String>? _teams;
-  LinkedHashMap<String, String>? get teams => _teams;
-  set teams(LinkedHashMap<String, String>? t) {
+  NotifiableChangeNotifier teamsController = NotifiableChangeNotifier();
+  LinkedHashMap<String, MatchRobotPositionInfo>? _teams;
+  LinkedHashMap<String, MatchRobotPositionInfo>? get teams => _teams;
+  set teams(LinkedHashMap<String, MatchRobotPositionInfo>? t) {
     _teams = t;
     team = null;
+    teamsController.notifyListeners();
   }
 
   ValueNotifier<String?> teamController;
   String? get team => teamController.value;
   set team(String? t) {
+    teamsController.notifyListeners();
     if (t == null) return teamController.value = null;
     if (teams == null) return;
     if (t == team || !teams!.containsKey(t)) return;
@@ -327,27 +356,6 @@ class MatchScoutInfo {
 class MatchScoutInfoFields extends StatelessWidget {
   const MatchScoutInfoFields({super.key, required this.info});
   final MatchScoutInfo info;
-
-  static final _robotPositionPattern =
-      RegExp(r'^(?:(?<count>\d+)\|)?(?<color>red|blue)(?<number>[1-3])$');
-  static Widget _generateRobotPositionChip(String position) {
-    RegExpMatch? patternMatch = _robotPositionPattern.firstMatch(position);
-    if (patternMatch == null) throw Exception("Malformed Robot Position '$position'");
-    return Container(
-        decoration: BoxDecoration(
-            color: const {
-              "red": Color(0xffed1c24),
-              "blue": Color(0xff0066b3)
-            }[patternMatch.namedGroup("color")]!
-                .withOpacity(1 / ((int.tryParse(patternMatch.namedGroup("count") ?? "") ?? 0) + 1)),
-            border: Border.all(width: 1, color: Colors.grey[800]!),
-            borderRadius: BorderRadius.circular(8)),
-        width: 20,
-        height: 24,
-        padding: const EdgeInsets.symmetric(horizontal: 3),
-        alignment: Alignment.topCenter,
-        child: Center(child: Text(patternMatch.namedGroup("number")!)));
-  }
 
   @override
   Widget build(BuildContext context) => Align(
@@ -435,7 +443,7 @@ class MatchScoutInfoFields extends StatelessWidget {
                 Flexible(
                     flex: 5,
                     child: ListenableBuilder(
-                        listenable: info.teamController,
+                        listenable: info.teamsController,
                         builder: (context, _) => DropdownButtonFormField(
                             alignment: Alignment.bottomCenter,
                             decoration: const InputDecoration(helperText: "Team"),
@@ -458,9 +466,14 @@ class MatchScoutInfoFields extends StatelessWidget {
                                                   children: [
                                                     const SizedBox(width: 5),
                                                     Expanded(child: Text(team.toString())),
-                                                    _generateRobotPositionChip(position)
+                                                    RobotPositionChip(position)
                                                   ])))
                                   ],
+                            onTap: () => info.team ??= (info.teams!.keys.toList()
+                                  ..sort((a, b) =>
+                                      info.teams![a]!.currentScouters -
+                                      info.teams![b]!.currentScouters))
+                                .first,
                             onChanged: (String? value) => info.team = value)))
               ])));
 }

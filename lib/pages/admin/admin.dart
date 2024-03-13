@@ -1,16 +1,13 @@
-import 'dart:math';
-
-import 'package:birdseye/pages/metadata.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../main.dart';
+import '../../pages/metadata.dart';
 import 'achievementqueue.dart';
 import 'qualitativeanalysis.dart';
 import 'statgraph.dart';
 
 final _adminNavigatorKey = GlobalKey<NavigatorState>();
-final rnd = Random();
 
 enum AdminRoutePaths { statgraphs, achiqueue, qualanaly }
 
@@ -44,16 +41,6 @@ final adminGoRoute = GoRoute(
                         : state.namedLocation(RoutePaths.adminportal.name)),
             GoRoute(
                 parentNavigatorKey: _adminNavigatorKey,
-                path: AdminRoutePaths.statgraphs.name,
-                name: AdminRoutePaths.statgraphs.name,
-                pageBuilder: (context, state) =>
-                    MaterialPage(child: StatGraphPage(), name: "Stat Graphs"),
-                redirect: (context, state) =>
-                    UserMetadata.instance.cachedPermissions.value.graphViewer
-                        ? null
-                        : state.namedLocation(RoutePaths.adminportal.name)),
-            GoRoute(
-                parentNavigatorKey: _adminNavigatorKey,
                 path: AdminRoutePaths.qualanaly.name,
                 name: AdminRoutePaths.qualanaly.name,
                 pageBuilder: (context, state) => const MaterialPage(
@@ -62,7 +49,15 @@ final adminGoRoute = GoRoute(
                     UserMetadata.instance.cachedPermissions.value.qualitativeAnalyzer
                         ? null
                         : state.namedLocation(RoutePaths.adminportal.name)),
-          ])
+          ]),
+      GoRoute(
+          path: AdminRoutePaths.statgraphs.name,
+          name: AdminRoutePaths.statgraphs.name,
+          pageBuilder: (context, state) =>
+              MaterialPage(child: StatGraphPage(), name: "Stat Graphs"),
+          redirect: (context, state) => UserMetadata.instance.cachedPermissions.value.graphViewer
+              ? null
+              : state.namedLocation(RoutePaths.adminportal.name)),
     ]);
 
 class AdminScaffoldShell extends StatelessWidget {

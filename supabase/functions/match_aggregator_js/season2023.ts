@@ -1,4 +1,4 @@
-import { AllianceInfo, MatchInfo } from "./tba.types.ts";
+import { MatchInfo, getRobotPosition } from "./tba.types.ts";
 
 interface ScoreBreakdown { // for reference
   "activationBonusAchieved": boolean;
@@ -40,19 +40,6 @@ interface CommunityState {
   "B": ("None" | "Cone" | "Cube")[];
   "M": ("None" | "Cone" | "Cube")[];
   "T": ("None" | "Cone" | "Cube")[];
-}
-
-function getRobotPosition(
-  alliances: { red: AllianceInfo; blue: AllianceInfo },
-  team: string,
-): { alliance: "red" | "blue"; index: number } {
-  for (const [alliance, info] of Object.entries(alliances)) {
-    const i = info.team_keys.indexOf(`frc${team}`);
-    if (i !== -1) {
-      return { "alliance": alliance as "red" | "blue", index: i + 1 };
-    }
-  }
-  throw new Error("Invalid Robot Position");
 }
 
 export default function (
