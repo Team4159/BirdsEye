@@ -441,7 +441,7 @@ export type Database = {
     Functions: {
       getavailableseasons: {
         Args: Record<PropertyKey, never>
-        Returns: number[]
+        Returns: unknown
       }
       gettableschema: {
         Args: {

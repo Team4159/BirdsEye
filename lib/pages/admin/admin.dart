@@ -1,3 +1,4 @@
+import 'package:birdseye/pages/admin/nextmatch.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,7 +10,7 @@ import 'statgraph.dart';
 
 final _adminNavigatorKey = GlobalKey<NavigatorState>();
 
-enum AdminRoutePaths { statgraphs, achiqueue, qualanaly }
+enum AdminRoutePaths { statgraphs, achiqueue, qualanaly, nextmatch }
 
 final adminGoRoute = GoRoute(
     path: '/admin',
@@ -49,6 +50,13 @@ final adminGoRoute = GoRoute(
                     UserMetadata.instance.cachedPermissions.value.qualitativeAnalyzer
                         ? null
                         : state.namedLocation(RoutePaths.adminportal.name)),
+            GoRoute(
+                parentNavigatorKey: _adminNavigatorKey,
+                path: AdminRoutePaths.nextmatch.name,
+                name: AdminRoutePaths.nextmatch.name,
+                pageBuilder: (context, state) => const MaterialPage(
+                    child: NextMatchPage(), name: "Next Match"),
+                redirect: (context, state) => null), // TODOX: add perm checking list prev routes
           ]),
       GoRoute(
           path: AdminRoutePaths.statgraphs.name,
@@ -98,7 +106,14 @@ class AdminScaffoldShell extends StatelessWidget {
                         enabled: UserMetadata.instance.cachedPermissions.value.qualitativeAnalyzer,
                         onTap: () => GoRouter.of(context)
                           ..pop()
-                          ..goNamed(AdminRoutePaths.qualanaly.name))
+                          ..goNamed(AdminRoutePaths.qualanaly.name)),
+                    ListTile(
+                        leading: const Icon(Icons.visibility),
+                        title: const Text("Next Match"),
+                        // enabled: UserMetadata.instance.cachedPermissions.value.nextMatchViewer, // TODOX: add perm checking like prev routes
+                        onTap: () => GoRouter.of(context)
+                          ..pop()
+                          ..goNamed(AdminRoutePaths.nextmatch.name)),
                   ]))),
       body: child);
 }

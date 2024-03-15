@@ -673,5 +673,34 @@ class EventInSeasonRankings extends StatelessWidget {
   const EventInSeasonRankings({super.key, required this.season, required this.event});
 
   @override
-  Widget build(BuildContext context) => const Placeholder();
+  Widget build(BuildContext context) => FutureBuilder(
+      future: Supabase.instance.client.functions
+          .invoke("event_aggregator?season=$season&event=$event")
+          .then((resp) => resp.status >= 400
+              ? throw Exception("HTTP Error ${resp.status}")
+              : LinkedHashMap.fromEntries(Map<String, double?>.from(resp.data)
+                  .entries
+                  .whereType<MapEntry<String, double>>()
+                  .toList()
+                ..sort((a, b) => a.value == b.value
+                    ? 0
+                    : a.value > b.value
+                        ? -1
+                        : 1))),
+      builder: (context, snapshot) => snapshot.hasError
+          ? Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                  Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
+                  const SizedBox(height: 20),
+                  Text(snapshot.error.toString())
+                ])
+          : !snapshot.hasData
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  children: snapshot.data!.entries
+                      .map((e) =>
+                          ListTile(title: Text(e.key), trailing: Text(e.value.toStringAsFixed(2))))
+                      .toList()));
 }
