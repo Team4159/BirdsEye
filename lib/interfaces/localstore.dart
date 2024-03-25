@@ -3,15 +3,20 @@ import 'dart:async';
 import 'package:localstore/localstore.dart';
 import 'package:stock/stock.dart';
 
+import '../pages/matchscout.dart' show MatchScoutInfoSerialized;
 import 'bluealliance.dart';
 
 class LocalStoreInterface {
   static final _db = Localstore.instance;
 
-  static Future<void> addMatch(int season, Map<String, dynamic> data) => _db
+  static Future<void> addMatch(MatchScoutInfoSerialized key, Map<String, dynamic> fields) => _db
       .collection("scout")
-      .doc("match-$season${data['event']}_${data['match']}-${data['team']}")
-      .set(data..['season'] = season);
+      .doc("match-${key.season}${key.event}_${key.match}-${key.team}")
+      .set(fields
+        ..['season'] = key.season
+        ..['event'] = key.event
+        ..['match'] = key.match
+        ..['team'] = key.team);
 
   static Future<void> addPit(int season, Map<String, dynamic> data) => _db
       .collection("scout")

@@ -462,3 +462,36 @@ class ToplessHitchedBorder extends BoxBorder {
     return '${objectRuntimeType(this, 'ToplessHitchedBorder')}($bottom)';
   }
 }
+
+class SliverAnimatedInList<T> extends StatefulWidget {
+  final List<T> list;
+  final Widget Function(BuildContext, T) builder;
+  const SliverAnimatedInList(this.list, {required this.builder, super.key});
+
+  @override
+  State<StatefulWidget> createState() => _SliverAnimatedInListState();
+}
+
+class _SliverAnimatedInListState extends State<SliverAnimatedInList> {
+  final GlobalKey<SliverAnimatedListState> _animKey = GlobalKey();
+
+  @override
+  void initState() {
+    WidgetsBinding.instance.addPostFrameCallback((_) => Future.forEach(
+        widget.list.indexed,
+        (e) => Future.delayed(Durations.medium1, () {
+              setState(() {
+                _animKey.currentState!.insertItem(e.$1, duration: Durations.medium3);
+              });
+            })));
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) => SliverAnimatedList(
+      key: _animKey,
+      itemBuilder: (context, i, anim) => AnimatedSlide(
+          offset: Offset(0, anim.value * -i.toDouble()),
+          duration: Durations.short1,
+          child: widget.builder(context, widget.list[i])));
+}

@@ -135,7 +135,12 @@ class _RespList extends StatelessWidget {
                               dataList.remove(id, dontUpdate: true),
                               handler(true),
                               (id.startsWith("match")
-                                  ? matchscout.submitInfo(data, season: data.remove('season'))
+                                  ? matchscout.submitInfo((
+                                      season: data.remove('season') as int,
+                                      event: data.remove('event') as String,
+                                      match: data.remove('match') as String,
+                                      team: data.remove('team') as String
+                                    ), fields: data)
                                   : id.startsWith("pit")
                                       ? pitscout.submitInfo(data, season: data.remove('season'))
                                       : throw Exception("Invalid LocalStore ID: $id"))

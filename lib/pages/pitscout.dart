@@ -10,7 +10,7 @@ import '../interfaces/localstore.dart';
 import '../interfaces/supabase.dart';
 
 Future<Map<String, String>?> _getPrevious(int team) => Supabase.instance.client
-    .from("${Configuration.instance.season}_pit")
+    .from("pit_data_${Configuration.instance.season}")
     .select()
     .eq("event", Configuration.event!)
     .eq("team", team)
@@ -20,10 +20,12 @@ Future<Map<String, String>?> _getPrevious(int team) => Supabase.instance.client
         ? {}
         : Map.castFrom(value..removeWhere((k, _) => {"event", "team"}.contains(k))));
 
-Future<void> submitInfo(Map<String, dynamic> data, {int? season}) async => (await SupabaseInterface
-        .canConnect)
-    ? Supabase.instance.client.from("${season ?? Configuration.instance.season}_pit").upsert(data)
-    : LocalStoreInterface.addPit(season ?? Configuration.instance.season, data);
+Future<void> submitInfo(Map<String, dynamic> data, {int? season}) async =>
+    (await SupabaseInterface.canConnect)
+        ? Supabase.instance.client
+            .from("pit_data_${season ?? Configuration.instance.season}")
+            .upsert(data)
+        : LocalStoreInterface.addPit(season ?? Configuration.instance.season, data);
 
 class PitScoutPage extends StatefulWidget {
   const PitScoutPage({super.key});
@@ -47,7 +49,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
         .then((data) => Set<int>.of(data.keys.map(int.parse)))
         .then((teams) async {
           Set<int> filledteams = await Supabase.instance.client
-              .from("${Configuration.instance.season}_pit")
+              .from("pit_data_${Configuration.instance.season}")
               .select("team")
               .eq("event", Configuration.event!)
               .withConverter((value) => value.map<int>((e) => e['team']).toSet())

@@ -5,6 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../pages/configuration.dart';
 import '../pages/matchscout.dart' hide MatchScoutPage;
+import 'bluealliance.dart' show MatchInfo, parseMatchInfo;
+
+typedef AggInfo = ({int season, String? event, String? team});
 
 // "Aren't supabase functions all over the code?" Yes, but here are the ones that require big think (and big caching)
 class SupabaseInterface {
@@ -48,9 +51,8 @@ class SupabaseInterface {
 
   static final matchscoutStock = Stock<int, MatchScoutQuestionSchema>(
       fetcher: Fetcher.ofFuture((season) => Supabase.instance.client
-              .rpc('gettableschema', params: {"tablename": "${season}_match"}).then((resp) {
-            var schema = (Map<String, dynamic>.from(resp)
-                  ..removeWhere((key, _) => {"event", "match", "team", "scouter"}.contains(key)))
+              .rpc('gettableschema', params: {"tablename": "match_data_$season"}).then((resp) {
+            var schema = (Map<String, dynamic>.from(resp)..remove("id"))
                 .map((key, value) => MapEntry(key, value["type"]!));
             MatchScoutQuestionSchema matchSchema = LinkedHashMap();
             for (var MapEntry(key: columnname, value: sqltype) in schema.entries) {
@@ -72,7 +74,7 @@ class SupabaseInterface {
 
   static final pitscoutStock = Stock<int, Map<String, String>>(
       fetcher: Fetcher.ofFuture((season) => Supabase.instance.client
-          .rpc('gettableschema', params: {"tablename": "${season}_pit"}).then((resp) =>
+          .rpc('gettableschema', params: {"tablename": "pit_data_$season"}).then((resp) =>
               (LinkedHashMap<String, dynamic>.from(resp)
                     ..removeWhere((key, value) =>
                         {"event", "match", "team", "scouter"}.contains(key) ||
@@ -104,6 +106,60 @@ class SupabaseInterface {
               .then((data) => _achievements = data)
           : Future.value(_achievements);
   static void clearAchievements() => _achievements = null;
+
+  static final aggregateStock = Stock<AggInfo, LinkedHashMap<dynamic, Map<String, num>>>(
+      sourceOfTruth: CachedSourceOfTruth(),
+      fetcher: Fetcher.ofFuture((key) async {
+        assert(key.event != null || key.team != null);
+        var response = LinkedHashMap<String, dynamic>.from(await Supabase.instance.client.functions
+                .invoke("match_aggregator_js", body: {
+                  "season": key.season,
+                  if (key.event != null) "event": key.event,
+                  if (key.team != null) "team": key.team
+                })
+                .then((resp) =>
+                    resp.status >= 400 ? throw Exception("HTTP Error ${resp.status}") : resp.data)
+                .catchError((e) => e is FunctionException && e.status == 404 ? {} : throw e))
+            .map((k, v) => MapEntry(k, Map<String, dynamic>.from(v)));
+        if (key.event != null && key.team != null) {
+          return LinkedHashMap<MatchInfo, Map<String, num>>.of(
+              response.map((k, v) => MapEntry(parseMatchInfo(k)!, Map.from(v[key.team]))));
+          // match: {scoretype: aggregated_count}
+        }
+        if (key.team != null) {
+          return LinkedHashMap.fromEntries(response.entries
+              .map((evententry) => Map<String, dynamic>.from(evententry.value).map(
+                  (matchstring, matchscores) => MapEntry(
+                      (event: evententry.key, match: parseMatchInfo(matchstring)!),
+                      Map<String, num>.from(matchscores))))
+              .expand((e) => e.entries));
+        }
+        throw UnimplementedError("No aggregate for that combination");
+      }));
+
+  static final distinctStock = Stock<
+          AggInfo,
+          ({
+            Set<String> scouters,
+            Set<String> eventmatches,
+            Set<String> events,
+            Set<String> matches,
+            Set<String> teams
+          })>(
+      sourceOfTruth: CachedSourceOfTruth(),
+      fetcher: Fetcher.ofFuture((key) {
+        var q =
+            Supabase.instance.client.from("match_scouting").select("*").eq("season", key.season);
+        if (key.event != null) q = q.eq("event", key.event!);
+        if (key.team != null) q = q.eq("team", key.team!);
+        return q.withConverter((data) => (
+              scouters: data.map<String>((e) => e["scouter"]).toSet(),
+              eventmatches: data.map<String>((e) => e["event"] + e["match"]).toSet(),
+              events: data.map<String>((e) => e["event"]).toSet(),
+              matches: data.map<String>((e) => e["match"]).toSet(),
+              teams: data.map<String>((e) => e["team"]).toSet()
+            ));
+      }));
 }
 
 typedef Achievement = ({

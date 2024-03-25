@@ -25,10 +25,20 @@ enum MatchScoutQuestionTypes<T> {
       .firstWhere((type) => type.sqlType == s, orElse: () => MatchScoutQuestionTypes.error);
 }
 
-Future<void> submitInfo(Map<String, dynamic> data, {int? season}) async => await SupabaseInterface
-        .canConnect
-    ? Supabase.instance.client.from("${season ?? Configuration.instance.season}_match").insert(data)
-    : LocalStoreInterface.addMatch(season ?? Configuration.instance.season, data);
+typedef MatchScoutInfoSerialized = ({int season, String event, String match, String team});
+Future<void> submitInfo(MatchScoutInfoSerialized key,
+        {required Map<String, dynamic> fields}) async =>
+    await SupabaseInterface.canConnect
+        ? Supabase.instance.client
+            .from("match_scouting")
+            .insert(
+                {"season": key.season, "event": key.event, "match": key.match, "team": key.team})
+            .select("id")
+            .single()
+            .then((r) => Supabase.instance.client
+                .from("match_data_${key.season}")
+                .insert(fields..["id"] = r["id"]))
+        : LocalStoreInterface.addMatch(key, fields);
 
 class MatchScoutPage extends StatefulWidget {
   const MatchScoutPage({super.key});
@@ -192,12 +202,13 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                                             _fields.clear();
                                             _formKey.currentState!.save();
                                             MatchInfo currmatch = info.match!;
-                                            submitInfo({
-                                              ..._fields,
-                                              "event": Configuration.event,
-                                              "match": stringifyMatchInfo(currmatch),
-                                              "team": info.team
-                                            }).then((_) async {
+                                            submitInfo((
+                                              season: Configuration.instance.season,
+                                              event: Configuration.event!,
+                                              match: stringifyMatchInfo(currmatch),
+                                              team: info.team!
+                                            ), fields: _fields)
+                                                .then((_) async {
                                               _formKey.currentState!.reset();
                                               if (currmatch.level == MatchLevel.qualification &&
                                                   currmatch.index < info.highestQual) {

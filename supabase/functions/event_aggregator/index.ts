@@ -35,7 +35,8 @@ Deno.serve(async (req: Request) => {
       );
     }
     // Database Fetching
-    const { data, error } = await supabase.from(`${params.get("season")}_match`).select().eq("event", params.get("event"));
+    const { data, error } = await supabase.from(`match_data_${params.get("season")}`)
+      .select("*, match_scouting!inner(event, team)").eq("match_scouting.event", params.get("event"));
     if (!data || data.length === 0) {
       return new Response(
         `No Data Found for ${params.get("season")}${params.has("event") ? params.get("event") : ""}\n${error?.message}`,
@@ -46,14 +47,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    let agg: {[key: string]: Set<number>} = {};
+    const agg: {[key: string]: Set<number>} = {};
     for (const entry of data) {
       const skill = entry["comments_agility"] / ( ((5 * entry["comments_fouls"] + 1) * (entry["comments_defensive"] ? 0.7 : 1)) );
-      if (!agg[entry["team"]]) agg[entry["team"]] = new Set<number>();
-      agg[entry["team"]].add(skill);
+      if (!agg[entry.match_scouting["team"]]) agg[entry.match_scouting["team"]] = new Set<number>();
+      agg[entry.match_scouting["team"]].add(skill);
     }
     return Response.json(Object.fromEntries(
-      Object.entries(agg).map(([k, v]: [string, Set<number>]) => [k, v.values().reduce((a, b) => a+b) / v.size])
+      Object.entries(agg).map(([k, v]: [string, Set<number>]) => [k, [...v.values()].reduce((a, b) => a+b) / v.size])
     ), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }

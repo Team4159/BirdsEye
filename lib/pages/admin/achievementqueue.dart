@@ -67,133 +67,128 @@ class AchievementQueuePage extends StatelessWidget {
             ),
           ],
       body: SafeArea(
-          child: RefreshIndicator(
-              onRefresh: _fetch,
-              child: ListenableBuilder(
-                  listenable: _items,
-                  builder: (context, child) => _items.isEmpty
-                      ? Center(
-                          child: Text("No pending achievements for your team!",
-                              style: Theme.of(context).textTheme.titleMedium))
-                      : ListView.builder(
-                          primary: false,
-                          physics:
-                              const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                          itemCount: _items.length,
-                          itemBuilder: (context, i) {
-                            var e = _items[i];
-                            bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-                            return ExpansionTile(
-                                key: ObjectKey(e),
-                                title: Text(e.achname),
-                                subtitle: Text("${e.user} @ ${e.season}${e.event}"),
-                                leading: e.image == null
-                                    ? null
-                                    : ClipRRect(
-                                        borderRadius: BorderRadius.circular(4),
-                                        clipBehavior: Clip.hardEdge,
-                                        child: GestureDetector(
-                                          child: Image(
-                                            image: e.image!,
-                                            isAntiAlias: false,
-                                          ),
-                                          onTap: () => showDialog(
+          child: ListenableBuilder(
+              listenable: _items,
+              builder: (context, child) => _items.isEmpty
+                  ? Center(
+                      child: Text("No pending achievements for your team!",
+                          style: Theme.of(context).textTheme.titleMedium))
+                  : ListView.builder(
+                      primary: false,
+                      itemCount: _items.length,
+                      itemBuilder: (context, i) {
+                        var e = _items[i];
+                        bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+                        return ExpansionTile(
+                            key: ObjectKey(e),
+                            title: Text(e.achname),
+                            subtitle: Text("${e.user} @ ${e.season}${e.event}"),
+                            leading: e.image == null
+                                ? null
+                                : ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    clipBehavior: Clip.hardEdge,
+                                    child: GestureDetector(
+                                      child: Image(
+                                        image: e.image!,
+                                        isAntiAlias: false,
+                                      ),
+                                      onTap: () => showDialog(
+                                          context: context,
+                                          builder: (context) => Dialog(
+                                              child: Image(
+                                                  image: e.image!,
+                                                  filterQuality: FilterQuality.medium))),
+                                    )),
+                            controlAffinity: ListTileControlAffinity.trailing,
+                            expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                            childrenPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            maintainState: true,
+                            children: [
+                              ListTile(
+                                  leading: const Icon(Icons.checklist_rounded),
+                                  title: Text(e.achdesc),
+                                  subtitle: Text(e.achreqs),
+                                  dense: true),
+                              ListTile(
+                                leading: const Icon(Icons.person_search_rounded),
+                                title: const Text("User Description"),
+                                subtitle: Text(e.details, softWrap: true),
+                                dense: true,
+                                trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      IconButton.filledTonal(
+                                          onPressed: () => showDialog(
                                               context: context,
-                                              builder: (context) => Dialog(
-                                                  child: Image(
-                                                      image: e.image!,
-                                                      filterQuality: FilterQuality.medium))),
-                                        )),
-                                controlAffinity: ListTileControlAffinity.trailing,
-                                expandedCrossAxisAlignment: CrossAxisAlignment.start,
-                                childrenPadding:
-                                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                maintainState: true,
-                                children: [
-                                  ListTile(
-                                      leading: const Icon(Icons.checklist_rounded),
-                                      title: Text(e.achdesc),
-                                      subtitle: Text(e.achreqs),
-                                      dense: true),
-                                  ListTile(
-                                    leading: const Icon(Icons.person_search_rounded),
-                                    title: const Text("User Description"),
-                                    subtitle: Text(e.details, softWrap: true),
-                                    dense: true,
-                                    trailing: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        mainAxisAlignment: MainAxisAlignment.end,
-                                        children: [
-                                          IconButton.filledTonal(
-                                              onPressed: () => showDialog(
-                                                  context: context,
-                                                  builder: (context) => AlertDialog(
-                                                          title: const Text("Reject Achievement?"),
-                                                          actions: [
-                                                            OutlinedButton(
-                                                                onPressed: () =>
-                                                                    GoRouter.of(context).pop(),
-                                                                child: const Text("Cancel")),
-                                                            FilledButton(
-                                                                onPressed: () => _update(
-                                                                            e.achid,
-                                                                            e.userid,
-                                                                            e.season,
-                                                                            e.event,
-                                                                            false)
-                                                                        .then((_) {
-                                                                      GoRouter.of(context).pop();
-                                                                      _items.remove(e);
-                                                                    }).catchError((e) {
-                                                                      ScaffoldMessenger.of(context)
-                                                                          .showSnackBar(SnackBar(
-                                                                              content: Text(
-                                                                                  e.toString())));
-                                                                    }),
-                                                                child: const Text("Confirm"))
-                                                          ])),
-                                              icon: const Icon(Icons.close_rounded),
-                                              style: ButtonStyle(
-                                                  backgroundColor: MaterialStatePropertyAll(
-                                                      Colors.red[isDarkMode ? 700 : 300]))),
-                                          const SizedBox(width: 8),
-                                          IconButton.filledTonal(
-                                            onPressed: () => showDialog(
-                                                context: context,
-                                                builder: (context) => AlertDialog(
-                                                        title: const Text("Approve Achievement?"),
-                                                        actions: [
-                                                          OutlinedButton(
-                                                              onPressed: () =>
-                                                                  GoRouter.of(context).pop(),
-                                                              child: const Text("Cancel")),
-                                                          FilledButton(
-                                                              onPressed: () => _update(
-                                                                          e.achid,
-                                                                          e.userid,
-                                                                          e.season,
-                                                                          e.event,
-                                                                          true)
-                                                                      .then((_) {
-                                                                    GoRouter.of(context).pop();
-                                                                    _items.remove(e);
-                                                                  }).catchError((e) {
-                                                                    ScaffoldMessenger.of(context)
-                                                                        .showSnackBar(SnackBar(
-                                                                            content: Text(
-                                                                                e.toString())));
-                                                                  }),
-                                                              child: const Text("Confirm"))
-                                                        ])),
-                                            icon: const Icon(Icons.check_rounded),
-                                            style: ButtonStyle(
-                                                backgroundColor: MaterialStatePropertyAll(
-                                                    Colors.green[isDarkMode ? 700 : 300])),
-                                          )
-                                        ]),
-                                  )
-                                ]);
-                          })))));
+                                              builder: (context) => AlertDialog(
+                                                      title: const Text("Reject Achievement?"),
+                                                      actions: [
+                                                        OutlinedButton(
+                                                            onPressed: () =>
+                                                                GoRouter.of(context).pop(),
+                                                            child: const Text("Cancel")),
+                                                        FilledButton(
+                                                            onPressed: () => _update(
+                                                                        e.achid,
+                                                                        e.userid,
+                                                                        e.season,
+                                                                        e.event,
+                                                                        false)
+                                                                    .then((_) {
+                                                                  GoRouter.of(context).pop();
+                                                                  _items.remove(e);
+                                                                }).catchError((e) {
+                                                                  ScaffoldMessenger.of(context)
+                                                                      .showSnackBar(SnackBar(
+                                                                          content:
+                                                                              Text(e.toString())));
+                                                                }),
+                                                            child: const Text("Confirm"))
+                                                      ])),
+                                          icon: const Icon(Icons.close_rounded),
+                                          style: ButtonStyle(
+                                              backgroundColor: MaterialStatePropertyAll(
+                                                  Colors.red[isDarkMode ? 700 : 300]))),
+                                      const SizedBox(width: 8),
+                                      IconButton.filledTonal(
+                                        onPressed: () => showDialog(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                                    title: const Text("Approve Achievement?"),
+                                                    actions: [
+                                                      OutlinedButton(
+                                                          onPressed: () =>
+                                                              GoRouter.of(context).pop(),
+                                                          child: const Text("Cancel")),
+                                                      FilledButton(
+                                                          onPressed: () => _update(
+                                                                      e.achid,
+                                                                      e.userid,
+                                                                      e.season,
+                                                                      e.event,
+                                                                      true)
+                                                                  .then((_) {
+                                                                GoRouter.of(context).pop();
+                                                                _items.remove(e);
+                                                              }).catchError((e) {
+                                                                ScaffoldMessenger.of(context)
+                                                                    .showSnackBar(SnackBar(
+                                                                        content:
+                                                                            Text(e.toString())));
+                                                              }),
+                                                          child: const Text("Confirm"))
+                                                    ])),
+                                        icon: const Icon(Icons.check_rounded),
+                                        style: ButtonStyle(
+                                            backgroundColor: MaterialStatePropertyAll(
+                                                Colors.green[isDarkMode ? 700 : 300])),
+                                      )
+                                    ]),
+                              )
+                            ]);
+                      }))));
 }
 
 class UniqueNotifyingList<E> extends ChangeNotifier {

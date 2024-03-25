@@ -37,14 +37,15 @@ class AchievementsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(children: [
         AppBar(title: const Text("Achievements")),
-        Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-                controller: _searchedText,
-                decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.search_rounded),
-                    hintText: "Search"))),
+        if (MediaQuery.of(context).size.height > 400)
+          Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextField(
+                  controller: _searchedText,
+                  decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.search_rounded),
+                      hintText: "Search"))),
         Expanded(
             child: FutureBuilder(
                 future:
@@ -82,87 +83,78 @@ class AchievementsPage extends StatelessWidget {
                                             .contains(_searchedText.text.toLowerCase()))
                                         .toList(growable: false);
                                 return CarouselSlider(
-                                  items: data.map((achdata) {
-                                    var autoscrollcontroller = ScrollController();
-                                    autoscrollcontroller.addListener(() =>
-                                        autoscrollcontroller.offset >=
-                                                autoscrollcontroller.position.maxScrollExtent
-                                            ? autoscrollcontroller.jumpTo(0)
-                                            : autoscrollcontroller.position.pixels == 0
-                                                ? autoscrollcontroller.animateTo(
-                                                    autoscrollcontroller.position.maxScrollExtent,
-                                                    duration: const Duration(seconds: 3),
-                                                    curve: Curves.linear)
-                                                : null);
-                                    return Card(
-                                        clipBehavior: Clip.hardEdge,
-                                        child: Stack(fit: StackFit.expand, children: [
-                                          if (achdata.approved != null)
-                                            ColoredBox(
-                                                color: {
-                                              AchievementApprovalStatus.approved: Colors.green,
-                                              AchievementApprovalStatus.rejected: Colors.red,
-                                              AchievementApprovalStatus.pending: Colors.grey
-                                            }[achdata.approved]!
-                                                    .withAlpha(128)),
-                                          Padding(
-                                              padding: const EdgeInsets.all(18),
-                                              child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                                  children: [
-                                                    Row(mainAxisSize: MainAxisSize.max, children: [
-                                                      Flexible(
-                                                          flex: 5,
-                                                          fit: FlexFit.tight,
-                                                          child: Align(
-                                                              alignment: Alignment.centerLeft,
-                                                              child: FittedBox(
-                                                                  fit: BoxFit.scaleDown,
-                                                                  child: Text(
-                                                                      achdata.achievement.name,
-                                                                      style: Theme.of(context)
-                                                                          .textTheme
-                                                                          .headlineMedium)))),
-                                                      const Flexible(
-                                                          flex: 1,
-                                                          fit: FlexFit.tight,
-                                                          child: SizedBox()),
-                                                      Flexible(
-                                                          flex: 2,
-                                                          fit: FlexFit.tight,
-                                                          child: Align(
-                                                              alignment: Alignment.centerRight,
-                                                              child: FittedBox(
-                                                                  child: Text(
-                                                                      "${achdata.achievement.points} pts",
-                                                                      style: Theme.of(context)
-                                                                          .textTheme
-                                                                          .headlineSmall!
-                                                                          .copyWith(
-                                                                              color:
-                                                                                  Colors.grey)))))
-                                                    ]),
-                                                    const SizedBox(height: 12),
-                                                    Expanded(
-                                                        child: SingleChildScrollView(
-                                                            physics: const ClampingScrollPhysics(
-                                                                parent:
-                                                                    NeverScrollableScrollPhysics()),
-                                                            controller: autoscrollcontroller,
-                                                            child: Text(
-                                                                achdata.achievement.description,
-                                                                style: Theme.of(context)
-                                                                    .textTheme
-                                                                    .bodyLarge)))
-                                                  ]))
-                                        ]));
-                                  }).toList(growable: false),
+                                  items: data
+                                      .map((achdata) => Card(
+                                          clipBehavior: Clip.hardEdge,
+                                          child: Stack(fit: StackFit.expand, children: [
+                                            if (achdata.approved != null)
+                                              ColoredBox(
+                                                  color: {
+                                                AchievementApprovalStatus.approved: Colors.green,
+                                                AchievementApprovalStatus.rejected: Colors.red,
+                                                AchievementApprovalStatus.pending: Colors.grey
+                                              }[achdata.approved]!
+                                                      .withAlpha(128)),
+                                            Padding(
+                                                padding: const EdgeInsets.all(18),
+                                                child: Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                    children: [
+                                                      Row(
+                                                          mainAxisSize: MainAxisSize.max,
+                                                          children: [
+                                                            Flexible(
+                                                                flex: 5,
+                                                                fit: FlexFit.tight,
+                                                                child: Align(
+                                                                    alignment: Alignment.centerLeft,
+                                                                    child: FittedBox(
+                                                                        fit: BoxFit.scaleDown,
+                                                                        child: Text(
+                                                                            achdata
+                                                                                .achievement.name,
+                                                                            style: Theme.of(context)
+                                                                                .textTheme
+                                                                                .headlineMedium)))),
+                                                            const Flexible(
+                                                                flex: 1,
+                                                                fit: FlexFit.tight,
+                                                                child: SizedBox()),
+                                                            Flexible(
+                                                                flex: 2,
+                                                                fit: FlexFit.tight,
+                                                                child: Align(
+                                                                    alignment:
+                                                                        Alignment.centerRight,
+                                                                    child: FittedBox(
+                                                                        child: Text(
+                                                                            "${achdata.achievement.points} pts",
+                                                                            style: Theme.of(context)
+                                                                                .textTheme
+                                                                                .headlineSmall!
+                                                                                .copyWith(
+                                                                                    color: Colors
+                                                                                        .grey)))))
+                                                          ]),
+                                                      const SizedBox(height: 12),
+                                                      Expanded(
+                                                          child: SingleChildScrollView(
+                                                              physics:
+                                                                  const ClampingScrollPhysics(),
+                                                              child: Text(
+                                                                  achdata.achievement.description,
+                                                                  style: Theme.of(context)
+                                                                      .textTheme
+                                                                      .bodyLarge)))
+                                                    ]))
+                                          ])))
+                                      .toList(growable: false),
                                   options: CarouselOptions(
                                       viewportFraction:
                                           max(300 / MediaQuery.of(context).size.width, 0.6),
                                       enlargeCenterPage: true,
                                       enlargeFactor: 0.2,
-                                      height: 200,
+                                      height: min(MediaQuery.of(context).size.height / 3, 200),
                                       enableInfiniteScroll: _searchedText.text.isEmpty,
                                       onPageChanged: (i, _) {
                                         if (_selectedAchievement.value.achievement.id ==

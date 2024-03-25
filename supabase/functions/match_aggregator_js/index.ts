@@ -27,7 +27,10 @@ Deno.serve(async (req: Request) => {
 
     // Request Argument Validation
     const params: URLSearchParams = new URL(req.url).searchParams;
-    // for (const entry of await req.json()) params.append(entry[0], entry[1]);
+    for (const entry of await req.json()
+        .then((p) => Object.entries<string>(p))
+        .catch((e) => {console.warn(e); return []}))
+      params.append(entry[0], entry[1]);
     if (!params.has("season") || !(params.has("event") || params.has("team"))) {
       return new Response(
         "Missing Required Parameters\nseason: valid frc season year (e.g. 2023)\n\nevent: valid tba event code (e.g. casf)\nOR\nteam: valid frc team number (e.g. 4159)",
@@ -38,9 +41,9 @@ Deno.serve(async (req: Request) => {
       );
     }
     // Database Fetching
-    let query = supabase.from(`${params.get("season")}_match`).select();
-    if (params.has("event")) query = query.eq("event", params.get("event")!)
-    if (params.has("team")) query = query.eq("team", params.get("team")!)
+    let query = supabase.from(`match_data_${params.get("season")}`).select("*, match_scouting!inner(scouter, event, match, team)");
+    if (params.has("event")) query = query.eq("match_scouting.event", params.get("event")!)
+    if (params.has("team")) query = query.eq("match_scouting.team", params.get("team")!)
     const { data, error } = await query;
     if (!data || data.length === 0) {
       return new Response(
@@ -57,14 +60,13 @@ Deno.serve(async (req: Request) => {
         [key: string]: { [key: string]: { [key: string]: string } };
       } = {}; // {team / event: {match: {question: value}}}
       for (const scoutingEntry of data) {
-        const mkey: string = !params.has("event") ? scoutingEntry["event"] : scoutingEntry["team"];
+        const mkey: string = !params.has("event") ? scoutingEntry.match_scouting["event"] : scoutingEntry.match_scouting["team"];
         if (agg[mkey] == null) agg[mkey] = {};
-        const match: string = scoutingEntry["match"];
+        const match: string = scoutingEntry.match_scouting["match"];
         if (agg[mkey][match] == null) agg[mkey][match] = {};
-        const scouter: string | undefined = scoutingEntry["scouter"];
-        ["event", "match", "team", "scouter"].forEach((k) =>
-          delete scoutingEntry[k]
-        );
+        const scouter: string | undefined = scoutingEntry.match_scouting["scouter"];
+        delete scoutingEntry.match_scouting;
+        delete scoutingEntry.id;
         for (const [key, value] of Object.entries(scoutingEntry)) {
           if (!(typeof value === "string") || value.length === 0) continue;
           if (agg[mkey][match][key] == null) agg[mkey][match][key] = "";
@@ -93,15 +95,14 @@ Deno.serve(async (req: Request) => {
         [key: string]: { [key: string]: { [key: string]: Set<number> } };
       } = {}; // {match: {team: {scoretype: value}}}
       for (const scoutingEntry of data) {
-        const match: string = scoutingEntry["match"];
+        const match: string = scoutingEntry.match_scouting["match"];
         if (agg[match] == null) agg[match] = {};
-        const team: string = scoutingEntry["team"];
+        const team: string = scoutingEntry.match_scouting["team"];
         if (agg[match][team] == null) agg[match][team] = {};
 
         if (!(match in tbadata)) continue;
-        ["event", "match", "team", "scouter"].forEach((k) =>
-          delete scoutingEntry[k]
-        );
+        delete scoutingEntry.match_scouting;
+        delete scoutingEntry.id;
         for (let [key, value] of Object.entries(scoutingEntry)) {
           if (typeof value === "boolean") value = value ? 1 : 0;
           if (typeof value !== "number") continue;
@@ -166,14 +167,13 @@ Deno.serve(async (req: Request) => {
       } = {}; // {event: {match: {scoretype: [values]}}}
       const team = params.get("team")!;
       for (const scoutingEntry of data) {
-        const event: string = scoutingEntry["event"];
+        const event: string = scoutingEntry.match_scouting["event"];
         if (agg[event] == null) agg[event] = {};
-        const match: string = scoutingEntry["match"];
+        const match: string = scoutingEntry.match_scouting["match"];
         if (agg[event][match] == null) agg[event][match] = {};
 
-        ["event", "match", "team", "scouter"].forEach((k) =>
-          delete scoutingEntry[k]
-        );
+        delete scoutingEntry.match_scouting;
+        delete scoutingEntry.id;
         for (let [key, value] of Object.entries(scoutingEntry)) {
           if (typeof value === "boolean") value = value ? 1 : 0;
           if (typeof value !== "number") continue;
