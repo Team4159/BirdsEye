@@ -107,7 +107,7 @@ class SupabaseInterface {
           : Future.value(_achievements);
   static void clearAchievements() => _achievements = null;
 
-  static final aggregateStock = Stock<AggInfo, LinkedHashMap<dynamic, Map<String, num>>>(
+  static final matchAggregateStock = Stock<AggInfo, LinkedHashMap<dynamic, Map<String, num>>>(
       sourceOfTruth: CachedSourceOfTruth(),
       fetcher: Fetcher.ofFuture((key) async {
         assert(key.event != null || key.team != null);
@@ -136,6 +136,23 @@ class SupabaseInterface {
         }
         throw UnimplementedError("No aggregate for that combination");
       }));
+  
+  static final eventAggregateStock = Stock<({int season, String event}), LinkedHashMap<String, double>>(sourceOfTruth: CachedSourceOfTruth(),fetcher: Fetcher.ofFuture((key) =>
+    Supabase.instance.client.functions
+        .invoke("event_aggregator?season=${key.season}&event=${key.event}")
+        .then((resp) => resp.status >= 400
+            ? throw Exception("HTTP Error ${resp.status}")
+            : LinkedHashMap.fromEntries((Map<String, double?>.from(resp.data)
+                  ..removeWhere((key, value) => value == null))
+                .cast<String, double>()
+                .entries
+                .toList()
+              ..sort((a, b) => a.value == b.value
+                  ? 0
+                  : a.value > b.value
+                      ? -1
+                      : 1)))
+  ));
 
   static final distinctStock = Stock<
           AggInfo,

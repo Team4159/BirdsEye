@@ -313,3 +313,6 @@ const scoringpoints2024 = {
   "endgame_spotlit": 4,
   "comments_fouls": -2
 };
+
+const frcred = Color(0xffed1c24);
+const frcblue = Color(0xff0066b3);

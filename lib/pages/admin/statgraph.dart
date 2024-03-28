@@ -7,14 +7,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../interfaces/bluealliance.dart';
 import '../../interfaces/supabase.dart';
-import '../../main.dart';
 import '../../utils.dart';
-import '../metadata.dart';
 import 'admin.dart';
 
 class StatGraphPage extends StatelessWidget {
@@ -25,48 +21,17 @@ class StatGraphPage extends StatelessWidget {
   Widget build(BuildContext context) => DefaultTabController(
       length: 3,
       child: Scaffold(
-          drawer: Drawer(
-              width: 250,
-              child: ListenableBuilder(
-                  listenable: UserMetadata.instance.cachedPermissions,
-                  builder: (context, _) => Column(children: [
-                        ListTile(
-                            leading: const Icon(Icons.chevron_left_rounded),
-                            title: const Text("Back"),
-                            onTap: () => GoRouter.of(context)
-                              ..pop()
-                              ..goNamed(RoutePaths.configuration.name)),
-                        const Divider(),
-                        ListTile(
-                            leading: const Icon(Icons.auto_graph_rounded),
-                            title: const Text("Stat Graphs"),
-                            enabled: UserMetadata.instance.cachedPermissions.value.graphViewer,
-                            onTap: () => GoRouter.of(context)
-                              ..pop()
-                              ..goNamed(AdminRoutePaths.statgraphs.name)),
-                        ListTile(
-                            leading: const Icon(Icons.queue_rounded),
-                            title: const Text("Achievement Queue"),
-                            enabled:
-                                UserMetadata.instance.cachedPermissions.value.achievementApprover,
-                            onTap: () => GoRouter.of(context)
-                              ..pop()
-                              ..goNamed(AdminRoutePaths.achiqueue.name)),
-                        ListTile(
-                            leading: const Icon(Icons.manage_search_rounded),
-                            title: const Text("Qualitative Analysis"),
-                            enabled:
-                                UserMetadata.instance.cachedPermissions.value.qualitativeAnalyzer,
-                            onTap: () => GoRouter.of(context)
-                              ..pop()
-                              ..goNamed(AdminRoutePaths.qualanaly.name))
-                      ]))),
+          drawer: AdminScaffoldShell.drawer(),
           appBar: AppBar(
               title: const Text("Statistic Graphs"),
               actions: [
                 IconButton(
                     icon: const Icon(Icons.refresh_rounded),
-                    onPressed: SupabaseInterface.aggregateStock.clearAll)
+                    onPressed: () {
+                      SupabaseInterface.matchAggregateStock.clearAll();
+                      SupabaseInterface.eventAggregateStock.clearAll();
+                      SupabaseInterface.distinctStock.clearAll();
+                    })
               ],
               bottom: TabBar(
                   tabs: [
@@ -409,7 +374,7 @@ class TeamAtEventGraph extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FutureBuilder(
       future: Future.wait([
-        SupabaseInterface.aggregateStock.get((season: season, event: event, team: team)),
+        SupabaseInterface.matchAggregateStock.get((season: season, event: event, team: team)),
         BlueAlliance.stock
             .get((season: season, event: event, match: null))
             .then((eventMatches) => Future.wait(eventMatches.keys.map((match) => BlueAlliance.stock
@@ -520,7 +485,7 @@ class TeamInSeasonGraph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => FutureBuilder(
-      future: SupabaseInterface.aggregateStock
+      future: SupabaseInterface.matchAggregateStock
           .get((season: season, event: null, team: team)).then((result) {
         Map<GamePeriod, double> op = {};
         Map<String, double> ot = {};
@@ -604,32 +569,36 @@ class TeamInSeasonGraph extends StatelessWidget {
                               child: e))))
                   .followedBy([
                 if (season == 2024 && snapshot.hasData)
-                  Flex(
-                      direction:
-                          MediaQuery.of(context).size.width > 600 ? Axis.vertical : Axis.horizontal,
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: {
-                        if (snapshot.data!.misc.containsKey('comments_agility'))
-                          "Agility": snapshot.data!.misc['comments_agility']!,
-                        if (snapshot.data!.misc.containsKey('comments_contribution'))
-                          "Contribution": snapshot.data!.misc['comments_contribution']!
-                      }
-                          .entries
-                          .map((e) => Card.filled(
-                              color: Theme.of(context).colorScheme.secondaryContainer,
-                              child: ConstrainedBox(
-                                  constraints: const BoxConstraints(minWidth: 80, maxHeight: 60),
-                                  child: Padding(
-                                      padding: const EdgeInsets.all(8),
-                                      child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(e.key),
-                                            Text("${(e.value * 5).toStringAsFixed(1)} / 5")
-                                          ])))))
-                          .toList())
+                  FittedBox(
+                      fit: BoxFit.fitWidth,
+                      child: Flex(
+                          direction: MediaQuery.of(context).size.width > 600
+                              ? Axis.vertical
+                              : Axis.horizontal,
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: {
+                            if (snapshot.data!.misc.containsKey('comments_agility'))
+                              "Agility": snapshot.data!.misc['comments_agility']!,
+                            if (snapshot.data!.misc.containsKey('comments_contribution'))
+                              "Contribution": snapshot.data!.misc['comments_contribution']!
+                          }
+                              .entries
+                              .map((e) => Card.filled(
+                                  color: Theme.of(context).colorScheme.secondaryContainer,
+                                  child: ConstrainedBox(
+                                      constraints:
+                                          const BoxConstraints(minWidth: 80, maxHeight: 60),
+                                      child: Padding(
+                                          padding: const EdgeInsets.all(8),
+                                          child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(e.key),
+                                                Text("${(e.value * 5).toStringAsFixed(1)} / 5")
+                                              ])))))
+                              .toList()))
               ]).toList()));
 }
 
@@ -641,21 +610,9 @@ class EventInSeasonRankings extends StatelessWidget {
   final ValueNotifier<String> searchTerm = ValueNotifier("");
   @override
   Widget build(BuildContext context) => CustomScrollView(slivers: [
-        // SliverAppBar(primary: false, automaticallyImplyLeading: false, title: TextField()),
+        const SliverToBoxAdapter(child: Text("Top Defensive", textAlign: TextAlign.center)),
         FutureBuilder(
-            future: Supabase.instance.client.functions
-                .invoke("event_aggregator?season=$season&event=$event")
-                .then((resp) => resp.status >= 400
-                    ? throw Exception("HTTP Error ${resp.status}")
-                    : LinkedHashMap.fromEntries(Map<String, double?>.from(resp.data)
-                        .entries
-                        .whereType<MapEntry<String, double>>()
-                        .toList()
-                      ..sort((a, b) => a.value == b.value
-                          ? 0
-                          : a.value > b.value
-                              ? -1
-                              : 1))),
+            future: SupabaseInterface.eventAggregateStock.get((season: season, event: event)),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return SliverFillRemaining(
@@ -673,8 +630,8 @@ class EventInSeasonRankings extends StatelessWidget {
                     hasScrollBody: false, child: Center(child: CircularProgressIndicator()));
               }
               return SliverAnimatedInList(snapshot.data!.entries.toList(),
-                  builder: (context, e) =>
-                      ListTile(title: Text(e.key), trailing: Text(e.value.toStringAsFixed(2))));
+                  builder: (context, dynamic e) => ListTile(
+                      title: Text(e.key), trailing: Text(e.value.toStringAsFixed(2)), dense: true));
             })
       ]);
 }

@@ -477,21 +477,29 @@ class _SliverAnimatedInListState extends State<SliverAnimatedInList> {
 
   @override
   void initState() {
-    WidgetsBinding.instance.addPostFrameCallback((_) => Future.forEach(
-        widget.list.indexed,
-        (e) => Future.delayed(Durations.medium1, () {
-              setState(() {
-                _animKey.currentState!.insertItem(e.$1, duration: Durations.medium3);
-              });
-            })));
+    _refresh();
     super.initState();
+  }
+
+  void _refresh() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.forEach(
+          widget.list.indexed,
+          (e) => Future.delayed(
+              Durations.short2,
+              () => setState(() {
+                    _animKey.currentState!.insertItem(e.$1, duration: Durations.medium3);
+                  }))).then((_) => Future.delayed(Durations.medium3, () => setState(() {})));
+    }, debugLabel: "AnimatedList Handler");
   }
 
   @override
   Widget build(BuildContext context) => SliverAnimatedList(
       key: _animKey,
-      itemBuilder: (context, i, anim) => AnimatedSlide(
-          offset: Offset(0, anim.value * -i.toDouble()),
-          duration: Durations.short1,
-          child: widget.builder(context, widget.list[i])));
+      itemBuilder: (context, i, anim) => i >= widget.list.length
+          ? const SizedBox()
+          : AnimatedSlide(
+              offset: Offset(0, (1 - anim.value) * (widget.list.length - i)),
+              duration: Durations.medium3,
+              child: widget.builder(context, widget.list[i])));
 }

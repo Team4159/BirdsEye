@@ -249,7 +249,7 @@ class RobotPositionChip extends Container {
   RobotPositionChip(MatchRobotPositionInfo position, {super.key})
       : super(
             decoration: BoxDecoration(
-                color: (position.isRedAlliance ? const Color(0xffed1c24) : const Color(0xff0066b3))
+                color: (position.isRedAlliance ? frcred : frcblue)
                     .withOpacity(1 / (position.currentScouters + 1)),
                 border: Border.all(width: 1, color: Colors.grey[800]!),
                 borderRadius: BorderRadius.circular(8)),

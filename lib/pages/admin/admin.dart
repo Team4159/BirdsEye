@@ -1,11 +1,10 @@
-import 'package:birdseye/pages/admin/nextmatch.dart';
+import 'package:birdseye/pages/admin/matchinsight.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../main.dart';
 import '../../pages/metadata.dart';
 import 'achievementqueue.dart';
-import 'qualitativeanalysis.dart';
 import 'statgraph.dart';
 
 final _adminNavigatorKey = GlobalKey<NavigatorState>();
@@ -42,21 +41,14 @@ final adminGoRoute = GoRoute(
                         : state.namedLocation(RoutePaths.adminportal.name)),
             GoRoute(
                 parentNavigatorKey: _adminNavigatorKey,
-                path: AdminRoutePaths.qualanaly.name,
-                name: AdminRoutePaths.qualanaly.name,
-                pageBuilder: (context, state) => const MaterialPage(
-                    child: QualitativeAnalysisPage(), name: "Qualitative Analysis"),
-                redirect: (context, state) =>
-                    UserMetadata.instance.cachedPermissions.value.qualitativeAnalyzer
-                        ? null
-                        : state.namedLocation(RoutePaths.adminportal.name)),
-            GoRoute(
-                parentNavigatorKey: _adminNavigatorKey,
                 path: AdminRoutePaths.nextmatch.name,
                 name: AdminRoutePaths.nextmatch.name,
-                pageBuilder: (context, state) => const MaterialPage(
-                    child: NextMatchPage(), name: "Next Match"),
-                redirect: (context, state) => null), // TODOX: add perm checking list prev routes
+                pageBuilder: (context, state) =>
+                    MaterialPage(child: MatchInsightPage(), name: "Match Insight"),
+                redirect: (context, state) =>
+                    UserMetadata.instance.cachedPermissions.value.graphViewer
+                        ? null
+                        : state.namedLocation(RoutePaths.adminportal.name))
           ]),
       GoRoute(
           path: AdminRoutePaths.statgraphs.name,
@@ -72,48 +64,41 @@ class AdminScaffoldShell extends StatelessWidget {
   final Widget child;
   const AdminScaffoldShell(this.child, {super.key});
 
+  static Drawer drawer() => Drawer(
+      width: 250,
+      child: ListenableBuilder(
+          listenable: UserMetadata.instance.cachedPermissions,
+          builder: (context, _) => Column(children: [
+                ListTile(
+                    leading: const Icon(Icons.chevron_left_rounded),
+                    title: const Text("Back"),
+                    onTap: () => GoRouter.of(context)
+                      ..pop()
+                      ..goNamed(RoutePaths.configuration.name)),
+                const Divider(),
+                ListTile(
+                    leading: const Icon(Icons.auto_graph_rounded),
+                    title: const Text("Stat Graphs"),
+                    enabled: UserMetadata.instance.cachedPermissions.value.graphViewer,
+                    onTap: () => GoRouter.of(context)
+                      ..pop()
+                      ..goNamed(AdminRoutePaths.statgraphs.name)),
+                ListTile(
+                    leading: const Icon(Icons.queue_rounded),
+                    title: const Text("Achievement Queue"),
+                    enabled: UserMetadata.instance.cachedPermissions.value.achievementApprover,
+                    onTap: () => GoRouter.of(context)
+                      ..pop()
+                      ..goNamed(AdminRoutePaths.achiqueue.name)),
+                ListTile(
+                    leading: const Icon(Icons.visibility),
+                    title: const Text("Match Insight"),
+                    enabled: UserMetadata.instance.cachedPermissions.value.graphViewer,
+                    onTap: () => GoRouter.of(context)
+                      ..pop()
+                      ..goNamed(AdminRoutePaths.nextmatch.name)),
+              ])));
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-      drawer: Drawer(
-          width: 250,
-          child: ListenableBuilder(
-              listenable: UserMetadata.instance.cachedPermissions,
-              builder: (context, _) => Column(children: [
-                    ListTile(
-                        leading: const Icon(Icons.chevron_left_rounded),
-                        title: const Text("Back"),
-                        onTap: () => GoRouter.of(context)
-                          ..pop()
-                          ..goNamed(RoutePaths.configuration.name)),
-                    const Divider(),
-                    ListTile(
-                        leading: const Icon(Icons.auto_graph_rounded),
-                        title: const Text("Stat Graphs"),
-                        enabled: UserMetadata.instance.cachedPermissions.value.graphViewer,
-                        onTap: () => GoRouter.of(context)
-                          ..pop()
-                          ..goNamed(AdminRoutePaths.statgraphs.name)),
-                    ListTile(
-                        leading: const Icon(Icons.queue_rounded),
-                        title: const Text("Achievement Queue"),
-                        enabled: UserMetadata.instance.cachedPermissions.value.achievementApprover,
-                        onTap: () => GoRouter.of(context)
-                          ..pop()
-                          ..goNamed(AdminRoutePaths.achiqueue.name)),
-                    ListTile(
-                        leading: const Icon(Icons.manage_search_rounded),
-                        title: const Text("Qualitative Analysis"),
-                        enabled: UserMetadata.instance.cachedPermissions.value.qualitativeAnalyzer,
-                        onTap: () => GoRouter.of(context)
-                          ..pop()
-                          ..goNamed(AdminRoutePaths.qualanaly.name)),
-                    ListTile(
-                        leading: const Icon(Icons.visibility),
-                        title: const Text("Next Match"),
-                        // enabled: UserMetadata.instance.cachedPermissions.value.nextMatchViewer, // TODOX: add perm checking like prev routes
-                        onTap: () => GoRouter.of(context)
-                          ..pop()
-                          ..goNamed(AdminRoutePaths.nextmatch.name)),
-                  ]))),
-      body: child);
+  Widget build(BuildContext context) => Scaffold(drawer: drawer(), body: child);
 }
