@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
 
-import 'package:carousel_slider/carousel_slider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -183,7 +182,6 @@ class ValueTab<T extends Object> extends StatelessWidget {
   final void Function(T)? onChange;
   final int Function(List<T>)? initialPositionCallback;
   ValueTab(this.options, {this.initialPositionCallback, this.onChange, super.key});
-  final CarouselController _carouselController = CarouselController();
   final ValueNotifier<bool> _searchMode = ValueNotifier(false);
 
   @override
@@ -212,6 +210,10 @@ class ValueTab<T extends Object> extends StatelessWidget {
                               child: LinearProgressIndicator(
                                   borderRadius: BorderRadius.all(Radius.circular(4))));
                         }
+                        var swipeController = PageController(
+                            initialPage: initialPositionCallback == null
+                                ? snapshot.data!.length - 1
+                                : initialPositionCallback!(snapshot.data!));
                         if (onChange != null && initialPositionCallback == null) {
                           WidgetsBinding.instance
                               .addPostFrameCallback((_) => onChange!(snapshot.data!.last));
@@ -225,8 +227,8 @@ class ValueTab<T extends Object> extends StatelessWidget {
                                     sizing: StackFit.expand,
                                     children: [
                                       Autocomplete<T>(
-                                          optionsBuilder: (input) => snapshot.data!.where(
-                                              (e) => e.toString().startsWith(input.toString())),
+                                          optionsBuilder: (input) => snapshot.data!
+                                              .where((e) => e.toString().startsWith(input.text)),
                                           fieldViewBuilder: (context, textEditingController,
                                                   focusNode, onFieldSubmitted) =>
                                               TextFormField(
@@ -255,7 +257,7 @@ class ValueTab<T extends Object> extends StatelessWidget {
                                                     onFieldSubmitted();
                                                     var v =
                                                         stringifiedOptions.toList().indexOf(value);
-                                                    _carouselController.jumpToPage(v);
+                                                    swipeController.jumpToPage(v);
                                                     if (onChange != null) {
                                                       onChange!(snapshot.data![v]);
                                                     }
@@ -271,13 +273,17 @@ class ValueTab<T extends Object> extends StatelessWidget {
                                                   textAlignVertical: TextAlignVertical.center),
                                           onSelected: (value) {
                                             if (onChange != null) onChange!(value);
-                                            _carouselController
+                                            swipeController
                                                 .jumpToPage(snapshot.data!.indexOf(value));
                                             _searchMode.value = false;
                                           }),
-                                      CarouselSlider(
-                                          carouselController: _carouselController,
-                                          items: snapshot.data!
+                                      PageView(
+                                          controller: swipeController,
+                                          onPageChanged: (i) =>
+                                              onChange == null || snapshot.data!.length <= i
+                                                  ? null
+                                                  : onChange!(snapshot.data![i]),
+                                          children: snapshot.data!
                                               .map((e) => Text(
                                                     e == 0.0 ? "" : e.toString(),
                                                     overflow: kIsWeb
@@ -288,25 +294,13 @@ class ValueTab<T extends Object> extends StatelessWidget {
                                                     textHeightBehavior: const TextHeightBehavior(
                                                         leadingDistribution:
                                                             TextLeadingDistribution.even),
+                                                    textAlign: TextAlign.center,
                                                     style: Theme.of(context)
                                                         .textTheme
                                                         .headlineSmall!
                                                         .copyWith(fontSize: 22),
                                                   ))
-                                              .toList(),
-                                          options: CarouselOptions(
-                                              height: 40,
-                                              viewportFraction: 1,
-                                              scrollDirection: Axis.horizontal,
-                                              initialPage: initialPositionCallback ==
-                                                      null // FIXME this does not work because carousel is stupid as balls
-                                                  ? snapshot.data!.length - 1
-                                                  : initialPositionCallback!(snapshot.data!),
-                                              enableInfiniteScroll: snapshot.data!.length > 3,
-                                              onPageChanged: (i, _) =>
-                                                  onChange == null || snapshot.data!.length <= i
-                                                      ? null
-                                                      : onChange!(snapshot.data![i])))
+                                              .toList())
                                     ]));
                       })))));
 }
