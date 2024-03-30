@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/material.dart';
@@ -337,7 +338,13 @@ class MatchScoutInfo {
   }
 
   String? getMatchStr() => match == null ? null : stringifyMatchInfo(match!);
-  void setMatchStr(String? m) => match = parseMatchInfo(m); // invoke the other setter
+  void setMatchStr(String? m) {
+    if (parseMatchInfo(m) != null) {
+      match = parseMatchInfo(m); // invoke the other setter
+    } else {
+      teams = null;
+    }
+  }
 
   NotifiableChangeNotifier teamsController = NotifiableChangeNotifier();
   LinkedHashMap<String, MatchRobotPositionInfo>? _teams;
@@ -408,7 +415,7 @@ class MatchScoutInfoFields extends StatelessWidget {
                               : info.matches?.containsKey(value) ?? false
                                   ? null
                                   : "Invalid", // TODO fails at varifying non-qual matches because cache doesn't refresh
-                          onFieldSubmitted: info.setMatchStr),
+                          onChanged: info.setMatchStr),
                       Align(
                           alignment: Alignment.topRight,
                           child: Column(
