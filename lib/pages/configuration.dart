@@ -98,7 +98,7 @@ class ConfigurationPage extends StatelessWidget {
                                 Configuration.event = entries[index].key;
                               } else {
                                 index = snapshot.data!.keys.toList().indexOf(Configuration.event!);
-                                if (index < 0) index = 0;
+                                if (index < 0) index = (entries.length / 2).round();
                               }
                               return ListenableBuilder(
                                   listenable: _carouselProgress,
@@ -141,6 +141,7 @@ class ConfigurationPage extends StatelessWidget {
                                                             curve: Curves.easeOutQuart)))
                                                 .toList(growable: false),
                                             options: CarouselOptions(
+                                                enableInfiniteScroll: false,
                                                 aspectRatio: 1 / 5,
                                                 viewportFraction: 40 /
                                                     (MediaQuery.of(context).size.height * 7 / 8),
