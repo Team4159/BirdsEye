@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../pages/configuration.dart';
 import '../pages/matchscout.dart' hide MatchScoutPage;
-import 'bluealliance.dart' show MatchInfo, parseMatchInfo;
+import 'bluealliance.dart' show MatchInfo;
 
 typedef AggInfo = ({int season, String? event, String? team});
 
@@ -123,36 +123,37 @@ class SupabaseInterface {
             .map((k, v) => MapEntry(k, Map<String, dynamic>.from(v)));
         if (key.event != null && key.team != null) {
           return LinkedHashMap<MatchInfo, Map<String, num>>.of(
-              response.map((k, v) => MapEntry(parseMatchInfo(k)!, Map.from(v[key.team]))));
+              response.map((k, v) => MapEntry(MatchInfo.fromString(k), Map.from(v[key.team]))));
           // match: {scoretype: aggregated_count}
         }
         if (key.team != null) {
           return LinkedHashMap.fromEntries(response.entries
               .map((evententry) => Map<String, dynamic>.from(evententry.value).map(
                   (matchstring, matchscores) => MapEntry(
-                      (event: evententry.key, match: parseMatchInfo(matchstring)!),
+                      (event: evententry.key, match: MatchInfo.fromString(matchstring)),
                       Map<String, num>.from(matchscores))))
               .expand((e) => e.entries));
         }
         throw UnimplementedError("No aggregate for that combination");
       }));
-  
-  static final eventAggregateStock = Stock<({int season, String event}), LinkedHashMap<String, double>>(sourceOfTruth: CachedSourceOfTruth(),fetcher: Fetcher.ofFuture((key) =>
-    Supabase.instance.client.functions
-        .invoke("event_aggregator?season=${key.season}&event=${key.event}")
-        .then((resp) => resp.status >= 400
-            ? throw Exception("HTTP Error ${resp.status}")
-            : LinkedHashMap.fromEntries((Map<String, double?>.from(resp.data)
-                  ..removeWhere((key, value) => value == null))
-                .cast<String, double>()
-                .entries
-                .toList()
-              ..sort((a, b) => a.value == b.value
-                  ? 0
-                  : a.value > b.value
-                      ? -1
-                      : 1)))
-  ));
+
+  static final eventAggregateStock =
+      Stock<({int season, String event}), LinkedHashMap<String, double>>(
+          sourceOfTruth: CachedSourceOfTruth(),
+          fetcher: Fetcher.ofFuture((key) => Supabase.instance.client.functions
+              .invoke("event_aggregator?season=${key.season}&event=${key.event}")
+              .then((resp) => resp.status >= 400
+                  ? throw Exception("HTTP Error ${resp.status}")
+                  : LinkedHashMap.fromEntries((Map<String, double?>.from(resp.data)
+                        ..removeWhere((key, value) => value == null))
+                      .cast<String, double>()
+                      .entries
+                      .toList()
+                    ..sort((a, b) => a.value == b.value
+                        ? 0
+                        : a.value > b.value
+                            ? -1
+                            : 1)))));
 
   static final distinctStock = Stock<
           AggInfo,

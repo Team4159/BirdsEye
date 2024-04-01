@@ -7,9 +7,6 @@ import 'package:stock/stock.dart';
 import '../main.dart' show prefs;
 import 'localstore.dart';
 
-final qualificationMatchInfoPattern = RegExp(r'^(?<level>qm)(?<index>\d+)$');
-final finalsMatchInfoPattern = RegExp(r'^(?<level>qf|sf|f)(?<finalnum>\d{1,2})m(?<index>\d+)$');
-
 enum MatchLevel {
   qualification(compLevel: "qm"),
   quarterfinals(compLevel: "qf"),
@@ -21,37 +18,54 @@ enum MatchLevel {
   static fromCompLevel(String s) => MatchLevel.values.firstWhere((type) => type.compLevel == s);
 }
 
-typedef MatchInfo = ({MatchLevel level, int? finalnum, int index});
-MatchInfo? parseMatchInfo(String? s) {
-  if (s == null || s.isEmpty) return null;
-  RegExpMatch? match =
-      qualificationMatchInfoPattern.firstMatch(s) ?? finalsMatchInfoPattern.firstMatch(s);
-  if (match == null) return null;
-  return (
-    level: MatchLevel.fromCompLevel(match.namedGroup("level")!),
-    finalnum: match.groupNames.contains("finalnum")
-        ? int.tryParse(match.namedGroup("finalnum") ?? "")
-        : null,
-    index: int.parse(match.namedGroup("index")!)
-  );
+class MatchInfo implements Comparable {
+  static final _qualificationPattern = RegExp(r'^(?<level>qm)(?<index>\d+)$');
+  static final _finalsPattern = RegExp(r'^(?<level>qf|sf|f)(?<finalnum>\d{1,2})m(?<index>\d+)$');
+
+  final MatchLevel level;
+  final int? finalnum;
+  final int index;
+  MatchInfo({required this.level, this.finalnum, required this.index});
+  factory MatchInfo.fromString(String s) {
+    RegExpMatch? match = _qualificationPattern.firstMatch(s) ?? _finalsPattern.firstMatch(s);
+    return MatchInfo(
+        level: MatchLevel.fromCompLevel(match!.namedGroup("level")!),
+        finalnum: match.groupNames.contains("finalnum")
+            ? int.tryParse(match.namedGroup("finalnum") ?? "")
+            : null,
+        index: int.parse(match.namedGroup("index")!));
+  }
+
+  @override
+  String toString() => "${level.compLevel}${finalnum != null ? '${finalnum}m' : ''}$index";
+
+  @override
+  int compareTo(b) => level != b.level
+      ? b.level.index - level.index
+      : finalnum != null && b.finalnum != null && finalnum != b.finalnum
+          ? b.finalnum! - finalnum!
+          : b.index - index;
+
+  @override
+  int get hashCode => Object.hash(level, finalnum, index);
+
+  @override
+  bool operator ==(Object other) =>
+      other is MatchInfo &&
+      other.level == level &&
+      other.finalnum == finalnum &&
+      other.index == index;
 }
 
-String stringifyMatchInfo(MatchInfo m) =>
-    "${m.level.compLevel}${m.finalnum != null ? '${m.finalnum}m' : ''}${m.index}";
+class TBAInfo {
+  final int season;
+  final String? event, match;
+  TBAInfo({required this.season, this.event, this.match});
 
-int compareMatchInfo(MatchInfo a, MatchInfo b) => a.level != b.level
-    ? b.level.index - a.level.index
-    : a.finalnum != null && b.finalnum != null && a.finalnum != b.finalnum
-        ? b.finalnum! - a.finalnum!
-        : b.index - a.index;
-
-bool stringMatchIsLevel(String s, MatchLevel l) => s.startsWith(l.compLevel);
-
-typedef TBAInfo = ({int season, String? event, String? match});
-String stringifyTBAInfo(TBAInfo t) =>
-    t.season.toString() +
-    (t.event != null ? t.event! : "") +
-    (t.match != null ? "_${t.match!}" : "");
+  @override
+  String toString() =>
+      season.toString() + (event != null ? event! : "") + (match != null ? "_${match!}" : "");
+}
 
 typedef OPRData = ({double? opr, double? dpr, double? ccwms});
 
@@ -101,7 +115,7 @@ class BlueAlliance {
     }).catchError((_) => false);
   }
 
-  static final stockSoT = LocalSourceOfTruth("tba");
+  static final stockSoT = LocalSourceOfTruth<TBAInfo>("tba");
   static final stock = Stock<TBAInfo, Map<String, String>>(
       sourceOfTruth: stockSoT.mapTo<Map<String, String>>(
           (p) => p.map((k, v) => MapEntry(k, v.toString())), (p) => p),
@@ -129,7 +143,8 @@ class BlueAlliance {
           for (MapEntry<String, dynamic> alliance
               in Map<String, dynamic>.from(data['alliances']).entries) {
             for (MapEntry<int, String> team in List<String>.from(alliance.value['team_keys'])
-                .followedBy(List<String>.from(alliance.value['surrogate_team_keys']))
+                .followedBy(List<String>.from(alliance.value[
+                    'surrogate_team_keys'])) // surrogate additions- i have no idea if they work this way
                 .toList(growable: false)
                 .asMap()
                 .entries) {
@@ -162,10 +177,10 @@ class BlueAlliance {
       }
       String matchkey = (matchdata['key'] as String).split("_").last;
       matches[matchkey] = matchdata['key'];
-      await stockSoT.write((season: season, event: event, match: matchkey), o);
+      await stockSoT.write(TBAInfo(season: season, event: event, match: matchkey), o);
     }
-    await stockSoT.write((season: season, event: event, match: null), matches);
-    await stockSoT.write((season: season, event: event, match: "*"), pitTeams);
+    await stockSoT.write(TBAInfo(season: season, event: event), matches);
+    await stockSoT.write(TBAInfo(season: season, event: event, match: "*"), pitTeams);
   }
 
   static final _oprStockSoT =

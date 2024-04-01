@@ -370,15 +370,15 @@ class TeamAtEventGraph extends StatelessWidget {
       future: Future.wait([
         SupabaseInterface.matchAggregateStock.get((season: season, event: event, team: team)),
         BlueAlliance.stock
-            .get((season: season, event: event, match: null))
+            .get(TBAInfo(season: season, event: event))
             .then((eventMatches) => Future.wait(eventMatches.keys.map((match) => BlueAlliance.stock
-                .get((season: season, event: event, match: match)).then(
-                    (teams) => teams.keys.contains(team) ? match : null))))
+                .get(TBAInfo(season: season, event: event, match: match))
+                .then((teams) => teams.keys.contains(team) ? match : null))))
             .then((unparsedEventMatches) => unparsedEventMatches
-                .where((match) => match != null)
-                .map((match) => parseMatchInfo(match)!)
+                .whereType<String>()
+                .map((match) => MatchInfo.fromString(match))
                 .toList()
-              ..sort((a, b) => compareMatchInfo(b, a)))
+              ..sort((b, a) => a.compareTo(b)))
       ]).then((results) => (
             data: results[0] as LinkedHashMap<MatchInfo, Map<String, num>>,
             ordinalMatches: results[1] as List<MatchInfo>
@@ -412,8 +412,7 @@ class TeamAtEventGraph extends StatelessWidget {
                                 }
                                 return SideTitleWidget(
                                     axisSide: AxisSide.bottom,
-                                    child:
-                                        Text(stringifyMatchInfo(snapshot.data!.ordinalMatches[n])));
+                                    child: Text(snapshot.data!.ordinalMatches[n].toString()));
                               })),
                       leftTitles: const AxisTitles(
                           axisNameWidget: Text("Score"),

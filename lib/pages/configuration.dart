@@ -1,4 +1,3 @@
-import 'package:birdseye/utils.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../interfaces/bluealliance.dart';
 import '../interfaces/supabase.dart';
 import '../main.dart' show prefs;
+import '../utils.dart';
 
 class ConfigurationPage extends StatelessWidget {
   final _eventCarouselController = CarouselController();
@@ -32,10 +32,12 @@ class ConfigurationPage extends StatelessWidget {
                               ])
                         : const LinearProgressIndicator();
                   }
-                  int index = snapshot.data!
-                      .indexWhere((element) => element == Configuration.instance.season);
-                  if (Configuration.instance.season < 0 || index < 0) {
-                    index = snapshot.data!.length - 1;
+                  int maybeSeason = Configuration.instance.season < 0
+                      ? DateTime.now().year
+                      : Configuration.instance.season;
+                  int index = snapshot.data!.indexWhere((element) => element == maybeSeason);
+                  if (index < 0) index = snapshot.data!.length - 1;
+                  if (snapshot.data![index] != Configuration.instance.season) {
                     WidgetsBinding.instance.addPostFrameCallback(
                         (_) => Configuration.instance.season = snapshot.data![index]);
                   }
@@ -64,8 +66,8 @@ class ConfigurationPage extends StatelessWidget {
                     builder: (context, child) => Configuration.instance.season < 0
                         ? const Center(child: CircularProgressIndicator())
                         : FutureBuilder(
-                            future: BlueAlliance.stock.get(
-                                (season: Configuration.instance.season, event: null, match: null)),
+                            future: BlueAlliance.stock
+                                .get(TBAInfo(season: Configuration.instance.season)),
                             builder: (context, snapshot) {
                               if (!snapshot.hasData) {
                                 return snapshot.hasError
@@ -93,12 +95,13 @@ class ConfigurationPage extends StatelessWidget {
                                       const Text("No Events Found")
                                     ]);
                               }
-                              int index = 0;
-                              if (Configuration.event == null) {
+                              String maybeEvent = Configuration.event ??
+                                  entries[entries.length ~/ 2].key; // TODO autofill event goes here
+                              int index =
+                                  entries.indexWhere((element) => element.key == maybeEvent);
+                              if (index < 0) index = snapshot.data!.length ~/ 2;
+                              if (entries[index].key != Configuration.event) {
                                 Configuration.event = entries[index].key;
-                              } else {
-                                index = snapshot.data!.keys.toList().indexOf(Configuration.event!);
-                                if (index < 0) index = (entries.length / 2).round();
                               }
                               return ListenableBuilder(
                                   listenable: _carouselProgress,
@@ -179,6 +182,7 @@ class Configuration extends ChangeNotifier {
   Future<bool> get isValid async =>
       season >= 0 &&
       event != null &&
-      await BlueAlliance.stock.get((season: season, event: null, match: null)).then(
-          (value) => value.containsKey(event));
+      await BlueAlliance.stock
+          .get(TBAInfo(season: season))
+          .then((value) => value.containsKey(event));
 }

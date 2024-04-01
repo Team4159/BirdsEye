@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../utils.dart';
-import './configuration.dart';
-import './metadata.dart';
 import '../interfaces/bluealliance.dart';
 import '../interfaces/localstore.dart';
 import '../interfaces/supabase.dart';
+import '../utils.dart';
+import './configuration.dart';
+import './metadata.dart';
 
 Future<Map<String, String>?> _getPrevious(int team) => Supabase.instance.client
     .from("pit_data_${Configuration.instance.season}")
@@ -45,24 +45,22 @@ class _PitScoutPageState extends State<PitScoutPage> {
   Future<List<int>> _getUnfilled() {
     if (unfilled != null) return Future.value(unfilled);
     return BlueAlliance.stock
-        .get((season: Configuration.instance.season, event: Configuration.event, match: "*"))
+        .get(TBAInfo(season: Configuration.instance.season, event: Configuration.event, match: "*"))
         .then((data) => Set<int>.of(data.keys.map(int.parse)))
         .then((teams) async {
-          Set<int> filledteams = await Supabase.instance.client
-              .from("pit_data_${Configuration.instance.season}")
-              .select("team")
-              .eq("event", Configuration.event!)
-              .withConverter((value) => value.map<int>((e) => e['team']).toSet())
-              .catchError((_) => <int>{});
-          if (UserMetadata.instance.team != null) {
-            filledteams.add(UserMetadata.instance.team!);
-          }
-          return teams.difference(filledteams).toList()..sort();
-        })
-        .then((teams) {
-          return unfilled = teams;
-        })
-        .catchError((e) => <int>[]);
+      Set<int> filledteams = await Supabase.instance.client
+          .from("pit_data_${Configuration.instance.season}")
+          .select("team")
+          .eq("event", Configuration.event!)
+          .withConverter((value) => value.map<int>((e) => e['team']).toSet())
+          .catchError((_) => <int>{});
+      if (UserMetadata.instance.team != null) {
+        filledteams.add(UserMetadata.instance.team!);
+      }
+      return teams.difference(filledteams).toList()..sort();
+    }).then((teams) {
+      return unfilled = teams;
+    }).catchError((e) => <int>[]);
   }
 
   @override
@@ -140,23 +138,19 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                   onChanged: (value) {
                                                     _team.value = null;
                                                     BlueAlliance.stock
-                                                        .get((
-                                                          season: Configuration.instance.season,
-                                                          event: Configuration.event,
-                                                          match: "*"
-                                                        ))
+                                                        .get(TBAInfo(
+                                                            season: Configuration.instance.season,
+                                                            event: Configuration.event,
+                                                            match: "*"))
                                                         .then((data) => Set<String>.of(data.keys)
                                                             .contains(value))
                                                         .then((isValid) {
-                                                          _teamFieldError =
-                                                              isValid ? "" : "Invalid";
-                                                          _teamFieldKey.currentState!.validate();
-                                                        })
-                                                        .catchError((e) {
-                                                          ScaffoldMessenger.of(context)
-                                                              .showSnackBar(SnackBar(
-                                                                  content: Text(e.toString())));
-                                                        });
+                                                      _teamFieldError = isValid ? "" : "Invalid";
+                                                      _teamFieldKey.currentState!.validate();
+                                                    }).catchError((e) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                          SnackBar(content: Text(e.toString())));
+                                                    });
                                                   },
                                                   onFieldSubmitted: (String? value) async {
                                                     if (value == null) return;

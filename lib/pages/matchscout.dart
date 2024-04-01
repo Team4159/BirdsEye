@@ -4,11 +4,11 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../utils.dart';
-import './configuration.dart';
 import '../interfaces/bluealliance.dart';
 import '../interfaces/localstore.dart';
 import '../interfaces/supabase.dart';
+import '../utils.dart';
+import './configuration.dart';
 
 typedef MatchScoutQuestionSchema
     = LinkedHashMap<String, LinkedHashMap<String, MatchScoutQuestionTypes>>;
@@ -206,7 +206,7 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                                             submitInfo((
                                               season: Configuration.instance.season,
                                               event: Configuration.event!,
-                                              match: stringifyMatchInfo(currmatch),
+                                              match: currmatch.toString(),
                                               team: info.team!
                                             ), fields: _fields)
                                                 .then((_) async {
@@ -214,11 +214,9 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                                               if (currmatch.level == MatchLevel.qualification &&
                                                   currmatch.index < info.highestQual) {
                                                 info.team = null;
-                                                info.match = (
-                                                  level: MatchLevel.qualification,
-                                                  finalnum: null,
-                                                  index: currmatch.index + 1
-                                                );
+                                                info.match = MatchInfo(
+                                                    level: MatchLevel.qualification,
+                                                    index: currmatch.index + 1);
                                               } else {
                                                 info.resetInfo();
                                               }
@@ -277,13 +275,13 @@ class MatchScoutInfo {
       : matchController = TextEditingController(),
         teamController = ValueNotifier(null) {
     refreshMatches(BlueAlliance.stock
-        .get((season: Configuration.instance.season, event: Configuration.event, match: null)));
+        .get(TBAInfo(season: Configuration.instance.season, event: Configuration.event)));
   }
 
   Future<void> refreshMatches(Future<Map<String, String>> resp) =>
       resp.then((matchesdata) => matches = LinkedHashMap.fromEntries(
-          matchesdata.keys.map((k) => MapEntry(k, parseMatchInfo(k)!)).toList()
-            ..sort((a, b) => compareMatchInfo(a.value, b.value))));
+          matchesdata.keys.map((k) => MapEntry(k, MatchInfo.fromString(k))).toList()
+            ..sort((a, b) => a.value.compareTo(b.value))));
 
   int highestQual = -1;
   LinkedHashMap<String, MatchInfo>? _matches;
@@ -309,20 +307,22 @@ class MatchScoutInfo {
       return _match = teams = null;
     }
     if (matches == null) return;
-    if (m == match || !matches!.containsValue(m)) return;
-    String mstr = stringifyMatchInfo(m);
+    if (m == match) return;
+    if (!matches!.containsValue(m)) {
+      return _match = teams = null;
+    }
+    String mstr = m.toString();
     matchController.text = mstr;
     _match = m;
     teams = null;
     Future<Map<String, String>> tbaDataFuture = m.level != MatchLevel.qualification &&
             BlueAlliance.dirtyConnected
-        ? BlueAlliance.stock
-            .fresh((season: Configuration.instance.season, event: Configuration.event, match: mstr))
-        : BlueAlliance.stock.get((
+        ? BlueAlliance.stock.fresh(
+            TBAInfo(season: Configuration.instance.season, event: Configuration.event, match: mstr))
+        : BlueAlliance.stock.get(TBAInfo(
             season: Configuration.instance.season,
             event: Configuration.event,
-            match: mstr
-          )); // keep fetching latest info for finals
+            match: mstr)); // keep fetching latest info for finals
     SupabaseInterface.canConnect
         .then((conn) =>
             conn ? SupabaseInterface.getSessions(match: mstr) : Future.value(<String, int>{}))
@@ -337,14 +337,9 @@ class MatchScoutInfo {
     }).catchError((e) => teams = null);
   }
 
-  String? getMatchStr() => match == null ? null : stringifyMatchInfo(match!);
-  void setMatchStr(String? m) {
-    if (parseMatchInfo(m) != null) {
-      match = parseMatchInfo(m); // invoke the other setter
-    } else {
-      teams = null;
-    }
-  }
+  String? getMatchStr() => match?.toString();
+  void setMatchStr(String? m) =>
+      match = m == null ? null : MatchInfo.fromString(m); // invoke the other setter
 
   NotifiableChangeNotifier teamsController = NotifiableChangeNotifier();
   LinkedHashMap<String, MatchRobotPositionInfo>? _teams;
@@ -426,12 +421,10 @@ class MatchScoutInfoFields extends StatelessWidget {
                                 IconButton(
                                     onPressed: () {
                                       if (info.highestQual < 1) return;
-                                      info.match = (
-                                        level: MatchLevel.qualification,
-                                        finalnum: null,
-                                        index: (info.match == null ? 1 : info.match!.index + 1)
-                                            .clamp(1, info.highestQual)
-                                      );
+                                      info.match = MatchInfo(
+                                          level: MatchLevel.qualification,
+                                          index: (info.match == null ? 1 : info.match!.index + 1)
+                                              .clamp(1, info.highestQual));
                                     },
                                     constraints: const BoxConstraints(maxHeight: 22),
                                     iconSize: 28,
@@ -441,14 +434,12 @@ class MatchScoutInfoFields extends StatelessWidget {
                                 IconButton(
                                     onPressed: () {
                                       if (info.highestQual < 1) return;
-                                      info.match = (
-                                        level: MatchLevel.qualification,
-                                        finalnum: null,
-                                        index: (info.match == null
-                                                ? info.highestQual
-                                                : info.match!.index - 1)
-                                            .clamp(1, info.highestQual)
-                                      );
+                                      info.match = MatchInfo(
+                                          level: MatchLevel.qualification,
+                                          index: (info.match == null
+                                                  ? info.highestQual
+                                                  : info.match!.index - 1)
+                                              .clamp(1, info.highestQual));
                                     },
                                     constraints: const BoxConstraints(maxHeight: 22),
                                     iconSize: 28,

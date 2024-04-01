@@ -1,13 +1,13 @@
-import 'package:birdseye/interfaces/supabase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_swipe_action_cell/core/cell.dart';
 
+import '../interfaces/bluealliance.dart';
+import '../interfaces/localstore.dart';
+import '../interfaces/supabase.dart';
+import '../pages/configuration.dart';
 import '../utils.dart';
 import './matchscout.dart' as matchscout;
 import './pitscout.dart' as pitscout;
-import '../interfaces/bluealliance.dart';
-import '../interfaces/localstore.dart';
-import '../pages/configuration.dart';
 
 class SavedResponsesPage extends StatelessWidget {
   final _list = _WrappedList([]);
@@ -169,13 +169,10 @@ class CacheAddWidget extends StatelessWidget {
             listenable: _cacheStatus, builder: (context, _) => Text(_cacheStatus.value)),
         const SizedBox(height: 8),
         FutureBuilder(
-            future: BlueAlliance.stock.get((
-              season: Configuration.instance.season,
-              event: null,
-              match: null
-            )).then((events) => events.keys
-                .map((eventcode) => DropdownMenuItem(value: eventcode, child: Text(eventcode)))
-                .toList(growable: false)),
+            future: BlueAlliance.stock.get(TBAInfo(season: Configuration.instance.season)).then(
+                (events) => events.keys
+                    .map((eventcode) => DropdownMenuItem(value: eventcode, child: Text(eventcode)))
+                    .toList(growable: false)),
             builder: (context, snapshot) => ListenableBuilder(
                 listenable: _dropdownValue,
                 builder: (context, _) => Row(children: [

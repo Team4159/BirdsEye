@@ -4,7 +4,6 @@ import 'package:localstore/localstore.dart';
 import 'package:stock/stock.dart';
 
 import '../pages/matchscout.dart' show MatchScoutInfoSerialized;
-import 'bluealliance.dart';
 
 class LocalStoreInterface {
   static final _db = Localstore.instance;
@@ -31,15 +30,16 @@ class LocalStoreInterface {
       _db.collection("scout").get().then((value) => value?.keys.toSet() ?? {});
 }
 
-class LocalSourceOfTruth implements SourceOfTruth<TBAInfo, Map<String, dynamic>> {
+class LocalSourceOfTruth<K> implements SourceOfTruth<K, Map<String, dynamic>> {
   final CollectionRef collection;
   final StreamController<({String key, Map<String, dynamic>? value})> _stream =
       StreamController.broadcast();
-  LocalSourceOfTruth(String key) : collection = LocalStoreInterface._db.collection(key);
+  LocalSourceOfTruth(String collection)
+      : collection = LocalStoreInterface._db.collection(collection);
 
   @override
-  Future<void> delete(TBAInfo key) {
-    String s = stringifyTBAInfo(key);
+  Future<void> delete(K key) {
+    String s = key.toString();
     _stream.add((key: s, value: null));
     return collection.doc(s).delete();
   }
@@ -53,15 +53,15 @@ class LocalSourceOfTruth implements SourceOfTruth<TBAInfo, Map<String, dynamic>>
       }).then((_) => collection.delete());
 
   @override
-  Stream<Map<String, dynamic>?> reader(TBAInfo key) async* {
-    String s = stringifyTBAInfo(key);
+  Stream<Map<String, dynamic>?> reader(K key) async* {
+    String s = key.toString();
     yield* collection.doc(s).get().asStream();
     yield* _stream.stream.where((e) => e.key == s).map((e) => e.value);
   }
 
   @override
-  Future<void> write(TBAInfo key, Map<String, dynamic>? value) {
-    String s = stringifyTBAInfo(key);
+  Future<void> write(K key, Map<String, dynamic>? value) {
+    String s = key.toString();
     _stream.add((key: s, value: value));
     return collection.doc(s).set(value ?? {});
   }

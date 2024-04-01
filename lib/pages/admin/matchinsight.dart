@@ -15,15 +15,18 @@ class MatchInsightPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FutureBuilder(
       future: BlueAlliance.stock
-          .get((season: Configuration.instance.season, event: Configuration.event!, match: null))
+          .get(TBAInfo(season: Configuration.instance.season, event: Configuration.event!))
           .then((eventMatches) => Future.wait(eventMatches.keys.map((matchCode) => BlueAlliance.stock
-              .get((season: Configuration.instance.season, event: Configuration.event!, match: matchCode)).then(
-                  (matchTeams) => matchTeams.keys.any(
-                          (teamKey) => teamKey.startsWith(UserMetadata.instance.team!.toString()))
-                      ? MapEntry(matchCode, matchTeams)
-                      : null))))
-          .then((teamMatches) =>
-              LinkedHashMap.fromEntries(teamMatches.whereType<MapEntry<String, Map<String, String>>>())),
+              .get(TBAInfo(
+                  season: Configuration.instance.season,
+                  event: Configuration.event!,
+                  match: matchCode))
+              .then((matchTeams) => matchTeams.keys
+                      .any((teamKey) => teamKey.startsWith(UserMetadata.instance.team!.toString()))
+                  ? MapEntry(matchCode, matchTeams)
+                  : null))))
+          .then(
+              (teamMatches) => LinkedHashMap.fromEntries(teamMatches.whereType<MapEntry<String, Map<String, String>>>())),
       builder: (context, snapshot) => !snapshot.hasData
           ? snapshot.hasError
               ? Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.center, children: [
