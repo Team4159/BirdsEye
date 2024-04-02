@@ -137,12 +137,29 @@ class SupabaseInterface {
         throw UnimplementedError("No aggregate for that combination");
       }));
 
-  static final eventAggregateStock =
-      Stock<({int season, String event}), LinkedHashMap<String, double>>(
-          sourceOfTruth: CachedSourceOfTruth(),
-          fetcher: Fetcher.ofFuture((key) => Supabase.instance.client.functions
-              .invoke("event_aggregator?season=${key.season}&event=${key.event}")
-              .then((resp) => resp.status >= 400
+  static final pitAggregateStock = Stock<({int season, String event, int team}),
+          Map<String, String>>(
+      sourceOfTruth: CachedSourceOfTruth(),
+      fetcher: Fetcher.ofFuture((key) => Supabase.instance.client
+          .from("pit_data_${key.season}")
+          .select("*")
+          .eq("event", key.event)
+          .eq("team", key.team)
+          .then((resp) => resp
+              .whereType<Map<String, String>>()
+              .map((e) => e
+                ..removeWhere((key, value) => {"event", "match", "team", "scouter"}.contains(key)))
+              .reduce((c, v) => c.map((key, value) => MapEntry(key, "$value\n${v[key]}"))))));
+
+  static final eventAggregateStock = Stock<
+          ({int season, String event, EventAggregateMethod method}), LinkedHashMap<String, double>>(
+      sourceOfTruth: CachedSourceOfTruth(),
+      fetcher: Fetcher.ofFuture((key) => Supabase.instance.client.functions
+              .invoke("event_aggregator", body: {
+            "season": key.season,
+            "event": key.event,
+            "method": key.method.name
+          }).then((resp) => resp.status >= 400
                   ? throw Exception("HTTP Error ${resp.status}")
                   : LinkedHashMap.fromEntries((Map<String, double?>.from(resp.data)
                         ..removeWhere((key, value) => value == null))
@@ -179,6 +196,8 @@ class SupabaseInterface {
             ));
       }));
 }
+
+enum EventAggregateMethod { defense, accuracy }
 
 typedef Achievement = ({
   int id,

@@ -9,7 +9,7 @@ import '../matchscout.dart';
 import '../metadata.dart';
 
 class MatchInsightPage extends StatelessWidget {
-  final ValueNotifier<String?> _selectedMatch = ValueNotifier(null);
+  final ValueNotifier<MatchInfo?> _selectedMatch = ValueNotifier(null);
   MatchInsightPage({super.key});
 
   @override
@@ -23,10 +23,10 @@ class MatchInsightPage extends StatelessWidget {
                   match: matchCode))
               .then((matchTeams) => matchTeams.keys
                       .any((teamKey) => teamKey.startsWith(UserMetadata.instance.team!.toString()))
-                  ? MapEntry(matchCode, matchTeams)
+                  ? MapEntry(MatchInfo.fromString(matchCode), matchTeams)
                   : null))))
           .then(
-              (teamMatches) => LinkedHashMap.fromEntries(teamMatches.whereType<MapEntry<String, Map<String, String>>>())),
+              (teamMatches) => LinkedHashMap.fromEntries(teamMatches.whereType<MapEntry<MatchInfo, Map<String, String>>>().toList()..sort((a, b) => a.key.compareTo(b.key)))),
       builder: (context, snapshot) => !snapshot.hasData
           ? snapshot.hasError
               ? Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.center, children: [
@@ -41,8 +41,8 @@ class MatchInsightPage extends StatelessWidget {
                     SliverAppBar(title: const Text("Match Insight"), actions: [
                       DropdownButton(
                           items: snapshot.data!.keys
-                              .map((matchCode) =>
-                                  DropdownMenuItem(value: matchCode, child: Text(matchCode)))
+                              .map((matchCode) => DropdownMenuItem(
+                                  value: matchCode, child: Text(matchCode.toString())))
                               .toList(),
                           value: _selectedMatch.value,
                           onChanged: (matchCode) => _selectedMatch.value = matchCode)

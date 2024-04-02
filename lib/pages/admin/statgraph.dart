@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -92,7 +93,7 @@ class StatGraphPage extends StatelessWidget {
                 flex: 1,
                 fit: FlexFit.loose,
                 child: Container(
-                    padding: const EdgeInsets.only(left: 12, right: 12, bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     alignment: Alignment.topCenter,
                     constraints: const BoxConstraints(maxHeight: 60),
                     child: TabBarView(children: [
@@ -279,6 +280,10 @@ class ValueTab<T extends Object> extends StatelessWidget {
                                           }),
                                       PageView(
                                           controller: swipeController,
+                                          scrollBehavior: ScrollConfiguration.of(context).copyWith(
+                                              scrollbars: false,
+                                              overscroll: false,
+                                              dragDevices: PointerDeviceKind.values.toSet()),
                                           onPageChanged: (i) =>
                                               onChange == null || snapshot.data!.length <= i
                                                   ? null
@@ -600,31 +605,50 @@ class EventInSeasonRankings extends StatelessWidget {
   final String event;
   EventInSeasonRankings({super.key, required this.season, required this.event});
 
-  final ValueNotifier<String> searchTerm = ValueNotifier("");
+  final ValueNotifier<EventAggregateMethod> method = ValueNotifier(EventAggregateMethod.defense);
   @override
-  Widget build(BuildContext context) => CustomScrollView(slivers: [
-        const SliverToBoxAdapter(child: Text("Top Defensive", textAlign: TextAlign.center)),
-        FutureBuilder(
-            future: SupabaseInterface.eventAggregateStock.get((season: season, event: event)),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return SliverFillRemaining(
-                    child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                      Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
-                      const SizedBox(height: 20),
-                      Text(snapshot.error.toString())
-                    ]));
-              }
-              if (!snapshot.hasData) {
-                return const SliverFillRemaining(
-                    hasScrollBody: false, child: Center(child: CircularProgressIndicator()));
-              }
-              return SliverAnimatedInList(snapshot.data!.entries.toList(),
-                  builder: (context, dynamic e) => ListTile(
-                      title: Text(e.key), trailing: Text(e.value.toStringAsFixed(2)), dense: true));
-            })
-      ]);
+  Widget build(BuildContext context) => ListenableBuilder(
+      listenable: method,
+      builder: (context, _) => CustomScrollView(slivers: [
+            SliverPadding(
+                padding: const EdgeInsets.only(bottom: 12),
+                sliver: SliverToBoxAdapter(
+                    child: Row(children: [
+                  const Expanded(child: SizedBox()),
+                  Text("Sort: ", style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(width: 12),
+                  SegmentedButton(
+                      segments: EventAggregateMethod.values
+                          .map((method) => ButtonSegment(value: method, label: Text(method.name)))
+                          .toList(),
+                      selected: {method.value},
+                      onSelectionChanged: (value) => method.value = value.single)
+                ]))),
+            FutureBuilder(
+                future: SupabaseInterface.eventAggregateStock
+                    .get((season: season, event: event, method: method.value)),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return SliverFillRemaining(
+                        child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                          Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
+                          const SizedBox(height: 20),
+                          Text(snapshot.error.toString())
+                        ]));
+                  }
+                  if (!snapshot.hasData) {
+                    return const SliverFillRemaining(
+                        hasScrollBody: false, child: Center(child: CircularProgressIndicator()));
+                  }
+                  return SliverAnimatedInList(snapshot.data!.entries.toList(),
+                      builder: (context, dynamic e) => ListTile(
+                          title: Text(e.key, style: Theme.of(context).textTheme.bodyLarge),
+                          trailing: Text(e.value.toStringAsFixed(2),
+                              style: Theme.of(context).textTheme.bodyMedium),
+                          dense: true));
+                })
+          ]));
 }

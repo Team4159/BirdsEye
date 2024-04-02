@@ -9,257 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      "2023_match": {
-        Row: {
-          auto_cone_high: number | null
-          auto_cone_low: number | null
-          auto_cone_mid: number | null
-          auto_cone_misses: number | null
-          auto_cube_high: number | null
-          auto_cube_low: number | null
-          auto_cube_mid: number | null
-          auto_cube_misses: number | null
-          comments_defensive: boolean | null
-          comments_fouls: number | null
-          event: string
-          match: string
-          scouter: string
-          team: string
-          teleop_cone_high: number | null
-          teleop_cone_low: number | null
-          teleop_cone_mid: number | null
-          teleop_cone_misses: number | null
-          teleop_cube_high: number | null
-          teleop_cube_low: number | null
-          teleop_cube_mid: number | null
-          teleop_cube_misses: number | null
-          teleop_intakes_double: number | null
-          teleop_intakes_single: number | null
-        }
-        Insert: {
-          auto_cone_high?: number | null
-          auto_cone_low?: number | null
-          auto_cone_mid?: number | null
-          auto_cone_misses?: number | null
-          auto_cube_high?: number | null
-          auto_cube_low?: number | null
-          auto_cube_mid?: number | null
-          auto_cube_misses?: number | null
-          comments_defensive?: boolean | null
-          comments_fouls?: number | null
-          event: string
-          match: string
-          scouter: string
-          team: string
-          teleop_cone_high?: number | null
-          teleop_cone_low?: number | null
-          teleop_cone_mid?: number | null
-          teleop_cone_misses?: number | null
-          teleop_cube_high?: number | null
-          teleop_cube_low?: number | null
-          teleop_cube_mid?: number | null
-          teleop_cube_misses?: number | null
-          teleop_intakes_double?: number | null
-          teleop_intakes_single?: number | null
-        }
-        Update: {
-          auto_cone_high?: number | null
-          auto_cone_low?: number | null
-          auto_cone_mid?: number | null
-          auto_cone_misses?: number | null
-          auto_cube_high?: number | null
-          auto_cube_low?: number | null
-          auto_cube_mid?: number | null
-          auto_cube_misses?: number | null
-          comments_defensive?: boolean | null
-          comments_fouls?: number | null
-          event?: string
-          match?: string
-          scouter?: string
-          team?: string
-          teleop_cone_high?: number | null
-          teleop_cone_low?: number | null
-          teleop_cone_mid?: number | null
-          teleop_cone_misses?: number | null
-          teleop_cube_high?: number | null
-          teleop_cube_low?: number | null
-          teleop_cube_mid?: number | null
-          teleop_cube_misses?: number | null
-          teleop_intakes_double?: number | null
-          teleop_intakes_single?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "2023_match_scouter_fkey"
-            columns: ["scouter"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      "2023_pit": {
-        Row: {
-          comments_generic: string | null
-          driveraccuracy: string | null
-          driverproficency: string | null
-          driverreaction: string | null
-          driverskill: string | null
-          event: string
-          experiencebuildseason: string | null
-          robotcomments: string | null
-          scouter: string
-          team: number
-        }
-        Insert: {
-          comments_generic?: string | null
-          driveraccuracy?: string | null
-          driverproficency?: string | null
-          driverreaction?: string | null
-          driverskill?: string | null
-          event: string
-          experiencebuildseason?: string | null
-          robotcomments?: string | null
-          scouter?: string
-          team: number
-        }
-        Update: {
-          comments_generic?: string | null
-          driveraccuracy?: string | null
-          driverproficency?: string | null
-          driverreaction?: string | null
-          driverskill?: string | null
-          event?: string
-          experiencebuildseason?: string | null
-          robotcomments?: string | null
-          scouter?: string
-          team?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "2023_pit_scouter_fkey"
-            columns: ["scouter"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      "2024_match": {
-        Row: {
-          auto_amp: number
-          auto_amp_missed: number
-          auto_speaker: number
-          auto_speaker_missed: number
-          comments_agility: number
-          comments_contribution: number | null
-          comments_defensive: boolean
-          comments_fouls: number
-          event: string
-          match: string
-          scouter: string
-          team: number
-          teleop_amp: number
-          teleop_amp_missed: number
-          teleop_loudspeaker: number
-          teleop_speaker: number
-          teleop_speaker_missed: number
-          teleop_trap: number
-        }
-        Insert: {
-          auto_amp?: number
-          auto_amp_missed?: number
-          auto_speaker?: number
-          auto_speaker_missed?: number
-          comments_agility: number
-          comments_contribution?: number | null
-          comments_defensive: boolean
-          comments_fouls?: number
-          event: string
-          match: string
-          scouter?: string
-          team: number
-          teleop_amp?: number
-          teleop_amp_missed?: number
-          teleop_loudspeaker?: number
-          teleop_speaker?: number
-          teleop_speaker_missed?: number
-          teleop_trap?: number
-        }
-        Update: {
-          auto_amp?: number
-          auto_amp_missed?: number
-          auto_speaker?: number
-          auto_speaker_missed?: number
-          comments_agility?: number
-          comments_contribution?: number | null
-          comments_defensive?: boolean
-          comments_fouls?: number
-          event?: string
-          match?: string
-          scouter?: string
-          team?: number
-          teleop_amp?: number
-          teleop_amp_missed?: number
-          teleop_loudspeaker?: number
-          teleop_speaker?: number
-          teleop_speaker_missed?: number
-          teleop_trap?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "2024_match_scouter_fkey"
-            columns: ["scouter"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      "2024_pit": {
-        Row: {
-          comments_generic: string | null
-          driverskill: string | null
-          event: string
-          experiencebuildseason: string | null
-          outreachinitiatives: string | null
-          rookieinvolvement: string | null
-          scoringstructures: string | null
-          scouter: string
-          team: number
-        }
-        Insert: {
-          comments_generic?: string | null
-          driverskill?: string | null
-          event: string
-          experiencebuildseason?: string | null
-          outreachinitiatives?: string | null
-          rookieinvolvement?: string | null
-          scoringstructures?: string | null
-          scouter?: string
-          team: number
-        }
-        Update: {
-          comments_generic?: string | null
-          driverskill?: string | null
-          event?: string
-          experiencebuildseason?: string | null
-          outreachinitiatives?: string | null
-          rookieinvolvement?: string | null
-          scoringstructures?: string | null
-          scouter?: string
-          team?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "2024_pit_scouter_fkey"
-            columns: ["scouter"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       achievement_queue: {
         Row: {
           achievement: number
@@ -302,7 +51,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       achievements: {
@@ -335,6 +84,186 @@ export type Database = {
         }
         Relationships: []
       }
+      match_data_2023: {
+        Row: {
+          auto_cone_high: number | null
+          auto_cone_low: number | null
+          auto_cone_mid: number | null
+          auto_cone_misses: number | null
+          auto_cube_high: number | null
+          auto_cube_low: number | null
+          auto_cube_mid: number | null
+          auto_cube_misses: number | null
+          comments_defensive: boolean | null
+          comments_fouls: number | null
+          id: number
+          teleop_cone_high: number | null
+          teleop_cone_low: number | null
+          teleop_cone_mid: number | null
+          teleop_cone_misses: number | null
+          teleop_cube_high: number | null
+          teleop_cube_low: number | null
+          teleop_cube_mid: number | null
+          teleop_cube_misses: number | null
+          teleop_intakes_double: number | null
+          teleop_intakes_single: number | null
+        }
+        Insert: {
+          auto_cone_high?: number | null
+          auto_cone_low?: number | null
+          auto_cone_mid?: number | null
+          auto_cone_misses?: number | null
+          auto_cube_high?: number | null
+          auto_cube_low?: number | null
+          auto_cube_mid?: number | null
+          auto_cube_misses?: number | null
+          comments_defensive?: boolean | null
+          comments_fouls?: number | null
+          id: number
+          teleop_cone_high?: number | null
+          teleop_cone_low?: number | null
+          teleop_cone_mid?: number | null
+          teleop_cone_misses?: number | null
+          teleop_cube_high?: number | null
+          teleop_cube_low?: number | null
+          teleop_cube_mid?: number | null
+          teleop_cube_misses?: number | null
+          teleop_intakes_double?: number | null
+          teleop_intakes_single?: number | null
+        }
+        Update: {
+          auto_cone_high?: number | null
+          auto_cone_low?: number | null
+          auto_cone_mid?: number | null
+          auto_cone_misses?: number | null
+          auto_cube_high?: number | null
+          auto_cube_low?: number | null
+          auto_cube_mid?: number | null
+          auto_cube_misses?: number | null
+          comments_defensive?: boolean | null
+          comments_fouls?: number | null
+          id?: number
+          teleop_cone_high?: number | null
+          teleop_cone_low?: number | null
+          teleop_cone_mid?: number | null
+          teleop_cone_misses?: number | null
+          teleop_cube_high?: number | null
+          teleop_cube_low?: number | null
+          teleop_cube_mid?: number | null
+          teleop_cube_misses?: number | null
+          teleop_intakes_double?: number | null
+          teleop_intakes_single?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_2023_match_id_fkey"
+            columns: ["id"]
+            isOneToOne: false
+            referencedRelation: "match_scouting"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_data_2024: {
+        Row: {
+          auto_amp: number
+          auto_amp_missed: number
+          auto_speaker: number
+          auto_speaker_missed: number
+          comments_agility: number
+          comments_contribution: number
+          comments_defensive: boolean
+          comments_fouls: number
+          id: number
+          teleop_amp: number
+          teleop_amp_missed: number
+          teleop_loudspeaker: number
+          teleop_speaker: number
+          teleop_speaker_missed: number
+          teleop_trap: number
+        }
+        Insert: {
+          auto_amp?: number
+          auto_amp_missed?: number
+          auto_speaker?: number
+          auto_speaker_missed?: number
+          comments_agility: number
+          comments_contribution: number
+          comments_defensive: boolean
+          comments_fouls?: number
+          id: number
+          teleop_amp?: number
+          teleop_amp_missed?: number
+          teleop_loudspeaker?: number
+          teleop_speaker?: number
+          teleop_speaker_missed?: number
+          teleop_trap?: number
+        }
+        Update: {
+          auto_amp?: number
+          auto_amp_missed?: number
+          auto_speaker?: number
+          auto_speaker_missed?: number
+          comments_agility?: number
+          comments_contribution?: number
+          comments_defensive?: boolean
+          comments_fouls?: number
+          id?: number
+          teleop_amp?: number
+          teleop_amp_missed?: number
+          teleop_loudspeaker?: number
+          teleop_speaker?: number
+          teleop_speaker_missed?: number
+          teleop_trap?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_2024_match_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "match_scouting"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_scouting: {
+        Row: {
+          created_at: string
+          event: string
+          id: number
+          match: string
+          scouter: string
+          season: number
+          team: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: number
+          match: string
+          scouter?: string
+          season: number
+          team: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: number
+          match?: string
+          scouter?: string
+          season?: number
+          team?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_match_scouting_scouter_fkey"
+            columns: ["scouter"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           achievement_approver: boolean
@@ -364,7 +293,98 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
+        ]
+      }
+      pit_data_2023: {
+        Row: {
+          comments_generic: string | null
+          driveraccuracy: string | null
+          driverproficency: string | null
+          driverreaction: string | null
+          driverskill: string | null
+          event: string
+          experiencebuildseason: string | null
+          robotcomments: string | null
+          scouter: string
+          team: number
+        }
+        Insert: {
+          comments_generic?: string | null
+          driveraccuracy?: string | null
+          driverproficency?: string | null
+          driverreaction?: string | null
+          driverskill?: string | null
+          event: string
+          experiencebuildseason?: string | null
+          robotcomments?: string | null
+          scouter: string
+          team: number
+        }
+        Update: {
+          comments_generic?: string | null
+          driveraccuracy?: string | null
+          driverproficency?: string | null
+          driverreaction?: string | null
+          driverskill?: string | null
+          event?: string
+          experiencebuildseason?: string | null
+          robotcomments?: string | null
+          scouter?: string
+          team?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_2023_pit_scouter_fkey"
+            columns: ["scouter"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pit_data_2024: {
+        Row: {
+          comments_generic: string | null
+          driverskill: string | null
+          event: string
+          experiencebuildseason: string | null
+          outreachinitiatives: string | null
+          rookieinvolvement: string | null
+          scoringstructures: string | null
+          scouter: string
+          team: number
+        }
+        Insert: {
+          comments_generic?: string | null
+          driverskill?: string | null
+          event: string
+          experiencebuildseason?: string | null
+          outreachinitiatives?: string | null
+          rookieinvolvement?: string | null
+          scoringstructures?: string | null
+          scouter?: string
+          team: number
+        }
+        Update: {
+          comments_generic?: string | null
+          driverskill?: string | null
+          event?: string
+          experiencebuildseason?: string | null
+          outreachinitiatives?: string | null
+          rookieinvolvement?: string | null
+          scoringstructures?: string | null
+          scouter?: string
+          team?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_2024_pit_scouter_fkey"
+            columns: ["scouter"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sessions: {
@@ -399,7 +419,7 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       users: {
@@ -431,7 +451,7 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
     }
@@ -463,14 +483,16 @@ export type Database = {
   }
 }
 
+type PublicSchema = Database[Extract<keyof Database, "public">]
+
 export type Tables<
   PublicTableNameOrOptions extends
-    | keyof (Database["public"]["Tables"] & Database["public"]["Views"])
+    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
     | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
     ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
         Database[PublicTableNameOrOptions["schema"]]["Views"])
-    : never = never
+    : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
       Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
@@ -478,67 +500,67 @@ export type Tables<
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"] &
-      Database["public"]["Views"])
-  ? (Database["public"]["Tables"] &
-      Database["public"]["Views"])[PublicTableNameOrOptions] extends {
-      Row: infer R
-    }
-    ? R
+  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
+        PublicSchema["Views"])
+    ? (PublicSchema["Tables"] &
+        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
     : never
-  : never
 
 export type TablesInsert<
   PublicTableNameOrOptions extends
-    | keyof Database["public"]["Tables"]
+    | keyof PublicSchema["Tables"]
     | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
     ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never
+    : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-  ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
-      Insert: infer I
-    }
-    ? I
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
     : never
-  : never
 
 export type TablesUpdate<
   PublicTableNameOrOptions extends
-    | keyof Database["public"]["Tables"]
+    | keyof PublicSchema["Tables"]
     | { schema: keyof Database },
   TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
     ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never
+    : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof Database["public"]["Tables"]
-  ? Database["public"]["Tables"][PublicTableNameOrOptions] extends {
-      Update: infer U
-    }
-    ? U
+  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
+    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
     : never
-  : never
 
 export type Enums<
   PublicEnumNameOrOptions extends
-    | keyof Database["public"]["Enums"]
+    | keyof PublicSchema["Enums"]
     | { schema: keyof Database },
   EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
     ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
-    : never = never
+    : never = never,
 > = PublicEnumNameOrOptions extends { schema: keyof Database }
   ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
-  ? Database["public"]["Enums"][PublicEnumNameOrOptions]
-  : never
+  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
+    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+    : never

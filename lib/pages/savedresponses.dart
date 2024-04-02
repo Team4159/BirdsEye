@@ -159,7 +159,7 @@ class _RespList extends StatelessWidget {
 }
 
 class CacheAddWidget extends StatelessWidget {
-  final ValueNotifier<String?> _dropdownValue = ValueNotifier(null);
+  final ValueNotifier<String?> _dropdownValue = ValueNotifier(Configuration.event);
   final ValueNotifier<String> _cacheStatus = ValueNotifier("Cache Event");
   CacheAddWidget({super.key});
 
