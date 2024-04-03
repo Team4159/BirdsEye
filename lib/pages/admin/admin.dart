@@ -1,4 +1,5 @@
 import 'package:birdseye/pages/admin/matchinsight.dart';
+import 'package:birdseye/pages/admin/pitsummary.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,7 +10,7 @@ import 'statgraph.dart';
 
 final _adminNavigatorKey = GlobalKey<NavigatorState>();
 
-enum AdminRoutePaths { statgraphs, achiqueue, qualanaly, nextmatch }
+enum AdminRoutePaths { statgraphs, achiqueue, pitresp, nextmatch }
 
 final adminGoRoute = GoRoute(
     path: '/admin',
@@ -29,6 +30,16 @@ final adminGoRoute = GoRoute(
                 path: 'home',
                 name: RoutePaths.adminportal.name,
                 pageBuilder: (context, state) => const MaterialPage(child: DrawerButton())),
+            GoRoute(
+                parentNavigatorKey: _adminNavigatorKey,
+                path: AdminRoutePaths.pitresp.name,
+                name: AdminRoutePaths.pitresp.name,
+                pageBuilder: (context, state) =>
+                    const MaterialPage(child: PitSummary(), name: "Pit Responses"),
+                redirect: (context, state) =>
+                    UserMetadata.instance.cachedPermissions.value.pitViewer
+                        ? null
+                        : state.namedLocation(RoutePaths.adminportal.name)),
             GoRoute(
                 parentNavigatorKey: _adminNavigatorKey,
                 path: AdminRoutePaths.achiqueue.name,
@@ -83,6 +94,13 @@ class AdminScaffoldShell extends StatelessWidget {
                     onTap: () => GoRouter.of(context)
                       ..pop()
                       ..goNamed(AdminRoutePaths.statgraphs.name)),
+                ListTile(
+                    leading: const Icon(Icons.textsms_outlined),
+                    title: const Text("Pit Responses"),
+                    enabled: UserMetadata.instance.cachedPermissions.value.pitViewer,
+                    onTap: () => GoRouter.of(context)
+                      ..pop()
+                      ..goNamed(AdminRoutePaths.pitresp.name)),
                 ListTile(
                     leading: const Icon(Icons.queue_rounded),
                     title: const Text("Achievement Queue"),

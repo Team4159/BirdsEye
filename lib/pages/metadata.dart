@@ -155,8 +155,8 @@ class TBAInfoDialog extends Dialog {
 typedef PermissionSet = ({
   bool achievementApprover,
   bool graphViewer,
-  bool economyManager,
-  bool qualitativeAnalyzer
+  bool pitViewer,
+  bool economyManager
 });
 
 class UserMetadata extends ChangeNotifier {
@@ -224,18 +224,14 @@ class UserMetadata extends ChangeNotifier {
       prefs.containsKey("tbaKey") &&
       await BlueAlliance.isKeyValid(prefs.getString("tbaKey"));
 
-  final ValueNotifier<PermissionSet> cachedPermissions = ValueNotifier((
-    achievementApprover: false,
-    graphViewer: false,
-    economyManager: false,
-    qualitativeAnalyzer: false
-  ));
+  final ValueNotifier<PermissionSet> cachedPermissions = ValueNotifier(
+      (achievementApprover: false, graphViewer: false, pitViewer: false, economyManager: false));
 
   bool get hasAnyAdminPerms =>
       UserMetadata.instance.cachedPermissions.value.achievementApprover ||
       UserMetadata.instance.cachedPermissions.value.economyManager ||
       UserMetadata.instance.cachedPermissions.value.graphViewer ||
-      UserMetadata.instance.cachedPermissions.value.qualitativeAnalyzer;
+      UserMetadata.instance.cachedPermissions.value.pitViewer;
 
   Future<void> fetchPerms() => Supabase.instance.client
       .from("permissions")
@@ -246,8 +242,8 @@ class UserMetadata extends ChangeNotifier {
       .then((value) => (
             achievementApprover: value?["achievement_approver"] ?? false,
             graphViewer: value?["graph_viewer"] ?? false,
-            economyManager: value?["economy_manager"] ?? false,
-            qualitativeAnalyzer: value?["qualitative_analyzer"] ?? false
+            pitViewer: value?["pit_viewer"] ?? false,
+            economyManager: value?["economy_manager"] ?? false
           ))
       .then((perms) => cachedPermissions.value = perms);
 }

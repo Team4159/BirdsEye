@@ -99,7 +99,7 @@ class ConfigurationPage extends StatelessWidget {
                                   entries[entries.length ~/ 2].key; // TODO autofill event goes here
                               int index =
                                   entries.indexWhere((element) => element.key == maybeEvent);
-                              if (index < 0) index = snapshot.data!.length ~/ 2;
+                              if (index < 0) index = entries.length ~/ 2;
                               if (entries[index].key != Configuration.event) {
                                 Configuration.event = entries[index].key;
                               }

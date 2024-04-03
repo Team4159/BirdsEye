@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
@@ -94,6 +96,27 @@ class NotifiableChangeNotifier extends ChangeNotifier {
   void notifyListeners() {
     super.notifyListeners();
   }
+}
+
+class UniqueNotifyingList<E> extends ChangeNotifier {
+  LinkedHashSet<E> _internal = LinkedHashSet.identity();
+
+  void setAll(Set<E> items) {
+    _internal = items is LinkedHashSet<E> ? items : LinkedHashSet<E>.of(items);
+    notifyListeners();
+  }
+
+  bool remove(E item) {
+    if (_internal.remove(item)) {
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  E operator [](int i) => _internal.elementAt(i);
+  get length => _internal.length;
+  get isEmpty => _internal.isEmpty;
 }
 
 /// A [ChangeNotifier] that holds a single double value.

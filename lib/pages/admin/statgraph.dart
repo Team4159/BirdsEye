@@ -347,14 +347,15 @@ class AnalysisInfo extends ChangeNotifier {
   ChangeNotifier seasonNotifier = ChangeNotifier();
 
   String? _event;
-  String? get event => _event?.toLowerCase();
+  String? get event => _event;
   set event(String? e) {
-    _event = e;
+    _event = e?.toLowerCase();
     seasoneventNotifier.notifyListeners();
     notifyListeners();
   }
 
-  ChangeNotifier seasoneventNotifier = ChangeNotifier();
+  ChangeNotifier seasoneventNotifier =
+      ChangeNotifier(); // this could be replaced with Listenable.combine
 
   String? _team;
   String? get team => _team?.toUpperCase();

@@ -137,19 +137,22 @@ class SupabaseInterface {
         throw UnimplementedError("No aggregate for that combination");
       }));
 
-  static final pitAggregateStock = Stock<({int season, String event, int team}),
-          Map<String, String>>(
-      sourceOfTruth: CachedSourceOfTruth(),
-      fetcher: Fetcher.ofFuture((key) => Supabase.instance.client
-          .from("pit_data_${key.season}")
-          .select("*")
-          .eq("event", key.event)
-          .eq("team", key.team)
-          .then((resp) => resp
-              .whereType<Map<String, String>>()
-              .map((e) => e
-                ..removeWhere((key, value) => {"event", "match", "team", "scouter"}.contains(key)))
-              .reduce((c, v) => c.map((key, value) => MapEntry(key, "$value\n${v[key]}"))))));
+  static final pitAggregateStock =
+      Stock<({int season, String event, int team}), LinkedHashMap<String, String>>(
+          sourceOfTruth: CachedSourceOfTruth(),
+          fetcher: Fetcher.ofFuture((key) => Supabase.instance.client
+                  .from("pit_data_${key.season}")
+                  .select("*")
+                  .eq("event", key.event)
+                  .eq("team", key.team)
+                  .then((resp) => resp.map((e) =>(e
+                    ..removeWhere((key, value) =>
+                        {"event", "match", "team", "scouter"}.contains(key) || value is! String))
+                    .map<String, String>((key, value) => MapEntry(key, value as String))))
+                  .then((map) => map.isEmpty
+                      ? LinkedHashMap<String, String>()
+                      : LinkedHashMap.of(map.reduce(
+                          (c, v) => c.map((key, value) => MapEntry(key, "$value\n${v[key]}")))))));
 
   static final eventAggregateStock = Stock<
           ({int season, String event, EventAggregateMethod method}), LinkedHashMap<String, double>>(
