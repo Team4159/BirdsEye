@@ -22,7 +22,7 @@ class SupabaseInterface {
       ? Future.value(_availableSeasons)
       : Supabase.instance.client
           .rpc("getavailableseasons")
-          .then((resp) => _availableSeasons = List<int>.from(resp));
+          .then((resp) => _availableSeasons = List<int>.from(resp, growable: false));
 
   static Future<void> setSession({String? match, String? team}) =>
       Supabase.instance.client.from("sessions").upsert({

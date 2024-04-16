@@ -258,13 +258,13 @@ class RobotPositionChip extends Container {
             alignment: Alignment.topCenter,
             child: Center(child: Text(position.ordinal.toString())));
 
-  static final _robotPositionPattern = RegExp(r'^(?<color>red|blue)(?<number>[1-9])$');
+  static final _robotPositionPattern = RegExp(r'^(?<color>red|blue)(?<number>[1-3])$');
   static MatchRobotPositionInfo robotPositionFromString(String posStr, {int scouters = 0}) {
     RegExpMatch? patternMatch = _robotPositionPattern.firstMatch(posStr);
-    if (patternMatch == null) throw Exception("Malformed Robot Position '$posStr'");
+    assert(patternMatch != null, "Malformed Robot Position '$posStr'");
     return (
-      isRedAlliance: patternMatch.namedGroup("color") == "red",
-      ordinal: int.parse(patternMatch.namedGroup("number")!),
+      isRedAlliance: patternMatch?.namedGroup("color") == "red",
+      ordinal: patternMatch == null ? 0 : int.parse(patternMatch.namedGroup("number")!),
       currentScouters: scouters
     );
   }
@@ -354,11 +354,14 @@ class MatchScoutInfo {
   String? get team => teamController.value;
   set team(String? t) {
     teamsController.notifyListeners();
-    if (t == null) return teamController.value = null;
+    if (t == null) {
+      SupabaseInterface.setSession(match: getMatchStr(), team: null);
+      return teamController.value = null;
+    }
     if (teams == null) return;
     if (t == team || !teams!.containsKey(t)) return;
     teamController.value = t;
-    if (team != null) SupabaseInterface.setSession(match: getMatchStr(), team: team);
+    SupabaseInterface.setSession(match: getMatchStr(), team: team);
   }
 
   void resetInfo() => match = null;
@@ -478,7 +481,7 @@ class MatchScoutInfoFields extends StatelessWidget {
                                                     RobotPositionChip(position)
                                                   ])))
                                   ],
-                            onTap: () => info.team ??= (info.teams!.keys.toList()
+                            onTap: () => info.team ??= (info.teams!.keys.toList(growable: false)
                                   ..sort((a, b) =>
                                       info.teams![a]!.currentScouters -
                                       info.teams![b]!.currentScouters))

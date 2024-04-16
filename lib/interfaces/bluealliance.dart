@@ -122,18 +122,20 @@ class BlueAlliance {
       fetcher: Fetcher.ofFuture((key) async {
         if (key.event == null) {
           // season -> {eventcode: event name}
-          var data = List<Map<String, dynamic>>.from(await _getJson("events/${key.season}/simple"));
+          var data = List<Map<String, dynamic>>.from(await _getJson("events/${key.season}/simple"),
+              growable: false);
           return Map.fromEntries(data.map((event) => MapEntry(event['event_code'], event['name'])));
         } else if (key.match == null) {
           // event -> {matchcode: full match name}
-          var data =
-              List<String>.from(await _getJson("event/${key.season}${key.event}/matches/keys"));
+          var data = List<String>.from(
+              await _getJson("event/${key.season}${key.event}/matches/keys"),
+              growable: false);
           return Map.fromEntries(
               data.map((matchCode) => MapEntry(matchCode.split("_").last, matchCode)));
         } else if (key.match == "*") {
           // match* -> {teamcode: *}
-          var data =
-              List<String>.from(await _getJson("event/${key.season}${key.event}/teams/keys"));
+          var data = List<String>.from(await _getJson("event/${key.season}${key.event}/teams/keys"),
+              growable: false);
           return Map.fromEntries(data.map((teamCode) => MapEntry(teamCode.substring(3), "*")));
         } else {
           // match -> {teamcode: team position}
@@ -142,12 +144,10 @@ class BlueAlliance {
           Map<String, String> o = {};
           for (MapEntry<String, dynamic> alliance
               in Map<String, dynamic>.from(data['alliances']).entries) {
-            for (MapEntry<int, String> team in List<String>.from(alliance.value['team_keys'])
-                .followedBy(List<String>.from(alliance.value[
-                    'surrogate_team_keys'])) // surrogate additions- i have no idea if they work this way
-                .toList(growable: false)
-                .asMap()
-                .entries) {
+            for (MapEntry<int, String> team
+                in List<String>.from(alliance.value['team_keys'], growable: false)
+                    .asMap()
+                    .entries) {
               if (team.value.substring(3) != "0") {
                 o[team.value.substring(3)] = "${alliance.key}${team.key + 1}";
               }
@@ -159,7 +159,7 @@ class BlueAlliance {
       }));
 
   static Future<void> batchFetch(int season, String event) async {
-    var data = List<dynamic>.from(await _getJson("event/$season$event/matches/simple"));
+    final data = List.from(await _getJson("event/$season$event/matches/simple"), growable: false);
     Map<String, String> matches = {};
     Map<String, String> pitTeams = {};
     for (dynamic matchdata in data) {
