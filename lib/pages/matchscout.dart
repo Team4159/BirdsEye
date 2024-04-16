@@ -258,7 +258,7 @@ class RobotPositionChip extends Container {
             alignment: Alignment.topCenter,
             child: Center(child: Text(position.ordinal.toString())));
 
-  static final _robotPositionPattern = RegExp(r'^(?<color>red|blue)(?<number>[1-3])$');
+  static final _robotPositionPattern = RegExp(r'^(?<color>red|blue)(?<number>[1-9])$');
   static MatchRobotPositionInfo robotPositionFromString(String posStr, {int scouters = 0}) {
     RegExpMatch? patternMatch = _robotPositionPattern.firstMatch(posStr);
     if (patternMatch == null) throw Exception("Malformed Robot Position '$posStr'");
