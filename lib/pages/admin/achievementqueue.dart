@@ -139,7 +139,7 @@ class AchievementQueuePage extends StatelessWidget {
                                                   ])),
                                       icon: const Icon(Icons.close_rounded),
                                       style: ButtonStyle(
-                                          backgroundColor: MaterialStatePropertyAll(
+                                          backgroundColor: WidgetStateProperty.all(
                                               Colors.red[isDarkMode ? 700 : 300]))),
                                   const SizedBox(width: 8),
                                   IconButton.filledTonal(
@@ -166,7 +166,7 @@ class AchievementQueuePage extends StatelessWidget {
                                                 ])),
                                     icon: const Icon(Icons.check_rounded),
                                     style: ButtonStyle(
-                                        backgroundColor: MaterialStatePropertyAll(
+                                        backgroundColor: WidgetStateProperty.all(
                                             Colors.green[isDarkMode ? 700 : 300])),
                                   )
                                 ]),

@@ -8,7 +8,7 @@ import '../main.dart' show prefs;
 import '../utils.dart';
 
 class ConfigurationPage extends StatelessWidget {
-  final _eventCarouselController = CarouselController();
+  final _eventCarouselController = CarouselSliderController();
   final BinaryValueNotifier _carouselProgress = BinaryValueNotifier(0);
   ConfigurationPage({super.key});
 

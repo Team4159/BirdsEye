@@ -189,11 +189,11 @@ class ValueTab<T extends Object> extends StatelessWidget {
   Widget build(BuildContext context) => Tab(
       child: DecoratedBox(
           decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceVariant,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular((FilledButtonTheme.of(context)
                           .style
                           ?.fixedSize
-                          ?.resolve({MaterialState.disabled})?.height ??
+                          ?.resolve({WidgetState.disabled})?.height ??
                       48) /
                   2)),
           child: GestureDetector(
