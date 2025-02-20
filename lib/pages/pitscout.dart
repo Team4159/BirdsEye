@@ -20,19 +20,29 @@ Future<Map<String, String>?> _getPrevious(int team) => Supabase.instance.client
         ? {}
         : Map.castFrom(value..removeWhere((k, _) => {"event", "team"}.contains(k))));
 
-Future<void> submitInfo(Map<String, dynamic> data, {int? season}) async =>
-    (await SupabaseInterface.canConnect)
-        ? Supabase.instance.client
-            .from("pit_data_${season ?? Configuration.instance.season}")
-            .upsert(data)
-        : LocalStoreInterface.addPit(season ?? Configuration.instance.season, data);
+Future<void> submitInfo(Map<String, dynamic> data, {int? season}) async {
+  final insertSeason = season ?? Configuration.instance.season;
 
-class PitScoutPage extends StatefulWidget {
-  const PitScoutPage({super.key});
+  final event = data["event"];
+  final scouter = data["scouter"];
+  final team = data["team"];
 
-  @override
-  State<PitScoutPage> createState() => _PitScoutPageState();
+  final comment = Map<String, dynamic>.from(data);
+  comment.removeWhere((key, value) => ["event", "scouter", "team"].contains(key));
+
+  final record = {
+    "season": insertSeason,
+    "event": event,
+    "scouter": scouter,
+    "team": team,
+    "comment": comment,
+  };
+
+  (await SupabaseInterface.canConnect)
+      ? Supabase.instance.client.from("pit_data").upsert(record)
+      : LocalStoreInterface.addPit(insertSeason, record);
 }
+
 
 class _PitScoutPageState extends State<PitScoutPage> {
   final GlobalKey<FormFieldState<String>> _teamFieldKey = GlobalKey();

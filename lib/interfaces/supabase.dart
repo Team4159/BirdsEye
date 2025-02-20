@@ -73,14 +73,20 @@ class SupabaseInterface {
       : matchscoutStock.get(Configuration.instance.season);
 
   static final pitscoutStock = Stock<int, Map<String, String>>(
-      fetcher: Fetcher.ofFuture((season) => Supabase.instance.client
-          .rpc('gettableschema', params: {"tablename": "pit_data_$season"}).then((resp) =>
-              (LinkedHashMap<String, dynamic>.from(resp)
-                    ..removeWhere((key, value) =>
-                        {"event", "match", "team", "scouter"}.contains(key) ||
-                        value["description"] == null))
-                  .map((key, value) => MapEntry(key, value["description"]!)))),
-      sourceOfTruth: CachedSourceOfTruth());
+    fetcher: Fetcher.ofFuture((season) => Supabase.instance.client
+        .from("pit_scouting_season_questions")
+        .select('pit_scouting_questions.q_id, pit_scouting_questions.question')
+        .innerJoin('pit_scouting_questions', 'pit_scouting_season_questions.q_id = pit_scouting_questions.q_id')
+        .eq('season', season)
+        .then((resp) => Map.fromIterable(
+              resp,
+              key: (entry) => entry["q_id"].toString(),
+              value: (entry) => entry["question"] as String,
+            ))),
+    sourceOfTruth: CachedSourceOfTruth(),
+  );
+
+
 
   static Future<Map<String, String>> get pitSchema async => await canConnect
       ? pitscoutStock.fresh(Configuration.instance.season)
