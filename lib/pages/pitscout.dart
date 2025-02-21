@@ -43,6 +43,12 @@ Future<void> submitInfo(Map<String, dynamic> data, {int? season}) async {
       : LocalStoreInterface.addPit(insertSeason, record);
 }
 
+class PitScoutPage extends StatefulWidget {
+  const PitScoutPage({super.key});
+
+  @override
+  State<PitScoutPage> createState() => _PitScoutPageState();
+}
 
 class _PitScoutPageState extends State<PitScoutPage> {
   final GlobalKey<FormFieldState<String>> _teamFieldKey = GlobalKey();
