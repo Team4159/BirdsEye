@@ -1,10 +1,10 @@
 {
-    "name": "birdseye",
-    "short_name": "birdseye",
+    "name": "Bird's Eye",
+    "short_name": "Bird's Eye",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
-    "theme_color": "#0175C2",
+    "theme_color": "#cf2e2e",
     "description": "FRC Scouting App",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,

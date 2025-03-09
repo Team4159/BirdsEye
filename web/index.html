@@ -19,10 +19,9 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="FRC Scouting App">
-  <meta name="google-site-verification" content="HUssETBS30d3tQh9eZ_P5LXp2HyUpwe4gzaD44KkWeU" />
 
   <!-- iOS meta tags & icons -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="birdseye">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
@@ -32,17 +31,8 @@
 
   <title>Bird's Eye</title>
   <link rel="manifest" href="manifest.json">
-
-  <!-- This script adds the flutter initialization JS code -->
-  <script src="flutter.js" defer></script>
 </head>
 <body>
-  <script>
-    {{flutter_build_config}}
-    window.addEventListener('load', function(ev) {
-      // Download main.dart.js
-      _flutter.loader.load();
-    });
-  </script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>
