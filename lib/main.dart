@@ -114,14 +114,17 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 enum RoutePaths {
   landing,
-  metadata,
-  configuration,
+  metadata("Metadata"),
+  configuration("Configuration"),
   achievements,
   scouting,
-  matchscout,
-  pitscout,
-  savedresp,
-  adminportal
+  matchscout("Match Scouting"),
+  pitscout("Pit Scouting"),
+  savedresp("Saved Responses"),
+  adminportal;
+
+  final String? label;
+  const RoutePaths([this.label]);
 }
 
 final GoRouter router = GoRouter(
@@ -139,14 +142,18 @@ final GoRouter router = GoRouter(
           path: '/accountdata',
           name: RoutePaths.metadata.name,
           pageBuilder: (context, state) => MaterialPage(
-              child: Scaffold(
-                  body: SafeArea(
-                      child: MetadataPage(
-                          isRedirect: state.uri.queryParameters["redirect"] == "true"))),
-              name: "Metadata"),
-          redirect: (_, state) => UserMetadata.isAuthenticated
-              ? null
-              : state.namedLocation(RoutePaths.landing.name, queryParameters: {})),
+              child: Scaffold(body: SafeArea(child: MetadataPage())),
+              name: RoutePaths.metadata.label),
+          redirect: (_, state) async {
+            if (!UserMetadata.isAuthenticated) {
+              return state.namedLocation(RoutePaths.landing.name, queryParameters: {});
+            }
+            if (state.uri.queryParameters["redirect"] != "true") return null;
+            if (await UserMetadata.instance.isValid) {
+              return state.namedLocation(RoutePaths.configuration.name);
+            }
+            return null;
+          }),
       GoRoute(
           path: '/scouting',
           redirect: (context, state) => UserMetadata.isAuthenticated
@@ -164,14 +171,15 @@ final GoRouter router = GoRouter(
                       parentNavigatorKey: _shellNavigatorKey,
                       path: 'configuration',
                       name: RoutePaths.configuration.name,
-                      pageBuilder: (context, state) =>
-                          MaterialPage(child: ConfigurationPage(), name: "Configuration")),
+                      pageBuilder: (context, state) => MaterialPage(
+                          child: ConfigurationPage(), name: RoutePaths.configuration.label)),
                   GoRoute(
                       parentNavigatorKey: _shellNavigatorKey,
                       path: 'match',
                       name: RoutePaths.matchscout.name,
-                      pageBuilder: (context, state) =>
-                          const MaterialPage(child: MatchScoutPage(), name: "Match Scouting"),
+                      pageBuilder: (context, state) => MaterialPage(
+                          child: MatchScoutPage(matchCode: state.uri.queryParameters["matchCode"]),
+                          name: RoutePaths.matchscout.label),
                       redirect: (context, state) async => await Configuration.instance.isValid
                           ? null
                           : state.namedLocation(RoutePaths.configuration.name)),
@@ -180,7 +188,7 @@ final GoRouter router = GoRouter(
                       path: 'pit',
                       name: RoutePaths.pitscout.name,
                       pageBuilder: (context, state) =>
-                          const MaterialPage(child: PitScoutPage(), name: "Pit Scouting"),
+                          MaterialPage(child: PitScoutPage(), name: RoutePaths.pitscout.label),
                       redirect: (context, state) async => await Configuration.instance.isValid
                           ? null
                           : state.namedLocation(RoutePaths.configuration.name)),
@@ -188,8 +196,8 @@ final GoRouter router = GoRouter(
                       parentNavigatorKey: _shellNavigatorKey,
                       path: 'saved',
                       name: RoutePaths.savedresp.name,
-                      pageBuilder: (context, state) =>
-                          MaterialPage(child: SavedResponsesPage(), name: "Saved Responses"),
+                      pageBuilder: (context, state) => MaterialPage(
+                          child: SavedResponsesPage(), name: RoutePaths.savedresp.label),
                       redirect: (context, state) async => await Configuration.instance.isValid
                           ? null
                           : state.namedLocation(RoutePaths.configuration.name)),
@@ -197,8 +205,8 @@ final GoRouter router = GoRouter(
                       parentNavigatorKey: _shellNavigatorKey,
                       path: 'achievements',
                       name: RoutePaths.achievements.name,
-                      pageBuilder: (context, state) =>
-                          MaterialPage(child: AchievementsPage(), name: "Achievements"),
+                      pageBuilder: (context, state) => MaterialPage(
+                          child: AchievementsPage(), name: RoutePaths.achievements.label),
                       redirect: (context, state) async => await Configuration.instance.isValid
                           ? null
                           : state.namedLocation(RoutePaths.configuration.name)),
@@ -223,6 +231,7 @@ class ScaffoldShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
       drawer: Drawer(
+          // Legacy code. To be replaced once I can figure out how the hell to calculate the current page from GoRouter.
           width: 225,
           child: Column(children: [
             if (MediaQuery.of(context).size.height > 400)
@@ -257,23 +266,14 @@ class ScaffoldShell extends StatelessWidget {
                                         onPressed: () => GoRouter.of(context).pop(),
                                         child: const Text("Cancel")),
                                     FilledButton(
-                                        onPressed: () {
-                                          Supabase.instance.client.auth.signOut().then((_) =>
-                                              GoRouter.of(context)
-                                                  .goNamed(RoutePaths.landing.name));
+                                        onPressed: () async {
+                                          final router = GoRouter.of(context);
+                                          await Supabase.instance.client.auth.signOut();
+                                          router.goNamed(RoutePaths.landing.name);
                                         },
                                         child: const Text("Confirm"))
                                   ])))),
-            FutureBuilder(
-                future: SupabaseInterface.canConnect,
-                builder: (context, snapshot) => ListTile(
-                    leading: const Icon(Icons.app_registration_outlined),
-                    title: const Text("Metadata"),
-                    dense: MediaQuery.of(context).size.height <= 400,
-                    enabled: snapshot.hasData && snapshot.data!,
-                    onTap: () => GoRouter.of(context)
-                      ..pop()
-                      ..goNamed(RoutePaths.metadata.name))),
+            _MetadataListTile(),
             ListTile(
                 leading: const Icon(Icons.settings_rounded),
                 title: const Text("Configuration"),
@@ -336,4 +336,33 @@ class ScaffoldShell extends StatelessWidget {
                             )))))
           ])),
       body: child);
+}
+
+class _MetadataListTile extends StatefulWidget {
+  const _MetadataListTile();
+
+  @override
+  State<_MetadataListTile> createState() => __MetadataListTileState();
+}
+
+class __MetadataListTileState extends State<_MetadataListTile> {
+  late Future<bool> canConnect;
+
+  @override
+  void initState() {
+    canConnect = SupabaseInterface.canConnect;
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+      future: canConnect,
+      builder: (context, snapshot) => ListTile(
+          leading: const Icon(Icons.app_registration_outlined),
+          title: const Text("Metadata"),
+          dense: MediaQuery.of(context).size.height <= 400,
+          enabled: snapshot.hasData && snapshot.data!,
+          onTap: () => GoRouter.of(context)
+            ..pop()
+            ..goNamed(RoutePaths.metadata.name)));
 }

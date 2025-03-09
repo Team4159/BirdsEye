@@ -1,30 +1,61 @@
 import 'dart:async';
 
+import '../types.dart';
 import 'package:localstore/localstore.dart';
 import 'package:stock/stock.dart';
-
-import '../pages/matchscout.dart' show MatchScoutInfoSerialized;
 
 class LocalStoreInterface {
   static final _db = Localstore.instance;
 
-  static Future<void> addMatch(MatchScoutInfoSerialized key, Map<String, dynamic> fields) => _db
+  static Future<void> addMatch(MatchScoutInfoSerialized key, Map<String, dynamic> data) => _db
       .collection("scout")
       .doc("match-${key.season}${key.event}_${key.match}-${key.team}")
-      .set(fields
+      .set(data
         ..['season'] = key.season
         ..['event'] = key.event
         ..['match'] = key.match
         ..['team'] = key.team);
 
-  static Future<void> addPit(int season, Map<String, dynamic> data) => _db
-      .collection("scout")
-      .doc("pit-$season${data['event']}-${data['team']}")
-      .set(data..['season'] = season);
+  static Future<void> addPit(PitScoutInfoSerialized key, Map<String, dynamic> data) =>
+      _db.collection("scout").doc("pit-${key.season}${key.event}-${key.team}").set(data
+        ..['season'] = key.season
+        ..['event'] = key.event
+        ..['team'] = key.team);
 
   static Future<void> remove(String id) => _db.collection("scout").doc(id).delete();
 
-  static Future<Map<String, dynamic>?> get(String id) => _db.collection("scout").doc(id).get();
+  static Future<({MatchScoutInfoSerialized key, Map<String, dynamic> data})?> getMatch(
+      String id) async {
+    assert(id.startsWith("match"));
+    var data = await _db.collection("scout").doc(id).get();
+    return data == null
+        ? null
+        : (
+            key: (
+              season: data.remove('season') as int,
+              event: data.remove('event') as String,
+              match: data.remove('match') as String,
+              team: data.remove('team') as String
+            ),
+            data: data
+          );
+  }
+
+  static Future<({PitScoutInfoSerialized key, Map<String, dynamic> data})?> getPit(
+      String id) async {
+    assert(id.startsWith("pit"));
+    var data = await _db.collection("scout").doc(id).get();
+    return data == null
+        ? null
+        : (
+            key: (
+              season: data.remove('season') as int,
+              event: data.remove('event') as String,
+              team: data.remove('team') as int
+            ),
+            data: data
+          );
+  }
 
   static Future<Set<String>> get getAll =>
       _db.collection("scout").get().then((value) => value?.keys.toSet() ?? {});

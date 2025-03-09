@@ -3,14 +3,13 @@ import 'dart:collection';
 import 'package:stock/stock.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../pages/configuration.dart';
-import '../pages/matchscout.dart' hide MatchScoutPage;
-import 'bluealliance.dart' show MatchInfo;
-
-typedef AggInfo = ({int season, String? event, String? team});
+import '../pages/configuration.dart' show Configuration;
+import '../types.dart';
 
 // "Aren't supabase functions all over the code?" Yes, but here are the ones that require big think (and big caching)
+/// A container for all generic database interactions
 class SupabaseInterface {
+  /// Checks if the database is accessible.
   static Future<bool> get canConnect => Supabase.instance.client
       .rpc('ping')
       .timeout(const Duration(seconds: 5))
@@ -18,12 +17,15 @@ class SupabaseInterface {
       .catchError((_) => false);
 
   static List<int>? _availableSeasons;
+
+  /// Fetches a list of all seasons with available tables.
   static Future<List<int>> getAvailableSeasons() => _availableSeasons != null
       ? Future.value(_availableSeasons)
       : Supabase.instance.client
           .rpc("getavailableseasons")
           .then((resp) => _availableSeasons = List<int>.from(resp, growable: false));
 
+  /// Sets the current activity the user is doing.
   static Future<void> setSession({String? match, String? team}) =>
       Supabase.instance.client.from("sessions").upsert({
         "season": Configuration.instance.season,
@@ -32,8 +34,10 @@ class SupabaseInterface {
         "team": team
       }).then((_) {});
 
+  /// Clears the current activity the user is doing.
   static Future<void> clearSession() => Supabase.instance.client.from("sessions").delete();
 
+  /// Fetches the current activities of other users.
   static Future<Map<String, int>> getSessions({required String match}) => Supabase.instance.client
           .from("sessions")
           .select("team")
@@ -68,23 +72,8 @@ class SupabaseInterface {
           })),
       sourceOfTruth: CachedSourceOfTruth());
 
-  static Future<MatchScoutQuestionSchema> get matchSchema async => await canConnect
-      ? matchscoutStock.fresh(Configuration.instance.season)
-      : matchscoutStock.get(Configuration.instance.season);
-
-  static final pitscoutStock = Stock<int, Map<String, String>>(
-      fetcher: Fetcher.ofFuture((season) => Supabase.instance.client
-          .rpc('gettableschema', params: {"tablename": "pit_data_$season"}).then((resp) =>
-              (LinkedHashMap<String, dynamic>.from(resp)
-                    ..removeWhere((key, value) =>
-                        {"event", "match", "team", "scouter"}.contains(key) ||
-                        value["description"] == null))
-                  .map((key, value) => MapEntry(key, value["description"]!)))),
-      sourceOfTruth: CachedSourceOfTruth());
-
-  static Future<Map<String, String>> get pitSchema async => await canConnect
-      ? pitscoutStock.fresh(Configuration.instance.season)
-      : pitscoutStock.get(Configuration.instance.season);
+  static Future<MatchScoutQuestionSchema> get matchSchema =>
+      matchscoutStock.get(Configuration.instance.season);
 
   static Set<Achievement>? _achievements;
   static Future<Set<Achievement>?> get achievements async =>
@@ -106,53 +95,6 @@ class SupabaseInterface {
               .then((data) => _achievements = data)
           : Future.value(_achievements);
   static void clearAchievements() => _achievements = null;
-
-  static final matchAggregateStock = Stock<AggInfo, LinkedHashMap<dynamic, Map<String, num>>>(
-      sourceOfTruth: CachedSourceOfTruth(),
-      fetcher: Fetcher.ofFuture((key) async {
-        assert(key.event != null || key.team != null);
-        var response = LinkedHashMap<String, dynamic>.from(await Supabase.instance.client.functions
-                .invoke("match_aggregator_js", body: {
-                  "season": key.season,
-                  if (key.event != null) "event": key.event,
-                  if (key.team != null) "team": key.team
-                })
-                .then((resp) =>
-                    resp.status >= 400 ? throw Exception("HTTP Error ${resp.status}") : resp.data)
-                .catchError((e) => e is FunctionException && e.status == 404 ? {} : throw e))
-            .map((k, v) => MapEntry(k, Map<String, dynamic>.from(v)));
-        if (key.event != null && key.team != null) {
-          return LinkedHashMap<MatchInfo, Map<String, num>>.of(
-              response.map((k, v) => MapEntry(MatchInfo.fromString(k), Map.from(v[key.team]))));
-          // match: {scoretype: aggregated_count}
-        }
-        if (key.team != null) {
-          return LinkedHashMap.fromEntries(response.entries
-              .map((evententry) => Map<String, dynamic>.from(evententry.value).map(
-                  (matchstring, matchscores) => MapEntry(
-                      (event: evententry.key, match: MatchInfo.fromString(matchstring)),
-                      Map<String, num>.from(matchscores))))
-              .expand((e) => e.entries));
-        }
-        throw UnimplementedError("No aggregate for that combination");
-      }));
-
-  static final pitAggregateStock =
-      Stock<({int season, String event, int team}), LinkedHashMap<String, String>>(
-          sourceOfTruth: CachedSourceOfTruth(),
-          fetcher: Fetcher.ofFuture((key) => Supabase.instance.client
-                  .from("pit_data_${key.season}")
-                  .select("*")
-                  .eq("event", key.event)
-                  .eq("team", key.team)
-                  .then((resp) => resp.map((e) =>(e
-                    ..removeWhere((key, value) =>
-                        {"event", "match", "team", "scouter"}.contains(key) || value is! String))
-                    .map<String, String>((key, value) => MapEntry(key, value as String))))
-                  .then((map) => map.isEmpty
-                      ? LinkedHashMap<String, String>()
-                      : LinkedHashMap.of(map.reduce(
-                          (c, v) => c.map((key, value) => MapEntry(key, "$value\n${v[key]}")))))));
 
   static final eventAggregateStock = Stock<
           ({int season, String event, EventAggregateMethod method}), LinkedHashMap<String, double>>(
@@ -200,14 +142,40 @@ class SupabaseInterface {
       }));
 }
 
-enum EventAggregateMethod { defense, accuracy }
+/// A container for all pit-scouting related database interactions
+class PitInterface {
+  static final pitscoutStock = Stock<int, Map<String, String>>(
+      fetcher: Fetcher.ofFuture((season) async => LinkedHashMap<String, String>.from(
+          await Supabase.instance.client.rpc('getpitschema', params: {"pitseason": season}))),
+      sourceOfTruth: CachedSourceOfTruth());
 
-typedef Achievement = ({
-  int id,
-  String name,
-  String description,
-  String requirements,
-  int points,
-  int? season,
-  String? event
-});
+  static Future<Map<String, String>> get pitSchema =>
+      pitscoutStock.get(Configuration.instance.season);
+
+  static Future<List<Map<String, String>>> pitResponseFetch(PitScoutInfoSerialized info,
+      [String? scouter]) {
+    var request = Supabase.instance.client
+        .from("pit_scouting")
+        .select("data")
+        .eq("season", info.season)
+        .eq("event", info.event)
+        .eq("team", info.team);
+    if (scouter != null) request = request.eq("scouter", scouter);
+    return request
+        .withConverter((resp) => resp.map((row) => Map<String, String>.from(row["data"])).toList());
+  }
+
+  static Future<void> pitResponseUpsert(PitScoutInfoSerialized info, Map<String, dynamic> data) =>
+      Supabase.instance.client
+          .from("pit_scouting")
+          .upsert({"season": info.season, "event": info.event, "team": info.team, "data": data});
+
+  static final pitAggregateStock = Stock<PitScoutInfoSerialized, LinkedHashMap<String, String>>(
+      sourceOfTruth: CachedSourceOfTruth(),
+      fetcher: Fetcher.ofFuture((key) => pitResponseFetch(key).then((map) => map.isEmpty
+          ? LinkedHashMap<String, String>()
+          : LinkedHashMap<String, String>.of(
+              map.reduce((c, v) => c.map((key, value) => MapEntry(key, "$value\n${v[key]}")))))));
+}
+
+enum EventAggregateMethod { defense, accuracy }

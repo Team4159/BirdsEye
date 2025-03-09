@@ -19,7 +19,7 @@ class ConfigurationPage extends StatelessWidget {
         ConstrainedBox(
             constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height / 8),
             child: FutureBuilder(
-                future: SupabaseInterface.getAvailableSeasons().then((list) => list..sort()),
+                future: SupabaseInterface.getAvailableSeasons(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return snapshot.hasError || (snapshot.data?.isEmpty ?? false)
@@ -103,12 +103,10 @@ class ConfigurationPage extends StatelessWidget {
                               if (entries[index].key != Configuration.event) {
                                 Configuration.event = entries[index].key;
                               }
-                              return ListenableBuilder(
-                                  listenable: _carouselProgress,
-                                  builder: (context, child) => AnimatedOpacity(
-                                      opacity: 1 - _carouselProgress.value,
-                                      duration: Durations.short1,
-                                      child: child),
+                              return ValueListenableBuilder(
+                                  valueListenable: _carouselProgress,
+                                  builder: (context, prog, child) => AnimatedOpacity(
+                                      opacity: 1 - prog, duration: Durations.short1, child: child),
                                   child: Stack(
                                       fit: StackFit.expand,
                                       alignment: Alignment.center,
@@ -171,9 +169,20 @@ class Configuration extends ChangeNotifier {
   int _season = -1;
 
   int get season => _season;
+
+  /// Set the configuration season. UNGUARDED.
   set season(int season) {
+    if (_season == season) return;
     _season = season;
     notifyListeners();
+  }
+
+  Future<bool> setSeason(int season) async {
+    if (!(await SupabaseInterface.getAvailableSeasons()).contains(season)) return false;
+    if (_season == season) return true;
+    _season = season;
+    notifyListeners();
+    return true;
   }
 
   static String? get event => prefs.containsKey("event") ? prefs.getString("event") : null;

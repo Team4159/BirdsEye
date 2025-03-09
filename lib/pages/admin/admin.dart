@@ -1,9 +1,9 @@
-import 'package:birdseye/pages/admin/matchinsight.dart';
-import 'package:birdseye/pages/admin/pitsummary.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../main.dart';
+import '../../pages/admin/matchinsight.dart';
+import '../../pages/admin/pitsummary.dart';
 import '../../pages/metadata.dart';
 import 'achievementqueue.dart';
 import 'statgraph.dart';

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
 
+import 'package:birdseye/interfaces/mixed.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -28,7 +29,7 @@ class StatGraphPage extends StatelessWidget {
                 IconButton(
                     icon: const Icon(Icons.refresh_rounded),
                     onPressed: () {
-                      SupabaseInterface.matchAggregateStock.clearAll();
+                      MixedInterfaces.matchAggregateStock.clearAll();
                       SupabaseInterface.eventAggregateStock.clearAll();
                       SupabaseInterface.distinctStock.clearAll();
                     })
@@ -374,7 +375,7 @@ class TeamAtEventGraph extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FutureBuilder(
       future: Future.wait([
-        SupabaseInterface.matchAggregateStock.get((season: season, event: event, team: team)),
+        MixedInterfaces.matchAggregateStock.get((season: season, event: event, team: team)),
         BlueAlliance.stock
             .get(TBAInfo(season: season, event: event))
             .then((eventMatches) => Future.wait(eventMatches.keys.map((match) => BlueAlliance.stock
@@ -417,7 +418,7 @@ class TeamAtEventGraph extends StatelessWidget {
                                   return const SizedBox();
                                 }
                                 return SideTitleWidget(
-                                    axisSide: AxisSide.bottom,
+                                    meta: meta,
                                     child: Text(snapshot.data!.ordinalMatches[n].toString()));
                               })),
                       leftTitles: const AxisTitles(
@@ -484,7 +485,7 @@ class TeamInSeasonGraph extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => FutureBuilder(
-      future: SupabaseInterface.matchAggregateStock
+      future: MixedInterfaces.matchAggregateStock
           .get((season: season, event: null, team: team)).then((result) {
         Map<GamePeriod, double> op = {};
         Map<String, double> ot = {};
@@ -540,8 +541,8 @@ class TeamInSeasonGraph extends StatelessWidget {
                                     borderSide:
                                         BorderSide(color: Theme.of(context).colorScheme.outline)))
                                 .toList()),
-                    swapAnimationDuration: Durations.extralong3,
-                    swapAnimationCurve: Curves.easeInSine),
+                    duration: Durations.extralong3,
+                    curve: Curves.easeInSine),
                 PieChart(
                     PieChartData(
                         centerSpaceRadius: 100,
@@ -557,8 +558,8 @@ class TeamInSeasonGraph extends StatelessWidget {
                                     borderSide:
                                         BorderSide(color: Theme.of(context).colorScheme.outline)))
                                 .toList()),
-                    swapAnimationDuration: Durations.extralong3,
-                    swapAnimationCurve: Curves.easeInSine)
+                    duration: Durations.extralong3,
+                    curve: Curves.easeInSine)
               ]
                   .map<Widget>((e) => Flexible(
                       child: ConstrainedBox(

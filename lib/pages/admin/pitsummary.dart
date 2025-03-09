@@ -1,9 +1,9 @@
-import 'package:birdseye/interfaces/bluealliance.dart';
-import 'package:birdseye/pages/configuration.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-import '../../interfaces/supabase.dart';
+import '../../interfaces/bluealliance.dart';
+import '../../interfaces/supabase.dart' show PitInterface;
+import '../../pages/configuration.dart';
 
 class PitSummary extends StatefulWidget {
   const PitSummary({super.key});
@@ -20,8 +20,8 @@ class _PitSummaryState extends State<PitSummary> {
       future: _selectedTeam == null
           ? Future.value(<Map<String, String>>[{}, {}])
           : Future.wait([
-              SupabaseInterface.pitSchema,
-              SupabaseInterface.pitAggregateStock.get((
+              PitInterface.pitSchema,
+              PitInterface.pitAggregateStock.get((
                 season: Configuration.instance.season,
                 event: Configuration.event!,
                 team: _selectedTeam!
@@ -48,7 +48,7 @@ class _PitSummaryState extends State<PitSummary> {
               IconButton(
                   icon: const Icon(Icons.refresh_rounded),
                   onPressed: () {
-                    SupabaseInterface.pitAggregateStock.clearAll();
+                    PitInterface.pitAggregateStock.clearAll();
                     setState(() => _selectedTeam = null);
                   })
             ]),

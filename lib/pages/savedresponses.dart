@@ -3,11 +3,10 @@ import 'package:flutter_swipe_action_cell/core/cell.dart';
 
 import '../interfaces/bluealliance.dart';
 import '../interfaces/localstore.dart';
-import '../interfaces/supabase.dart';
+import '../interfaces/mixed.dart';
+import '../interfaces/supabase.dart'; // solely for .clearAchievements
 import '../pages/configuration.dart';
 import '../utils.dart';
-import './matchscout.dart' as matchscout;
-import './pitscout.dart' as pitscout;
 
 class SavedResponsesPage extends StatelessWidget {
   final _list = _WrappedList([]);
@@ -35,6 +34,8 @@ class SavedResponsesPage extends StatelessWidget {
                                 DeleteConfirmation(
                                     reset: () {
                                       SupabaseInterface.clearAchievements();
+                                      SupabaseInterface.matchscoutStock.clearAll();
+                                      PitInterface.pitscoutStock.clearAll();
                                       BlueAlliance.stockSoT.deleteAll();
                                       BlueAlliance.refreshOPRs(null);
                                     },
@@ -128,25 +129,21 @@ class _RespList extends StatelessWidget {
                           widthSpace: 60,
                           icon: const Icon(Icons.send_rounded),
                           performsFirstActionWithFullSwipe: true,
-                          onTap: (CompletionHandler handler) async {
-                            Map<String, dynamic>? data = await LocalStoreInterface.get(id);
-                            if (data == null) return handler(false);
-                            await Future.wait({
-                              dataList.remove(id, dontUpdate: true),
-                              handler(true),
-                              (id.startsWith("match")
-                                  ? matchscout.submitInfo((
-                                      season: data.remove('season') as int,
-                                      event: data.remove('event') as String,
-                                      match: data.remove('match') as String,
-                                      team: data.remove('team') as String
-                                    ), fields: data)
-                                  : id.startsWith("pit")
-                                      ? pitscout.submitInfo(data, season: data.remove('season'))
-                                      : throw Exception("Invalid LocalStore ID: $id"))
-                            });
-                            await dataList.sync();
-                          })
+                          onTap: (CompletionHandler handler) => Future.wait({
+                                dataList.remove(id, dontUpdate: true),
+                                handler(true),
+                                switch (id.split("-").first) {
+                                  "pit" => LocalStoreInterface.getPit(id).then((resp) {
+                                      if (resp == null) return handler(false);
+                                      MixedInterfaces.submitPitResponse(resp.key, resp.data);
+                                    }),
+                                  "match" => LocalStoreInterface.getMatch(id).then((resp) {
+                                      if (resp == null) return handler(false);
+                                      MixedInterfaces.submitMatchResponse(resp.key, resp.data);
+                                    }),
+                                  _ => throw Exception("Invalid LocalStore ID: $id")
+                                }
+                              }).then((_) => dataList.sync()))
                     ],
                     child: Padding(
                         padding: const EdgeInsets.only(left: 10),

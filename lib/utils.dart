@@ -1,3 +1,4 @@
+import 'dart:async' show Completer;
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
@@ -9,29 +10,75 @@ import 'package:go_router/go_router.dart';
 class DeleteConfirmation extends IconButton {
   DeleteConfirmation(
       {super.key,
-      required void Function() reset,
+      required void Function()? reset,
       required BuildContext context,
       String toConfirm = "reset"})
       : super(
             icon: Icon(Icons.delete, color: Colors.red[800]),
             tooltip: toConfirm,
-            onPressed: () => showDialog(
-                context: context,
-                builder: (BuildContext context) => AlertDialog(
-                        title:
-                            Text("Confirm ${toConfirm[0].toUpperCase()}${toConfirm.substring(1)}"),
-                        content: Text("Are you sure you want to $toConfirm?"),
-                        actions: [
-                          OutlinedButton(
-                              onPressed: () => GoRouter.of(context).pop(),
-                              child: const Text("Cancel")),
-                          FilledButton(
-                              onPressed: () {
-                                GoRouter.of(context).pop();
-                                reset();
-                              },
-                              child: const Text("Confirm"))
-                        ])));
+            onPressed: reset == null
+                ? null
+                : () => showDialog(
+                    context: context,
+                    builder: (BuildContext context) => AlertDialog(
+                            title: Text(
+                                "Confirm ${toConfirm[0].toUpperCase()}${toConfirm.substring(1)}"),
+                            content: Text("Are you sure you want to $toConfirm?"),
+                            actions: [
+                              OutlinedButton(
+                                  onPressed: () => GoRouter.of(context).pop(),
+                                  child: const Text("Cancel")),
+                              FilledButton(
+                                  onPressed: () {
+                                    GoRouter.of(context).pop();
+                                    reset();
+                                  },
+                                  child: const Text("Confirm"))
+                            ])));
+}
+
+extension ErrorReportingFuture<T> on Future<T> {
+  Future<T> reportError(BuildContext context) => catchError((e) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      });
+}
+
+extension SOD<T> on Iterable<T> {
+  /// Just like [Iterable.single], but returns null for no elements.
+  T? get singleOrDie {
+    Iterator<T> it = iterator;
+    if (!it.moveNext()) return null;
+    T result = it.current;
+    if (it.moveNext()) throw StateError("Too many elements");
+    return result;
+  }
+}
+
+extension GrayLuminance on Color {
+  /// A crappy approximation for a real luminance value, much faster.
+  double get grayLuminance => (r + g + b) / 3;
+}
+
+extension Awaitable on Listenable {
+  Future<void> get nextChange {
+    final c = Completer();
+    addListener(c.complete);
+    return c.future.then((v) {
+      removeListener(c.complete);
+      return v;
+    });
+  }
+}
+
+class ListenableOrNot extends StatelessWidget {
+  final Listenable? listenable;
+  final Widget Function(BuildContext, Widget?) builder;
+  const ListenableOrNot({super.key, required this.listenable, required this.builder});
+
+  @override
+  Widget build(BuildContext context) => listenable == null
+      ? Builder(builder: (context) => builder(context, null))
+      : ListenableBuilder(listenable: listenable!, builder: builder);
 }
 
 /// A [ChangeNotifier] that holds a single lazily-initialized value.
@@ -91,11 +138,11 @@ class NotifiableTextEditingController extends TextEditingController {
   void notifyListeners() => super.notifyListeners();
 }
 
-class NotifiableChangeNotifier extends ChangeNotifier {
+class NotifiableValueNotifier<T> extends ValueNotifier<T> {
+  NotifiableValueNotifier(super.value);
+
   @override
-  void notifyListeners() {
-    super.notifyListeners();
-  }
+  void notifyListeners() => super.notifyListeners();
 }
 
 class UniqueNotifyingList<E> extends ChangeNotifier {

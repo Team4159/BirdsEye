@@ -128,13 +128,11 @@ class AchievementQueuePage extends StatelessWidget {
                                                         onPressed: () => _update(e.achid, e.userid,
                                                                     e.season, e.event, false)
                                                                 .then((_) {
-                                                              GoRouter.of(context).pop();
+                                                              if (context.mounted) {
+                                                                GoRouter.of(context).pop();
+                                                              }
                                                               _items.remove(e);
-                                                            }).catchError((e) {
-                                                              ScaffoldMessenger.of(context)
-                                                                  .showSnackBar(SnackBar(
-                                                                      content: Text(e.toString())));
-                                                            }),
+                                                            }).reportError(context),
                                                         child: const Text("Confirm"))
                                                   ])),
                                       icon: const Icon(Icons.close_rounded),
@@ -155,13 +153,11 @@ class AchievementQueuePage extends StatelessWidget {
                                                       onPressed: () => _update(e.achid, e.userid,
                                                                   e.season, e.event, true)
                                                               .then((_) {
-                                                            GoRouter.of(context).pop();
+                                                            if (context.mounted) {
+                                                              GoRouter.of(context).pop();
+                                                            }
                                                             _items.remove(e);
-                                                          }).catchError((e) {
-                                                            ScaffoldMessenger.of(context)
-                                                                .showSnackBar(SnackBar(
-                                                                    content: Text(e.toString())));
-                                                          }),
+                                                          }).reportError(context),
                                                       child: const Text("Confirm"))
                                                 ])),
                                     icon: const Icon(Icons.check_rounded),

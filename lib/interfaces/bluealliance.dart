@@ -1,11 +1,11 @@
 import 'dart:convert' show json;
 
-import 'package:flutter/material.dart';
+import '../interfaces/localstore.dart' show LocalSourceOfTruth;
+import 'package:flutter/material.dart' show Color;
 import 'package:http/http.dart' show Client;
 import 'package:stock/stock.dart';
 
 import '../main.dart' show prefs;
-import 'localstore.dart';
 
 enum MatchLevel {
   qualification(compLevel: "qm"),
@@ -28,8 +28,9 @@ class MatchInfo implements Comparable {
   MatchInfo({required this.level, this.finalnum, required this.index});
   factory MatchInfo.fromString(String s) {
     RegExpMatch? match = _qualificationPattern.firstMatch(s) ?? _finalsPattern.firstMatch(s);
+    if (match == null) throw Exception("Invalid Match String - Could not parse");
     return MatchInfo(
-        level: MatchLevel.fromCompLevel(match!.namedGroup("level")!),
+        level: MatchLevel.fromCompLevel(match.namedGroup("level")!),
         finalnum: match.groupNames.contains("finalnum")
             ? int.tryParse(match.namedGroup("finalnum") ?? "")
             : null,
@@ -231,29 +232,22 @@ num scoreTotal(Map<String, num> scores, {required int season, GamePeriod? period
     }
   }
   if (entries.isEmpty) return 0;
-  return switch (season) {
-    2024 => entries
-        .where((e) => scoringpoints2024.containsKey(e.key) && e.value != 0)
-        .map((e) => scoringpoints2024[e.key]! * e.value)
-        .followedBy([0]).reduce((v, e) => v + e),
-    2023 => entries
-        .where((e) => scoringpoints2023.containsKey(e.key) && e.value != 0)
-        .map((e) => scoringpoints2023[e.key]! * e.value)
-        .followedBy([0]).reduce((v, e) => v + e),
-    _ => throw Exception("Can't total scores - Unrecognized Season")
-  };
+  if (!scoringpoints.containsKey(season)) {
+    throw Exception("Can't total scores - Unrecognized Season");
+  }
+  return entries
+      .where((e) => scoringpoints[season]!.containsKey(e.key) && e.value != 0)
+      .map((e) => scoringpoints[season]![e.key]! * e.value)
+      .followedBy([0]).reduce((v, e) => v + e);
 }
 
 Map<GamePeriod, num> scoreTotalByPeriod(Map<String, num> scorecounts, {required int season}) {
-  var scores = switch (season) {
-    2024 => scorecounts.entries
-        .where((e) => scoringpoints2024.containsKey(e.key) && e.value != 0)
-        .map((e) => MapEntry(e.key.split("_").first, scoringpoints2024[e.key]! * e.value)),
-    2023 => scorecounts.entries
-        .where((e) => scoringpoints2023.containsKey(e.key) && e.value != 0)
-        .map((e) => MapEntry(e.key.split("_").first, scoringpoints2023[e.key]! * e.value)),
-    _ => throw Exception("Can't total scores - Unrecognized Season")
-  };
+  if (!scoringpoints.containsKey(season)) {
+    throw Exception("Can't total scores - Unrecognized Season");
+  }
+  final scores = scorecounts.entries
+      .where((e) => scoringpoints[season]!.containsKey(e.key) && e.value != 0)
+      .map((e) => MapEntry(e.key.split("_").first, scoringpoints[season]![e.key]! * e.value));
   Map<GamePeriod, num> out = {};
   for (MapEntry<String, num> scoreentry in scores) {
     var period = GamePeriod.fromString(scoreentry.key);
@@ -266,13 +260,13 @@ Map<String, num> scoreTotalByType(Map<String, num> scorecounts, {required int se
   var scores = switch (season) {
     2024 => scorecounts.entries
         .where((e) =>
-            scoringpoints2024.containsKey(e.key) &&
+            scoringpoints[2024]!.containsKey(e.key) &&
             e.value != 0 &&
             (e.key.endsWith("amp") || e.key.endsWith("speaker")))
         .map((e) => MapEntry(e.key.split("_").last, e.value)),
     2023 => scorecounts.entries
         .where((e) =>
-            scoringpoints2023.containsKey(e.key) &&
+            scoringpoints[2023]!.containsKey(e.key) &&
             e.value != 0 &&
             (e.key.contains("cube") || e.key.contains("cone")))
         .map((e) => MapEntry(e.key.split("_")[1], e.value)),
@@ -286,47 +280,64 @@ Map<String, num> scoreTotalByType(Map<String, num> scorecounts, {required int se
 }
 
 Map<String, num> nonScoreFilter(Map<String, num> scorecounts, {required int season}) {
-  scorecounts = Map.from(scorecounts);
-  return switch (season) {
-    2024 => scorecounts..removeWhere((k, v) => scoringpoints2024.containsKey(k)),
-    2023 => scorecounts..removeWhere((k, v) => scoringpoints2023.containsKey(k)),
-    _ => throw Exception("Can't total scores - Unrecognized Season")
-  };
+  if (!scoringpoints.containsKey(season)) {
+    throw Exception("Can't total scores - Unrecognized Season");
+  }
+  return Map.from(scorecounts)..removeWhere((k, v) => scoringpoints[season]!.containsKey(k));
 }
 
-const scoringpoints2023 = {
-  "auto_cone_low": 3,
-  "auto_cone_mid": 4,
-  "auto_cone_high": 6,
-  "auto_cube_low": 3,
-  "auto_cube_mid": 4,
-  "auto_cube_high": 6,
-  "auto_mobility": 3,
-  "auto_docked": 8,
-  "auto_engaged": 4,
-  "teleop_cone_low": 2,
-  "teleop_cone_mid": 3,
-  "teleop_cone_high": 5,
-  "teleop_cube_low": 2,
-  "teleop_cube_mid": 3,
-  "teleop_cube_high": 5,
-  "endgame_parked": 2,
-  "endgame_docked": 6,
-  "endgame_engaged": 4,
-  "comments_fouls": -5
-};
+/// The number of digits in the longest FRC team number
+const longestTeam = 5;
 
-const scoringpoints2024 = {
-  "auto_amp": 5,
-  "auto_speaker": 5,
-  "teleop_amp": 1,
-  "teleop_speaker": 2,
-  "teleop_loudspeaker": 5,
-  "endgame_trap": 5,
-  "endgame_parked": 1,
-  "endgame_onstage": 3,
-  "endgame_spotlit": 4,
-  "comments_fouls": -2
+const scoringpoints = {
+  2023: {
+    "auto_cone_low": 3,
+    "auto_cone_mid": 4,
+    "auto_cone_high": 6,
+    "auto_cube_low": 3,
+    "auto_cube_mid": 4,
+    "auto_cube_high": 6,
+    "auto_mobility": 3,
+    "auto_docked": 8,
+    "auto_engaged": 4,
+    "teleop_cone_low": 2,
+    "teleop_cone_mid": 3,
+    "teleop_cone_high": 5,
+    "teleop_cube_low": 2,
+    "teleop_cube_mid": 3,
+    "teleop_cube_high": 5,
+    "endgame_parked": 2,
+    "endgame_docked": 6,
+    "endgame_engaged": 4,
+    "comments_fouls": -5
+  },
+  2024: {
+    "auto_amp": 5,
+    "auto_speaker": 5,
+    "teleop_amp": 1,
+    "teleop_speaker": 2,
+    "teleop_loudspeaker": 5,
+    "endgame_trap": 5,
+    "endgame_parked": 1,
+    "endgame_onstage": 3,
+    "endgame_spotlit": 4,
+    "comments_fouls": -2
+  },
+  2025: {
+    "auto_coral_l1": 3,
+    "auto_coral_l2": 4,
+    "auto_coral_l3": 6,
+    "auto_coral_l4": 7,
+    "auto_algae_net": 4,
+    "auto_algae_processor": 6,
+    "teleop_coral_l1": 2,
+    "teleop_coral_l2": 3,
+    "teleop_coral_l3": 4,
+    "teleop_coral_l4": 5,
+    "teleop_algae_net": 4,
+    "teleop_algae_processor": 6,
+    "comments_fouls": -4, // average of -2 (normal) and -6 (major)
+  }
 };
 
 const frcred = Color(0xffed1c24);

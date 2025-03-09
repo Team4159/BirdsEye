@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../types.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -84,7 +85,7 @@ class AchievementsPage extends StatelessWidget {
                                         .toList(growable: false);
                                 return CarouselSlider(
                                   items: data
-                                      .map((achdata) => Card(
+                                      .map((achdata) => Card.filled(
                                           clipBehavior: Clip.hardEdge,
                                           child: Stack(fit: StackFit.expand, children: [
                                             if (achdata.approved != null)
@@ -227,10 +228,7 @@ class AchievementsPage extends StatelessWidget {
                                             }).then((_) {
                                               _detailsController.clear();
                                               _searchedText.notifyListeners();
-                                            }).catchError((e) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(content: Text(e.toString())));
-                                            });
+                                            }).reportError(context);
                                           },
                                     icon: const Icon(Icons.send_rounded),
                                     label: const Text("Submit")))

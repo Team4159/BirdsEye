@@ -1,31 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../interfaces/bluealliance.dart';
-import '../interfaces/localstore.dart';
-import '../interfaces/supabase.dart';
+import '../interfaces/mixed.dart';
+import '../interfaces/supabase.dart' show PitInterface, SupabaseInterface;
 import '../utils.dart';
 import './configuration.dart';
 import './metadata.dart';
-
-Future<Map<String, String>?> _getPrevious(int team) => Supabase.instance.client
-    .from("pit_data_${Configuration.instance.season}")
-    .select()
-    .eq("event", Configuration.event!)
-    .eq("team", team)
-    .eq("scouter", UserMetadata.instance.id!)
-    .maybeSingle()
-    .withConverter((value) => value == null
-        ? {}
-        : Map.castFrom(value..removeWhere((k, _) => {"event", "team"}.contains(k))));
-
-Future<void> submitInfo(Map<String, dynamic> data, {int? season}) async =>
-    (await SupabaseInterface.canConnect)
-        ? Supabase.instance.client
-            .from("pit_data_${season ?? Configuration.instance.season}")
-            .upsert(data)
-        : LocalStoreInterface.addPit(season ?? Configuration.instance.season, data);
 
 class PitScoutPage extends StatefulWidget {
   const PitScoutPage({super.key});
@@ -44,21 +25,9 @@ class _PitScoutPageState extends State<PitScoutPage> {
   List<int>? unfilled; // memory cache
   Future<List<int>> _getUnfilled() {
     if (unfilled != null) return Future.value(unfilled);
-    return BlueAlliance.stock
-        .get(TBAInfo(season: Configuration.instance.season, event: Configuration.event, match: "*"))
-        .then((data) => Set<int>.of(data.keys.map(int.parse)))
-        .then((teams) async {
-      Set<int> filledteams = await Supabase.instance.client
-          .from("pit_data_${Configuration.instance.season}")
-          .select("team")
-          .eq("event", Configuration.event!)
-          .withConverter((value) => value.map<int>((e) => e['team']).toSet())
-          .catchError((_) => <int>{});
-      if (UserMetadata.instance.team != null) {
-        filledteams.add(UserMetadata.instance.team!);
-      }
-      return teams.difference(filledteams).toList()..sort();
-    }).then((teams) {
+    return MixedInterfaces.getPitUnscoutedTeams(Configuration.instance.season, Configuration.event!)
+        .then((teams) {
+      teams.remove(UserMetadata.instance.team);
       return unfilled = teams;
     }).catchError((e) => <int>[]);
   }
@@ -67,6 +36,13 @@ class _PitScoutPageState extends State<PitScoutPage> {
   void initState() {
     _getUnfilled();
     super.initState();
+    _team.addListener(() => SupabaseInterface.setSession(team: _team.value?.toString()));
+  }
+
+  @override
+  void dispose() {
+    _team.dispose();
+    super.dispose();
   }
 
   @override
@@ -123,7 +99,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                   inputFormatters: [
                                                     FilteringTextInputFormatter.digitsOnly
                                                   ],
-                                                  maxLength: 4,
+                                                  maxLength: longestTeam,
                                                   validator: (value) {
                                                     if (value?.isEmpty ?? true) {
                                                       return "Required";
@@ -147,10 +123,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                         .then((isValid) {
                                                       _teamFieldError = isValid ? "" : "Invalid";
                                                       _teamFieldKey.currentState!.validate();
-                                                    }).catchError((e) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                          SnackBar(content: Text(e.toString())));
-                                                    });
+                                                    }).reportError(context);
                                                   },
                                                   onFieldSubmitted: (String? value) async {
                                                     if (value == null) return;
@@ -158,7 +131,12 @@ class _PitScoutPageState extends State<PitScoutPage> {
                                                     int team = int.parse(value);
                                                     onSubmitted();
                                                     Map<String, String>? prev =
-                                                        await _getPrevious(team);
+                                                        (await PitInterface.pitResponseFetch((
+                                                      season: Configuration.instance.season,
+                                                      event: Configuration.event!,
+                                                      team: team
+                                                    ), UserMetadata.instance.id!))
+                                                            .singleOrDie;
                                                     if (prev != null) {
                                                       for (var MapEntry(:key, :value)
                                                           in prev.entries) {
@@ -177,7 +155,7 @@ class _PitScoutPageState extends State<PitScoutPage> {
           ],
       body: SafeArea(
           child: FutureBuilder(
-              future: SupabaseInterface.pitSchema,
+              future: PitInterface.pitSchema,
               builder: (context, snapshot) => !snapshot.hasData
                   ? snapshot.hasError
                       ? Column(
@@ -243,27 +221,29 @@ class _PitScoutPageState extends State<PitScoutPage> {
                               Expanded(
                                   child: FilledButton(
                                       child: const Text("Submit"),
-                                      onPressed: () {
-                                        submitInfo({
-                                          ..._controllers
-                                              .map((key, value) => MapEntry(key, value.text)),
-                                          "event": Configuration.event,
-                                          "team": _team.value
-                                        }).then((_) async {
-                                          for (TextEditingController controller
-                                              in _controllers.values) {
-                                            controller.clear();
-                                          }
+                                      onPressed: () async {
+                                        final info = (
+                                          season: Configuration.instance.season,
+                                          event: Configuration.event!,
+                                          team: _team.value!,
+                                        );
+                                        final data = _controllers
+                                            .map((key, value) => MapEntry(key, value.text));
+                                        await MixedInterfaces.submitPitResponse(info, data)
+                                            .reportError(context);
 
-                                          await _scrollController.animateTo(0,
-                                              duration: const Duration(seconds: 1),
-                                              curve: Curves.easeOutBack);
-                                          _teamFieldKey.currentState!.didChange("");
-                                          _team.value = _teamFieldError = null;
-                                        }).catchError((e) {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(SnackBar(content: Text(e.toString())));
-                                        });
+                                        // Clear all the text boxes
+                                        for (TextEditingController controller
+                                            in _controllers.values) {
+                                          controller.clear();
+                                        }
+                                        _teamFieldKey.currentState!
+                                            .didChange(""); // Clear the team dropdown
+                                        _team.value =
+                                            _teamFieldError = null; // Clear the team-related values
+                                        await _scrollController.animateTo(0,
+                                            duration: const Duration(seconds: 1),
+                                            curve: Curves.easeOutBack);
                                       })),
                               const SizedBox(width: 10),
                               DeleteConfirmation(

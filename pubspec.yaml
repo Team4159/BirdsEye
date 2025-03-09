@@ -8,7 +8,7 @@ environment:
 
 dependencies:
   carousel_slider: ^5.0.0
-  fl_chart: ^0.68.0
+  fl_chart: ^0.70.2
   flutter:
     sdk: flutter
   flutter_markdown: ^0.7.1
@@ -23,7 +23,7 @@ dependencies:
   url_launcher: ^6.1.14
 
 dev_dependencies:
-  flutter_lints: ^4.0.0
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
