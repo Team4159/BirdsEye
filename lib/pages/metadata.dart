@@ -15,6 +15,7 @@ class MetadataPage extends StatelessWidget {
   final _nameController = TextEditingController(text: UserMetadata.instance.name);
   final _teamController = TextEditingController(text: UserMetadata.instance.team.toString());
   final _tbaFieldController = TextEditingController(text: prefs.getString("tbaKey"));
+  final _tbaFieldError = ValueNotifier<String?>(null);
   MetadataPage({super.key}) {
     UserMetadata.instance.addListener(() {
       _nameController.text = UserMetadata.instance.name ?? "";
@@ -44,21 +45,24 @@ class MetadataPage extends StatelessWidget {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 maxLength: longestTeam,
                 validator: (value) => value == null || value.isEmpty ? "Required" : null),
-            TextField(
-                obscureText: true,
-                autocorrect: false,
-                controller: _tbaFieldController,
-                decoration: InputDecoration(
-                    labelText: "TBA API Key",
-                    counterText: "",
-                    suffixIcon: IconButton(
-                        onPressed: () => showDialog(
-                            context: context,
-                            builder: (context) => TBAInfoDialog(context: context)),
-                        tooltip: "Instructions",
-                        icon: const Icon(Icons.info_outline_rounded))),
-                keyboardType: TextInputType.none,
-                maxLength: 64),
+            ValueListenableBuilder(
+                valueListenable: _tbaFieldError,
+                builder: (context, error, _) => TextField(
+                    obscureText: true,
+                    autocorrect: false,
+                    controller: _tbaFieldController,
+                    decoration: InputDecoration(
+                        labelText: "TBA API Key",
+                        counterText: "",
+                        errorText: error,
+                        suffixIcon: IconButton(
+                            onPressed: () => showDialog(
+                                context: context,
+                                builder: (context) => TBAInfoDialog(context: context)),
+                            tooltip: "Instructions",
+                            icon: const Icon(Icons.info_outline_rounded))),
+                    keyboardType: TextInputType.none,
+                    maxLength: 64)),
             Expanded(
                 child: Align(
                     alignment: Alignment.bottomRight,

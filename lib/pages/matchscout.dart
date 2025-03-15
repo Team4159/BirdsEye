@@ -78,10 +78,10 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
       headerSliverBuilder: (context, _) => [
             const SliverAppBar(
                 primary: true, floating: true, snap: true, title: Text("Match Scouting")),
-            FutureBuilder(
-                future: infoConverter,
-                builder: (context, snapshot) =>
-                    SliverToBoxAdapter(child: MatchScoutInfoFields(info: snapshot.data)))
+            SliverToBoxAdapter(
+                child: FutureBuilder(
+                    future: infoConverter,
+                    builder: (context, snapshot) => MatchScoutInfoFields(info: snapshot.data)))
           ],
       body: SafeArea(
           child: FutureBuilder(
@@ -106,150 +106,165 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
                           child: child),
                       child: Form(
                           key: _formKey,
-                          child: CustomScrollView(
-                              cacheExtent: double.infinity,
-                              slivers: [
-                                for (var MapEntry(key: section, value: contents)
-                                    in snapshot.data!.entries) ...[
-                                  SliverAppBar(
-                                      primary: false,
-                                      excludeHeaderSemantics: true,
-                                      automaticallyImplyLeading: false,
-                                      centerTitle: true,
-                                      stretch: false,
-                                      title: Text(section,
-                                          style: Theme.of(context).textTheme.headlineLarge,
-                                          textScaler: const TextScaler.linear(1.5))),
-                                  SliverPadding(
-                                      padding: const EdgeInsets.only(bottom: 12, left: 6, right: 6),
-                                      sliver: SliverGrid.count(
-                                          crossAxisCount: 2,
-                                          childAspectRatio:
-                                              MediaQuery.of(context).size.width > 450 ? 3 : 2,
-                                          mainAxisSpacing: 8,
-                                          crossAxisSpacing: 12,
-                                          children: [
-                                            for (var MapEntry(key: field, value: type)
-                                                in contents.entries)
-                                              switch (type) {
-                                                MatchScoutQuestionTypes.text => TextFormField(
-                                                    maxLines: null,
-                                                    expands: true,
-                                                    style: TextStyle(
-                                                        color: Theme.of(context)
-                                                            .colorScheme
-                                                            .onSecondaryContainer),
-                                                    cursorColor: Theme.of(context)
-                                                        .colorScheme
-                                                        .onSecondaryContainer,
-                                                    decoration: InputDecoration(
-                                                        labelText: field
-                                                            .split("_")
-                                                            .map((s) =>
-                                                                s[0].toUpperCase() + s.substring(1))
-                                                            .join(" "),
-                                                        filled: true,
-                                                        fillColor: Theme.of(context)
-                                                            .colorScheme
-                                                            .secondaryContainer
-                                                            .withAlpha(75),
-                                                        labelStyle: TextStyle(
+                          child: CustomScrollView(cacheExtent: double.infinity, slivers: [
+                            SliverCrossAxisGroup(slivers: [
+                              SliverFillRemaining(hasScrollBody: false),
+                              SliverConstrainedCrossAxis(
+                                  maxExtent: 500,
+                                  sliver: SliverMainAxisGroup(slivers: [
+                                    for (var MapEntry(key: section, value: contents)
+                                        in snapshot.data!.entries) ...[
+                                      SliverAppBar(
+                                          primary: false,
+                                          excludeHeaderSemantics: true,
+                                          automaticallyImplyLeading: false,
+                                          centerTitle: true,
+                                          stretch: false,
+                                          title: Text(section,
+                                              style: Theme.of(context).textTheme.headlineLarge,
+                                              textScaler: const TextScaler.linear(1.5))),
+                                      SliverPadding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 12, left: 6, right: 6),
+                                          sliver: SliverGrid.count(
+                                              crossAxisCount: 2,
+                                              childAspectRatio:
+                                                  MediaQuery.of(context).size.width > 450 ? 3 : 2,
+                                              mainAxisSpacing: 8,
+                                              crossAxisSpacing: 12,
+                                              children: [
+                                                for (var MapEntry(key: field, value: type)
+                                                    in contents.entries)
+                                                  switch (type) {
+                                                    MatchScoutQuestionTypes.text => TextFormField(
+                                                        maxLines: null,
+                                                        expands: true,
+                                                        style: TextStyle(
                                                             color: Theme.of(context)
                                                                 .colorScheme
-                                                                .onSecondaryContainer,
-                                                            fontWeight: FontWeight.w500),
-                                                        enabledBorder: OutlineInputBorder(
-                                                            borderSide: BorderSide(
+                                                                .onSecondaryContainer),
+                                                        cursorColor: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSecondaryContainer,
+                                                        decoration: InputDecoration(
+                                                            labelText: field.split("_").map((s) => s[0].toUpperCase() + s.substring(1)).join(
+                                                                " "),
+                                                            filled: true,
+                                                            fillColor: Theme.of(context)
+                                                                .colorScheme
+                                                                .secondaryContainer
+                                                                .withAlpha(75),
+                                                            labelStyle: TextStyle(
                                                                 color: Theme.of(context)
                                                                     .colorScheme
-                                                                    .secondaryContainer,
-                                                                width: 3)),
-                                                        focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).colorScheme.secondaryContainer, width: 2))),
-                                                    onSaved: (i) => _fields["${section}_$field"] = i),
-                                                MatchScoutQuestionTypes.counter => CounterFormField(
-                                                    labelText: field
-                                                        .split("_")
-                                                        .map((s) =>
-                                                            s[0].toUpperCase() + s.substring(1))
-                                                        .join(" "),
-                                                    onSaved: (i) =>
-                                                        _fields["${section}_$field"] = i,
-                                                    season: info.season),
-                                                MatchScoutQuestionTypes.slider => RatingFormField(
-                                                    labelText: field
-                                                        .split("_")
-                                                        .map((s) =>
-                                                            s[0].toUpperCase() + s.substring(1))
-                                                        .join(" "),
-                                                    onSaved: (i) =>
-                                                        _fields["${section}_$field"] = i),
-                                                MatchScoutQuestionTypes.toggle => ToggleFormField(
-                                                    labelText: field
-                                                        .split("_")
-                                                        .map((s) =>
-                                                            s[0].toUpperCase() + s.substring(1))
-                                                        .join(" "),
-                                                    onSaved: (i) =>
-                                                        _fields["${section}_$field"] = i),
-                                                MatchScoutQuestionTypes.error => Material(
-                                                    type: MaterialType.button,
-                                                    borderRadius: BorderRadius.circular(4),
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .errorContainer,
-                                                    child: Center(child: Text(field)))
-                                              }
-                                          ]))
-                                ],
-                                SliverPadding(
-                                    padding: const EdgeInsets.all(20),
-                                    sliver: SliverToBoxAdapter(
-                                        child: Row(children: [
-                                      Expanded(
-                                          child: FutureBuilder(
-                                              future: infoConverter,
-                                              builder: (context, snapshot) => FilledButton(
-                                                  onPressed: !snapshot.hasData
-                                                      ? null
-                                                      : () async {
-                                                          _fields.clear();
-                                                          _formKey.currentState!.save();
-                                                          MatchInfo currmatch = info.match!;
-                                                          await MixedInterfaces.submitMatchResponse(
-                                                                  (
+                                                                    .onSecondaryContainer,
+                                                                fontWeight: FontWeight.w500),
+                                                            enabledBorder: OutlineInputBorder(
+                                                                borderSide: BorderSide(
+                                                                    color: Theme.of(context)
+                                                                        .colorScheme
+                                                                        .secondaryContainer,
+                                                                    width: 3)),
+                                                            focusedBorder:
+                                                                OutlineInputBorder(borderSide: BorderSide(color: Theme.of(context).colorScheme.secondaryContainer, width: 2))),
+                                                        onSaved: (i) => _fields["${section}_$field"] = i),
+                                                    MatchScoutQuestionTypes.counter =>
+                                                      CounterFormField(
+                                                          labelText: field
+                                                              .split("_")
+                                                              .map((s) =>
+                                                                  s[0].toUpperCase() +
+                                                                  s.substring(1))
+                                                              .join(" "),
+                                                          onSaved: (i) =>
+                                                              _fields["${section}_$field"] = i,
+                                                          season: info.season),
+                                                    MatchScoutQuestionTypes.slider =>
+                                                      RatingFormField(
+                                                          labelText:
+                                                              field
+                                                                  .split("_")
+                                                                  .map(
+                                                                      (s) =>
+                                                                          s[0]
+                                                                              .toUpperCase() +
+                                                                          s.substring(1))
+                                                                  .join(" "),
+                                                          onSaved: (i) =>
+                                                              _fields["${section}_$field"] = i),
+                                                    MatchScoutQuestionTypes.toggle =>
+                                                      ToggleFormField(
+                                                          labelText:
+                                                              field
+                                                                  .split("_")
+                                                                  .map(
+                                                                      (s) =>
+                                                                          s[0]
+                                                                              .toUpperCase() +
+                                                                          s.substring(1))
+                                                                  .join(" "),
+                                                          onSaved: (i) =>
+                                                              _fields["${section}_$field"] = i),
+                                                    MatchScoutQuestionTypes.error => Material(
+                                                        type: MaterialType.button,
+                                                        borderRadius: BorderRadius.circular(4),
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .errorContainer,
+                                                        child: Center(child: Text(field)))
+                                                  }
+                                              ]))
+                                    ],
+                                    SliverPadding(
+                                        padding: const EdgeInsets.all(20),
+                                        sliver: SliverToBoxAdapter(
+                                            child: Row(children: [
+                                          Expanded(
+                                              child: FutureBuilder(
+                                                  future: infoConverter,
+                                                  builder: (context, snapshot) => FilledButton(
+                                                      onPressed: !snapshot.hasData
+                                                          ? null
+                                                          : () async {
+                                                              _fields.clear();
+                                                              _formKey.currentState!.save();
+                                                              MatchInfo currmatch = info.match!;
+                                                              await MixedInterfaces
+                                                                      .submitMatchResponse((
                                                                 season: info.season,
                                                                 event: info.event,
                                                                 match: currmatch.toString(),
                                                                 team: info.team!
-                                                              ),
-                                                                  _fields)
-                                                              .reportError(context);
+                                                              ), _fields)
+                                                                  .reportError(context);
+                                                              _formKey.currentState!.reset();
+                                                              snapshot.data!.progressOrReset();
+                                                              await _scrollController.animateTo(0,
+                                                                  duration:
+                                                                      const Duration(seconds: 1),
+                                                                  curve: Curves.easeOutBack);
+                                                            },
+                                                      child: const Text("Submit")))),
+                                          const SizedBox(width: 10),
+                                          FutureBuilder(
+                                              future: infoConverter,
+                                              builder: (context, snapshot) => DeleteConfirmation(
+                                                  context: context,
+                                                  reset: !snapshot.hasData
+                                                      ? null
+                                                      : () async {
                                                           _formKey.currentState!.reset();
-                                                          snapshot.data!.progressOrReset();
                                                           await _scrollController.animateTo(0,
-                                                              duration: const Duration(seconds: 1),
+                                                              duration: const Duration(
+                                                                  milliseconds: 1500),
                                                               curve: Curves.easeOutBack);
-                                                        },
-                                                  child: const Text("Submit")))),
-                                      const SizedBox(width: 10),
-                                      FutureBuilder(
-                                          future: infoConverter,
-                                          builder: (context, snapshot) => DeleteConfirmation(
-                                              context: context,
-                                              reset: !snapshot.hasData
-                                                  ? null
-                                                  : () async {
-                                                      _formKey.currentState!.reset();
-                                                      await _scrollController.animateTo(0,
-                                                          duration:
-                                                              const Duration(milliseconds: 1500),
-                                                          curve: Curves.easeOutBack);
-                                                      snapshot.data!.resetInfo();
-                                                    }))
-                                    ])))
-                              ]
-                                  .map((s) => SliverConstrainedCrossAxis(maxExtent: 500, sliver: s))
-                                  .toList()))))));
+                                                          snapshot.data!.resetInfo();
+                                                        }))
+                                        ])))
+                                  ])),
+                              SliverFillRemaining(hasScrollBody: false)
+                            ])
+                          ]))))));
 }
 
 typedef MatchRobotPositionInfo = ({bool isRedAlliance, int ordinal, int currentScouters});

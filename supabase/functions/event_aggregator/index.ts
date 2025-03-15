@@ -4,7 +4,7 @@ import { Database } from "./database.types.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req: Request) => {
@@ -24,9 +24,9 @@ Deno.serve(async (req: Request) => {
     // Request Argument Validation
     const params: URLSearchParams = new URL(req.url).searchParams;
     for (const entry of await req.json()
-        .then((p) => Object.entries<string>(p))
-        .catch((e) => {console.warn(e); return []}))
-      params.append(entry[0], entry[1]);
+      .then((p) => Object.entries<string>(p))
+    .catch((e) => {console.warn(e); return []}))
+    params.append(entry[0], entry[1]);
     if (!params.has("season") || !(params.has("event") || !params.has("method") || !(params.get("method")! in rankFunctions))) {
       return new Response(
         "Missing Required Parameters\nseason: valid frc season year (e.g. 2023)\nevent: valid tba event code (e.g. casf)\nmethod: metric to rank on "+`(e.g. ${Object.keys(rankFunctions).join(", ")})`,
@@ -36,19 +36,19 @@ Deno.serve(async (req: Request) => {
         },
       );
     }
-
+    
     let data: any, error: any = null;
-
+    
     if (params.get('season') === '2025') {
       ({ data, error } = await supabase.from('sum_coral_view')
-        .select('*')
-        .eq('event', params.get('event')));
+      .select('*')
+      .eq('event', params.get('event')));
     } else {
       ({ data, error } = await supabase.from(`match_data_${params.get("season")}`)
-        .select("*, match_scouting!inner(event, team)")
-        .eq("match_scouting.event", params.get("event")));
+      .select("*, match_scouting!inner(event, team)")
+      .eq("match_scouting.event", params.get("event")));
     }
-
+    
     if (!data || data.length === 0) {
       return new Response(
         `No Data Found for ${params.get('season')}${params.has('event') ? params.get('event') : ''}\n${error?.message}`,
@@ -58,9 +58,7 @@ Deno.serve(async (req: Request) => {
         }
       );
     }
-
-
-
+    
     const rankFunc = rankFunctions[params.get("method")!]!;
     const agg: {[key: string]: Set<number>} = {};
     for (const { match_scouting, ...entry } of data) {

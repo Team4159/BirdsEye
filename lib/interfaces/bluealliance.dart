@@ -258,6 +258,12 @@ Map<GamePeriod, num> scoreTotalByPeriod(Map<String, num> scorecounts, {required 
 
 Map<String, num> scoreTotalByType(Map<String, num> scorecounts, {required int season}) {
   var scores = switch (season) {
+    2025 => scorecounts.entries
+        .where((e) =>
+            scoringpoints[2025]!.containsKey(e.key) &&
+            e.value != 0 &&
+            (e.key.contains("coral") || e.key.contains("algae")))
+        .map((e) => MapEntry(e.key.split("_")[1], e.value)),
     2024 => scorecounts.entries
         .where((e) =>
             scoringpoints[2024]!.containsKey(e.key) &&
@@ -336,7 +342,10 @@ const scoringpoints = {
     "teleop_coral_l4": 5,
     "teleop_algae_net": 4,
     "teleop_algae_processor": 6,
-    "comments_fouls": -4, // average of -2 (normal) and -6 (major)
+    "endgame_parked": 2,
+    "endgame_shallow": 6,
+    "endgame_deep": 12,
+    "comments_fouls": -3, // average of -2 (normal) and -6 (major)
   }
 };
 

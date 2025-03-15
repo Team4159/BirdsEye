@@ -228,9 +228,11 @@ export type Database = {
       }
       match_data_2025: {
         Row: {
+          auto_algae_intake_failed: number | null
           auto_algae_net: number
           auto_algae_net_missed: number
           auto_algae_processor: number
+          auto_coral_intake_failed: number | null
           auto_coral_l1: number
           auto_coral_l2: number
           auto_coral_l3: number
@@ -240,9 +242,11 @@ export type Database = {
           comments_defensive: boolean
           comments_fouls: number
           id: number
+          teleop_algae_intake_failed: number | null
           teleop_algae_net: number
           teleop_algae_net_missed: number
           teleop_algae_processor: number
+          teleop_coral_intake_failed: number | null
           teleop_coral_l1: number
           teleop_coral_l2: number
           teleop_coral_l3: number
@@ -250,9 +254,11 @@ export type Database = {
           teleop_coral_missed: number
         }
         Insert: {
+          auto_algae_intake_failed?: number | null
           auto_algae_net: number
           auto_algae_net_missed: number
           auto_algae_processor: number
+          auto_coral_intake_failed?: number | null
           auto_coral_l1: number
           auto_coral_l2: number
           auto_coral_l3: number
@@ -262,9 +268,11 @@ export type Database = {
           comments_defensive: boolean
           comments_fouls: number
           id?: number
+          teleop_algae_intake_failed?: number | null
           teleop_algae_net: number
           teleop_algae_net_missed: number
           teleop_algae_processor: number
+          teleop_coral_intake_failed?: number | null
           teleop_coral_l1: number
           teleop_coral_l2: number
           teleop_coral_l3: number
@@ -272,9 +280,11 @@ export type Database = {
           teleop_coral_missed: number
         }
         Update: {
+          auto_algae_intake_failed?: number | null
           auto_algae_net?: number
           auto_algae_net_missed?: number
           auto_algae_processor?: number
+          auto_coral_intake_failed?: number | null
           auto_coral_l1?: number
           auto_coral_l2?: number
           auto_coral_l3?: number
@@ -284,9 +294,11 @@ export type Database = {
           comments_defensive?: boolean
           comments_fouls?: number
           id?: number
+          teleop_algae_intake_failed?: number | null
           teleop_algae_net?: number
           teleop_algae_net_missed?: number
           teleop_algae_processor?: number
+          teleop_coral_intake_failed?: number | null
           teleop_coral_l1?: number
           teleop_coral_l2?: number
           teleop_coral_l3?: number
@@ -401,7 +413,7 @@ export type Database = {
           created_at?: string
           data: Json
           event: string
-          scouter: string
+          scouter?: string
           season: number
           team: number
         }
@@ -430,7 +442,7 @@ export type Database = {
         }
         Insert: {
           qid: string
-          season?: number
+          season: number
         }
         Update: {
           qid?: string
@@ -507,7 +519,37 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      sum_coral_view: {
+        Row: {
+          auto_algae_net: number | null
+          auto_algae_processor: number | null
+          auto_coral: number | null
+          auto_coral_l1: number | null
+          auto_coral_l2: number | null
+          auto_coral_l3: number | null
+          auto_coral_l4: number | null
+          comments_fouls: number | null
+          event: string | null
+          id: number | null
+          team: string | null
+          teleop_algae_net: number | null
+          teleop_algae_processor: number | null
+          teleop_coral: number | null
+          teleop_coral_l1: number | null
+          teleop_coral_l2: number | null
+          teleop_coral_l3: number | null
+          teleop_coral_l4: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_data_2025_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "match_scouting"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       getavailableseasons: {
@@ -516,7 +558,7 @@ export type Database = {
       }
       getpitschema: {
         Args: {
-          season: number
+          pitseason: number
         }
         Returns: Json
       }

@@ -504,6 +504,7 @@ class TeamInSeasonGraph extends StatelessWidget {
             om[miscVals.key] = (om[miscVals.key] ?? 0) + miscVals.value;
           }
         }
+        print(ot);
         return (
           period: op.map((key, value) => MapEntry(key, value / result.values.length.toDouble())),
           type: ot,
