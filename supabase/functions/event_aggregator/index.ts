@@ -21,6 +21,21 @@ Deno.serve(async (req: Request) => {
         },
       },
     );
+    // Request Argument Validation
+    const params: URLSearchParams = new URL(req.url).searchParams;
+    for (const entry of await req.json()
+        .then((p) => Object.entries<string>(p))
+        .catch((e) => {console.warn(e); return []}))
+      params.append(entry[0], entry[1]);
+    if (!params.has("season") || !(params.has("event") || !params.has("method") || !(params.get("method")! in rankFunctions))) {
+      return new Response(
+        "Missing Required Parameters\nseason: valid frc season year (e.g. 2023)\nevent: valid tba event code (e.g. casf)\nmethod: metric to rank on "+`(e.g. ${Object.keys(rankFunctions).join(", ")})`,
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        },
+      );
+    }
 
     let data: any, error: any = null;
 
