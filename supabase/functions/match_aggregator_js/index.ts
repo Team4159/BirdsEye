@@ -3,6 +3,7 @@ import { Database } from "./database.types.ts";
 import { MatchInfo } from "./tba.types.ts";
 import process2023TBA from "./season2023.ts";
 import process2024TBA from "./season2024.ts";
+import process2025TBA from "./season2025.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -117,6 +118,9 @@ Deno.serve(async (req: Request) => {
           case "2024":
             process2024TBA(agg[match][team], team, tbadata[match]);
             break;
+          case "2025":
+              process2025TBA(agg[match][team], team, tbadata[match]);
+              break;
         }
       }
       // Data Aggregation 2: Electric Boogaloo
@@ -189,6 +193,9 @@ Deno.serve(async (req: Request) => {
           case "2024":
             process2024TBA(agg[event][match], team, tbadata[match]);
             break;
+          case "2025":
+              process2025TBA(agg[event][match], team, tbadata[match]);
+              break;
         }
       }
       // Data Aggregation 2: Electric Boogaloo

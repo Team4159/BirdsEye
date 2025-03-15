@@ -21,7 +21,6 @@ Deno.serve(async (req: Request) => {
         },
       },
     );
-
     // Request Argument Validation
     const params: URLSearchParams = new URL(req.url).searchParams;
     for (const entry of await req.json()
@@ -37,18 +36,30 @@ Deno.serve(async (req: Request) => {
         },
       );
     }
-    // Database Fetching
-    const { data, error } = await supabase.from(`match_data_${params.get("season")}`)
-      .select("*, match_scouting!inner(event, team)").eq("match_scouting.event", params.get("event")!);
+
+    let data: any, error: any = null;
+
+    if (params.get('season') === '2025') {
+      ({ data, error } = await supabase.from('sum_coral_view')
+        .select('*')
+        .eq('event', params.get('event')));
+    } else {
+      ({ data, error } = await supabase.from(`match_data_${params.get("season")}`)
+        .select("*, match_scouting!inner(event, team)")
+        .eq("match_scouting.event", params.get("event")));
+    }
+
     if (!data || data.length === 0) {
       return new Response(
-        `No Data Found for ${params.get("season")}${params.has("event") ? params.get("event") : ""}\n${error?.message}`,
+        `No Data Found for ${params.get('season')}${params.has('event') ? params.get('event') : ''}\n${error?.message}`,
         {
           status: 404,
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
         }
       );
     }
+
+
 
     const rankFunc = rankFunctions[params.get("method")!]!;
     const agg: {[key: string]: Set<number>} = {};
@@ -91,3 +102,4 @@ const rankFunctions: {[key: string]: RankFunction} = {
     }).reduce((a, b) => a+b, 0) / b.length;
   }
 }
+
