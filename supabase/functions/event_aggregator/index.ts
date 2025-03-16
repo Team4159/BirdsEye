@@ -1,5 +1,7 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { SupabaseClient, createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { Database } from "./database.types.ts";
+
+// more clearly, this should be called "event_ranker"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +13,42 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+
+  const params: URLSearchParams = new URL(req.url).searchParams; // Grab query parameters
+  // deno-lint-ignore no-explicit-any
+  for (const entry of Object.entries<any>(await req.json().catch(() => {return {}}))) { // Grab request body parameters
+    params.append(entry[0], entry[1].toString());
+  }
+
+  // Validate parameters
+  let season: number | undefined;
+  let event: string | undefined;
+  let mode: string = "defense";
+  if (params.has("season")) {
+    const out = Number.parseInt(params.get("season")!);
+    if (!isFinite(out) || out <= 0) {
+      return new HTTP400(
+        "Invalid Parameter\nseason: valid frc season year (e.g. 2023)",
+      );
+    }
+    season = out;
+  }
+  if (params.has("event")) event = params.get("event")!;
+  if (!season || !event) {
+    return new HTTP400("Missing Required Parameters\nseason, event");
+  }
+  if (params.has("mode")) {
+    // deno-lint-ignore no-explicit-any
+    const out = params.get("mode") as any;
+    if (!(out in rankMethods)) {
+      return new HTTP400(
+        "Invalid Parameter\nmode: " + Object.keys(rankMethods).join(", "),
+      );
+    }
+    mode = out;
+  }
+
+  // Execute
   try {
     const supabase = createClient<Database>(
       Deno.env.get("SUPABASE_URL")!,
@@ -21,22 +59,18 @@ Deno.serve(async (req: Request) => {
         },
       },
     );
-    // Request Argument Validation
-    const params: URLSearchParams = new URL(req.url).searchParams;
-    for (const entry of await req.json()
-      .then((p) => Object.entries<string>(p))
-    .catch((e) => {console.warn(e); return []}))
-    params.append(entry[0], entry[1]);
-    if (!params.has("season") || !(params.has("event") || !params.has("method") || !(params.get("method")! in rankFunctions))) {
-      return new Response(
-        "Missing Required Parameters\nseason: valid frc season year (e.g. 2023)\nevent: valid tba event code (e.g. casf)\nmethod: metric to rank on "+`(e.g. ${Object.keys(rankFunctions).join(", ")})`,
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "text/plain" },
-        },
-      );
-    }
-    
+
+    return await rankTeams(supabase, mode, season, event);
+  } catch (e) {
+    console.error(e);
+    return new Response("Internal Server Error", {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "text/plain" },
+    });
+  }
+}
+
+function rankTeams(supabase: SupabaseClient<Database>, mode, season: number, event: string) {
     let data: any, error: any = null;
     
     if (params.get('season') === '2025') {
@@ -59,9 +93,10 @@ Deno.serve(async (req: Request) => {
       );
     }
     
-    const rankFunc = rankFunctions[params.get("method")!]!;
+    const rankFunc = rankMethods[mode]!;
     const agg: {[key: string]: Set<number>} = {};
-    for (const { match_scouting, ...entry } of data) {
+    // {team: heuristic (one per match)}
+    for (const { match_scouting, ...en......................try } of data) {
       if (!agg[match_scouting!.team]) agg[match_scouting!.team] = new Set<number>();
       agg[match_scouting!.team].add(rankFunc(entry));
     }
@@ -84,7 +119,7 @@ interface RankFunction {
   (entry: {[key: string]: number | boolean}): number;
 }
 
-const rankFunctions: {[key: string]: RankFunction} = {
+const rankMethods: {[key: string]: RankFunction} = {
   "defense": (entry) => (entry["comments_agility"] as number) / ( ((5 * (entry["comments_fouls"] as number) + 1) * (entry["comments_defensive"] ? 0.7 : 1)) ),
   "accuracy": (entry) => {
     const b = Object.keys(entry).filter(k => {
@@ -101,3 +136,12 @@ const rankFunctions: {[key: string]: RankFunction} = {
   }
 }
 
+
+class HTTP400 extends Response {
+  constructor(message: string) {
+    super(message, {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "text/plain" },
+    });
+  }
+}

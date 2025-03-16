@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
 
   const params: URLSearchParams = new URL(req.url).searchParams; // Grab query parameters
   // deno-lint-ignore no-explicit-any
-  for (const entry of Object.entries<any>(await req.json())) { // Grab request body parameters
+  for (const entry of Object.entries<any>(await req.json().catch(() => {return {}}))) { // Grab request body parameters
     params.append(entry[0], entry[1].toString());
   }
 
@@ -116,12 +116,12 @@ async function aggregateMatches(
   if (event != null) query = query.eq("match_scouting.event", event);
   if (team != null) query = query.eq("match_scouting.team", team);
   // deno-lint-ignore no-explicit-any
-  const { data: dbdata, error } = await query as any; // shut up typescript
+  const { data: dbdata, error } = (await query) as any; // shut up typescript
   if (!dbdata || dbdata.length === 0) {
     return new Response(
       `No Data Found for ${team == null ? "" : team + "@ "}${season}${
         event ?? ""
-      }\n${error?.message}`,
+      }\n${error?.message ?? ""}`,
       {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "text/plain" },
