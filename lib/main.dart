@@ -178,7 +178,9 @@ final GoRouter router = GoRouter(
                       path: 'match',
                       name: RoutePaths.matchscout.name,
                       pageBuilder: (context, state) => MaterialPage(
-                          child: MatchScoutPage(matchCode: state.uri.queryParameters["matchCode"]),
+                          child: state.uri.queryParameters.containsKey("matchCode")
+                              ? MatchScoutPage.fromCode(state.uri.queryParameters["matchCode"]!)
+                              : MatchScoutPage(),
                           name: RoutePaths.matchscout.label),
                       redirect: (context, state) async => await Configuration.instance.isValid
                           ? null
@@ -206,7 +208,9 @@ final GoRouter router = GoRouter(
                       path: 'achievements',
                       name: RoutePaths.achievements.name,
                       pageBuilder: (context, state) => MaterialPage(
-                          child: AchievementsPage(), name: RoutePaths.achievements.label),
+                          child: AchievementsPage(
+                              season: Configuration.instance.season, event: Configuration.event),
+                          name: RoutePaths.achievements.label),
                       redirect: (context, state) async => await Configuration.instance.isValid
                           ? null
                           : state.namedLocation(RoutePaths.configuration.name)),

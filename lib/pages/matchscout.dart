@@ -10,9 +10,36 @@ import '../interfaces/supabase.dart';
 import '../types.dart';
 import '../utils.dart';
 
+final _matchCodeParamPattern =
+    RegExp(r"^(?<season>\d{4})(?<event>[A-z\d]+)_(?<match>.+?)_(?<team>\d{1,5}[A-Z]?)$");
+
 class MatchScoutPage extends StatefulWidget {
-  final String? matchCode;
-  const MatchScoutPage({super.key, this.matchCode});
+  final ({int season, String event, String? match, String? team}) info;
+  MatchScoutPage({super.key, int? season, String? event})
+      : info = (
+          season: season ?? Configuration.instance.season,
+          event: event ?? Configuration.event!,
+          match: null,
+          team: null
+        );
+
+  const MatchScoutPage._fromInfo(this.info);
+  factory MatchScoutPage.fromCode(String matchCode) {
+    var match = _matchCodeParamPattern.firstMatch(matchCode);
+    if (match != null) {
+      try {
+        return MatchScoutPage._fromInfo((
+          season: int.parse(match.namedGroup("season")!),
+          event: match.namedGroup("event")!,
+          match: match.namedGroup("match")!,
+          team: match.namedGroup("team")!
+        ));
+      } catch (e) {
+        // passthrough
+      }
+    }
+    return MatchScoutPage();
+  }
 
   @override
   State<MatchScoutPage> createState() => _MatchScoutPageState();
@@ -25,30 +52,11 @@ class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObse
   final Map<String, dynamic> _fields = {};
   final ScrollController _scrollController = ScrollController();
 
-  final _matchCodeParamPattern =
-      RegExp(r"^(?<season>\d{4})(?<event>[A-z\d]+)_(?<match>.+?)_(?<team>\d{1,5}[A-Z]?)$");
-  MatchScoutInfoSerialized? _parseQuery() {
-    if (widget.matchCode == null) return null;
-    var match = _matchCodeParamPattern.firstMatch(widget.matchCode!);
-    if (match == null) return null;
-    try {
-      return (
-        season: int.parse(match.namedGroup("season")!),
-        event: match.namedGroup("event")!,
-        match: match.namedGroup("match")!,
-        team: match.namedGroup("team")!
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
   @override
   void initState() {
-    var pq = _parseQuery();
-    info = pq == null
-        ? MatchScoutInfo(Configuration.instance.season, Configuration.event!)
-        : MatchScoutInfoImmutable.fill(pq);
+    info = widget.info.match == null || widget.info.team == null
+        ? MatchScoutInfo(widget.info.season, widget.info.event)
+        : MatchScoutInfoImmutable.fill(widget.info as MatchScoutInfoSerialized);
     infoConverter = MatchScoutInfo.promote(info).then((i) => info = i);
     WidgetsBinding.instance.addObserver(this);
     super.initState();
@@ -628,22 +636,18 @@ class CounterFormField extends FormField<int> {
                             )))
                   ])));
         });
+
+  static const _buttonColors = {
+    // change every season to add new pieces
+    2025: {"coral": Color(0xffc0c0c0), "algae": Color(0xff3a854d)},
+    2023: {"cone": Color(0xffccc000), "cube": Color(0xffa000a0)}
+  };
   static Color? _getColor(String? labelText, int season) {
     if (labelText == null) return null;
     final lower = labelText.toLowerCase();
-    return switch (season) {
-      2025 => lower.startsWith("coral")
-          ? const Color(0xffc0c0c0)
-          : lower.startsWith("algae")
-              ? const Color(0xff3a854d)
-              : null,
-      2023 => lower.startsWith("cone")
-          ? const Color(0xffccc000)
-          : lower.startsWith("cube")
-              ? const Color(0xffa000a0)
-              : null,
-      _ => null
-    };
+    return (_buttonColors[season]?.entries as Iterable<MapEntry<String, Color>?>)
+        .firstWhere((c) => lower.startsWith(c!.key), orElse: () => null)
+        ?.value;
   }
 }
 

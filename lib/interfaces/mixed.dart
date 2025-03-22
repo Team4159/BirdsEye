@@ -29,11 +29,14 @@ class MixedInterfaces {
         }
         if (key.team != null) {
           return LinkedHashMap.fromEntries(response.entries
-              .map((evententry) => Map<String, dynamic>.from(evententry.value).map(
-                  (matchstring, matchscores) => MapEntry(
-                      (event: evententry.key, match: MatchInfo.fromString(matchstring)),
-                      Map<String, num>.from(matchscores))))
+              .map((evententry) =>
+                  Map<String, dynamic>.from(evententry.value) // match: {scoretype: aggregate_value}
+                      .map((matchstring, matchscores) => MapEntry(
+                          (event: evententry.key, match: MatchInfo.fromString(matchstring)),
+                          Map<String, num>.from(matchscores) // scoretype: aggregate_value
+                          )))
               .expand((e) => e.entries));
+          // (String event, MatchInfo info): {scoretype: aggregate_value}
         }
         throw UnimplementedError("No aggregate for that combination");
       }));

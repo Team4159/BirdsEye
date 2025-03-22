@@ -1,4 +1,3 @@
-import '../utils.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../interfaces/bluealliance.dart';
 import '../interfaces/supabase.dart';
 import '../main.dart';
+import '../utils.dart';
 
 class MetadataPage extends StatelessWidget {
   final GlobalKey<FormState> _formKey = GlobalKey();
@@ -190,14 +190,15 @@ class UserMetadata extends ChangeNotifier {
           .maybeSingle()
           .then((value) {
         if (value == null) throw Exception("No User Found");
-        bool dirty = hard || _name != value['name'] || _team != value['team'];
+        if (!hard && _name == value['name'] && _team == value['team']) return;
         _name = value['name'];
         _team = value['team'];
-        if (dirty) notifyListeners();
+        notifyListeners();
       }).catchError((e) {
-        bool dirty = hard || _name != null || _team != null;
-        _name = _team = null;
-        if (dirty) notifyListeners();
+        if (hard || _name != null || _team != null) {
+          _name = _team = null;
+          notifyListeners();
+        }
         throw e;
       });
 

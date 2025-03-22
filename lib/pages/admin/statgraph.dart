@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:math';
+import 'dart:math' show min;
 
 import 'package:birdseye/interfaces/mixed.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -457,11 +457,7 @@ class TeamAtEventGraph extends StatelessWidget {
                                         scoreTotal(e.value, season: season, period: period)
                                             .toDouble()))
                                     .toList(growable: false)
-                                  ..sort((a, b) => a.x == b.x
-                                      ? 0
-                                      : a.x > b.x
-                                          ? 1
-                                          : -1))
+                                  ..sort((a, b) => (a.x - b.x).sign.toInt()))
                         ],
                   extraLinesData: ExtraLinesData(
                       horizontalLines: !snapshot.hasData || snapshot.data!.data.isEmpty
@@ -488,26 +484,33 @@ class TeamInSeasonGraph extends StatelessWidget {
       future: MixedInterfaces.matchAggregateStock
           .get((season: season, event: null, team: team)).then((result) {
         Map<GamePeriod, double> op = {};
-        Map<String, double> ot = {};
+        Map<String, ({int count, int score})> ot = {};
         Map<String, double> om = {};
         for (Map<String, num> matchScores in result.values) {
-          for (MapEntry<GamePeriod, num> periodScore
-              in scoreTotalByPeriod(matchScores, season: season).entries) {
+          final Map<String, int> intScores =
+              (Map.of(matchScores)..removeWhere((k, v) => v is! int)).cast<String, int>();
+          for (MapEntry<GamePeriod, int> periodScore
+              in scoreTotalByPeriod(intScores, season: season).entries) {
+            if (periodScore.key == GamePeriod.others) continue;
             op[periodScore.key] = (op[periodScore.key] ?? 0) + periodScore.value;
           }
-          for (MapEntry<String, num> typeScore
-              in scoreTotalByType(matchScores, season: season).entries) {
-            ot[typeScore.key] = (ot[typeScore.key] ?? 0) + typeScore.value;
+          for (final typeScore in aggByType(intScores, season: season).entries) {
+            ot[typeScore.key] = (
+              count: (ot[typeScore.key]?.count ?? 0) + typeScore.value.count,
+              score: (ot[typeScore.key]?.score ?? 0) + typeScore.value.score
+            );
           }
           for (MapEntry<String, num> miscVals
               in nonScoreFilter(matchScores, season: season).entries) {
             om[miscVals.key] = (om[miscVals.key] ?? 0) + miscVals.value;
           }
         }
+        final numMatches = result.values.length.toDouble();
         return (
-          period: op.map((key, value) => MapEntry(key, value / result.values.length.toDouble())),
-          type: ot,
-          misc: om.map((key, value) => MapEntry(key, value / result.values.length.toDouble()))
+          period: op.map((key, value) => MapEntry(key, value / numMatches)),
+          type: ot.map((key, value) =>
+              MapEntry(key, (count: value.count / numMatches, score: value.score / numMatches))),
+          misc: om.map((key, value) => MapEntry(key, value / numMatches))
         );
       }),
       builder: (context, snapshot) => snapshot.hasError
@@ -517,89 +520,87 @@ class TeamInSeasonGraph extends StatelessWidget {
               children: [
                   Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
                   const SizedBox(height: 20),
-                  Text(snapshot.error.runtimeType.toString())
+                  Text(snapshot.error.toString())
                 ])
-          : Flex(
-              direction: MediaQuery.of(context).size.width > 600 ? Axis.horizontal : Axis.vertical,
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                PieChart(
-                    PieChartData(
-                        centerSpaceRadius: 100,
-                        sections: !snapshot.hasData
-                            ? []
-                            : snapshot.data!.period.entries
-                                .where((e) => e.key != GamePeriod.others && e.value > 0)
-                                .map((e) => PieChartSectionData(
-                                    value: e.value,
-                                    title: e.key.name,
-                                    color: e.key.graphColor,
-                                    showTitle: true,
-                                    titleStyle: Theme.of(context).textTheme.labelSmall,
-                                    borderSide:
-                                        BorderSide(color: Theme.of(context).colorScheme.outline)))
-                                .toList()),
-                    duration: Durations.extralong3,
-                    curve: Curves.easeInSine),
-                PieChart(
-                    PieChartData(
-                        centerSpaceRadius: 100,
-                        sections: !snapshot.hasData
-                            ? []
-                            : snapshot.data!.type.entries
-                                .map((e) => PieChartSectionData(
-                                    value: e.value,
-                                    title: e.key,
-                                    color: Theme.of(context).colorScheme.primaryContainer,
-                                    showTitle: true,
-                                    titleStyle: Theme.of(context).textTheme.labelSmall,
-                                    borderSide:
-                                        BorderSide(color: Theme.of(context).colorScheme.outline)))
-                                .toList()),
-                    duration: Durations.extralong3,
-                    curve: Curves.easeInSine)
-              ]
-                  .map<Widget>((e) => Flexible(
-                      child: ConstrainedBox(
-                          constraints: BoxConstraints.tight(const Size.square(400)),
-                          child: Transform.scale(
-                              scale: min(MediaQuery.of(context).size.shortestSide / 400, 1),
-                              child: e))))
-                  .followedBy([
-                if (season == 2024 && snapshot.hasData)
-                  FittedBox(
-                      fit: BoxFit.fitWidth,
-                      child: Flex(
-                          direction: MediaQuery.of(context).size.width > 600
-                              ? Axis.vertical
-                              : Axis.horizontal,
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: {
-                            if (snapshot.data!.misc.containsKey('comments_agility'))
-                              "Agility": snapshot.data!.misc['comments_agility']!,
-                            if (snapshot.data!.misc.containsKey('comments_contribution'))
-                              "Contribution": snapshot.data!.misc['comments_contribution']!
-                          }
-                              .entries
-                              .map((e) => Card.filled(
-                                  color: Theme.of(context).colorScheme.secondaryContainer,
-                                  child: ConstrainedBox(
-                                      constraints:
-                                          const BoxConstraints(minWidth: 80, maxHeight: 60),
-                                      child: Padding(
-                                          padding: const EdgeInsets.all(8),
-                                          child: Column(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(e.key),
-                                                Text("${(e.value * 5).toStringAsFixed(1)} / 5")
-                                              ])))))
-                              .toList()))
-              ]).toList()));
+          : !snapshot.hasData
+              ? Center(child: CircularProgressIndicator())
+              : LayoutBuilder(builder: (context, constraints) {
+                  final mainAxis = constraints.biggest.width > constraints.biggest.height
+                      ? Axis.horizontal
+                      : Axis.vertical;
+                  final maxRadius = (mainAxis == Axis.vertical
+                          ? constraints.maxWidth / 2
+                          : min(constraints.maxWidth / 4, constraints.maxHeight / 2)) *
+                      0.9;
+
+                  final periodRadius = maxRadius *
+                      (!_scoreScalers.containsKey(season)
+                          ? 1
+                          : _scoreScalers[season]!(
+                              snapshot.data!.period.values.fold(0, (a, b) => a + b)));
+                  assert(periodRadius < maxRadius);
+
+                  return Flex(
+                      direction: mainAxis,
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                            child: StatChart(
+                                snapshot.data!.period.entries
+                                    .map(
+                                        (e) => StatChartData(e.key.name, e.value, e.key.graphColor))
+                                    .toList(),
+                                radius: periodRadius)),
+                        Expanded(
+                            child: StatChart(
+                                snapshot.data!.type.entries
+                                    .map((e) => StatChartData(
+                                        e.key,
+                                        e.value.count,
+                                        Theme.of(context)
+                                            .colorScheme
+                                            .primaryContainer, // TODO colorize
+                                        e.value.score.toStringAsFixed(2)))
+                                    .toList(),
+                                radius:
+                                    maxRadius * (!_scoreScalers.containsKey(season) ? 1 : 0.85))),
+                        if (snapshot.data!.misc.isNotEmpty)
+                          FittedBox(
+                              fit: BoxFit.fitWidth,
+                              child: Flex(
+                                  direction:
+                                      mainAxis == Axis.horizontal ? Axis.vertical : Axis.horizontal,
+                                  mainAxisSize: MainAxisSize.max,
+                                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                  children: [
+                                    for (var extradata in {
+                                      "Agility": snapshot.data!.misc['comments_agility'],
+                                      "Contribution": snapshot.data!.misc['comments_contribution']
+                                    }.entries.where((e) => e.value != null))
+                                      Card.filled(
+                                          color: Theme.of(context).colorScheme.secondaryContainer,
+                                          child: ConstrainedBox(
+                                              constraints:
+                                                  const BoxConstraints(minWidth: 40, maxHeight: 60),
+                                              child: Padding(
+                                                  padding: const EdgeInsets.all(8),
+                                                  child: Column(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Text(extradata.key),
+                                                        Text(
+                                                            "${(extradata.value! * 5).toStringAsFixed(1)} / 5")
+                                                      ]))))
+                                  ]))
+                      ]);
+                }));
+
+  static final Map<int, double Function(double)> _scoreScalers = {
+    2025: (x) => (0.8 * x * x) / (x * x + 280) + 0.2
+  };
 }
 
 class EventInSeasonRankings extends StatelessWidget {
@@ -653,4 +654,78 @@ class EventInSeasonRankings extends StatelessWidget {
                           dense: true));
                 })
           ]));
+}
+
+// class TeamInSeasonWheel extends StatelessWidget {
+//   final int season;
+//   final String event, team;
+//   const TeamInSeasonWheel(
+//       {super.key, required this.season, required this.event, required this.team});
+
+//   @override
+//   Widget build(BuildContext context) => FutureBuilder(
+//       future: MixedInterfaces.matchAggregateStock
+//           .get((season: season, event: event, team: team)).then((result) {
+//         final matches = result.keys.toList() as List<({String event, MatchInfo info})>;
+//         switch (season) {
+//           case 2025:
+//           default:
+//         }
+//       }),
+//       builder: (context, _) =>
+//           RadarChart(RadarChartData(dataSets: [RadarDataSet(dataEntries: null)])));
+// }
+
+class StatChartData {
+  final String label;
+  final double size;
+  final String hoverLabel;
+  final Color color;
+
+  StatChartData(this.label, this.size, this.color, [String? tooltip])
+      : hoverLabel = tooltip ?? size.toStringAsFixed(2);
+}
+
+class StatChart extends StatefulWidget {
+  final num radius;
+  final List<StatChartData> data;
+  const StatChart(this.data, {super.key, required this.radius});
+
+  @override
+  State<StatefulWidget> createState() => _StatChartState();
+}
+
+class _StatChartState extends State<StatChart> {
+  int? _touched;
+  _StatChartState();
+
+  @override
+  build(BuildContext context) => PieChart(
+      PieChartData(
+          centerSpaceRadius: widget.radius * 0.7,
+          sections: widget.data.indexed
+              .map((e) => PieChartSectionData(
+                  radius: widget.radius * 0.3,
+                  title: e.$2.label,
+                  color: e.$2.color,
+                  value: e.$2.size,
+                  showTitle: true,
+                  titleStyle: Theme.of(context).textTheme.labelSmall,
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
+                  badgeWidget: _touched != e.$1
+                      ? null
+                      : Card.filled(
+                          child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 3, horizontal: 6),
+                              child: Text(e.$2.hoverLabel)))))
+              .toList(),
+          pieTouchData: PieTouchData(
+            enabled: true,
+            touchCallback: (e, r) => r?.touchedSection?.touchedSectionIndex == _touched
+                ? null
+                : setState(() => _touched =
+                    !e.isInterestedForInteractions ? null : r?.touchedSection?.touchedSectionIndex),
+          )),
+      duration: Durations.extralong3,
+      curve: Curves.easeInSine);
 }

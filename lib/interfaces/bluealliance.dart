@@ -238,49 +238,51 @@ num scoreTotal(Map<String, num> scores, {required int season, GamePeriod? period
   return entries
       .where((e) => scoringpoints[season]!.containsKey(e.key) && e.value != 0)
       .map((e) => scoringpoints[season]![e.key]! * e.value)
-      .followedBy([0]).reduce((v, e) => v + e);
+      .fold(0, (v, e) => v + e);
 }
 
-Map<GamePeriod, num> scoreTotalByPeriod(Map<String, num> scorecounts, {required int season}) {
+Map<GamePeriod, int> scoreTotalByPeriod(Map<String, int> scorecounts, {required int season}) {
   if (!scoringpoints.containsKey(season)) {
     throw Exception("Can't total scores - Unrecognized Season");
   }
   final scores = scorecounts.entries
       .where((e) => scoringpoints[season]!.containsKey(e.key) && e.value != 0)
       .map((e) => MapEntry(e.key.split("_").first, scoringpoints[season]![e.key]! * e.value));
-  Map<GamePeriod, num> out = {};
-  for (MapEntry<String, num> scoreentry in scores) {
+  Map<GamePeriod, int> out = {};
+  for (final scoreentry in scores) {
     var period = GamePeriod.fromString(scoreentry.key);
     out[period] = (out[period] ?? 0) + scoreentry.value;
   }
   return out;
 }
 
-Map<String, num> scoreTotalByType(Map<String, num> scorecounts, {required int season}) {
+Map<String, ({int count, int score})> aggByType(Map<String, int> scorecounts,
+    {required int season}) {
+  if (!scoringpoints.containsKey(season)) {
+    throw Exception("Can't total scores - Unrecognized Season");
+  }
+  scorecounts.removeWhere((k, v) => !scoringpoints[season]!.containsKey(k) || v == 0);
   var scores = switch (season) {
     2025 => scorecounts.entries
-        .where((e) =>
-            scoringpoints[2025]!.containsKey(e.key) &&
-            e.value != 0 &&
-            (e.key.contains("coral") || e.key.contains("algae")))
-        .map((e) => MapEntry(e.key.split("_")[1], e.value)),
+        .where((e) => (e.key.contains("coral") || e.key.contains("algae")))
+        .map((e) => MapEntry(e.key.split("_")[1],
+            (count: e.value, score: scoringpoints[season]![e.key]! * e.value))),
     2024 => scorecounts.entries
-        .where((e) =>
-            scoringpoints[2024]!.containsKey(e.key) &&
-            e.value != 0 &&
-            (e.key.endsWith("amp") || e.key.endsWith("speaker")))
-        .map((e) => MapEntry(e.key.split("_").last, e.value)),
+        .where((e) => (e.key.endsWith("amp") || e.key.endsWith("speaker")))
+        .map((e) => MapEntry(e.key.split("_").last,
+            (count: e.value, score: scoringpoints[season]![e.key]! * e.value))),
     2023 => scorecounts.entries
-        .where((e) =>
-            scoringpoints[2023]!.containsKey(e.key) &&
-            e.value != 0 &&
-            (e.key.contains("cube") || e.key.contains("cone")))
-        .map((e) => MapEntry(e.key.split("_")[1], e.value)),
-    _ => throw Exception("Can't total scores - Unrecognized Season")
+        .where((e) => (e.key.contains("cube") || e.key.contains("cone")))
+        .map((e) => MapEntry(e.key.split("_")[1],
+            (count: e.value, score: scoringpoints[season]![e.key]! * e.value))),
+    _ => throw Exception("Can't total scores - Unimplemented Season")
   };
-  Map<String, num> out = {};
-  for (MapEntry<String, num> scoreentry in scores) {
-    out[scoreentry.key] = (out[scoreentry.key] ?? 0) + scoreentry.value;
+  Map<String, ({int count, int score})> out = {};
+  for (final scoreentry in scores) {
+    out[scoreentry.key] = (
+      count: (out[scoreentry.key]?.count ?? 0) + scoreentry.value.count,
+      score: (out[scoreentry.key]?.score ?? 0) + scoreentry.value.score
+    );
   }
   return out;
 }
