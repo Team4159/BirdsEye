@@ -1,6 +1,8 @@
-import { SupabaseClient, createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  createClient,
+  SupabaseClient,
+} from "jsr:@supabase/supabase-js@2";
 import { Database } from "./database.types.ts";
-
 // more clearly, this should be called "event_ranker"
 
 const corsHeaders = {
@@ -23,7 +25,7 @@ Deno.serve(async (req: Request) => {
   // Validate parameters
   let season: number | undefined;
   let event: string | undefined;
-  let mode: string = "defense";
+  let mode: keyof typeof rankMethods | undefined;
   if (params.has("season")) {
     const out = Number.parseInt(params.get("season")!);
     if (!isFinite(out) || out <= 0) {
@@ -34,18 +36,18 @@ Deno.serve(async (req: Request) => {
     season = out;
   }
   if (params.has("event")) event = params.get("event")!;
-  if (!season || !event) {
-    return new HTTP400("Missing Required Parameters\nseason, event");
-  }
+  if (params.has("method")) params.set("mode", params.get("method")!); // alias
   if (params.has("mode")) {
-    // deno-lint-ignore no-explicit-any
-    const out = params.get("mode") as any;
-    if (!(out in rankMethods)) {
+    const out = params.get("mode")!;
+    if (!isValidRankMethod(out)) {
       return new HTTP400(
         "Invalid Parameter\nmode: " + Object.keys(rankMethods).join(", "),
       );
     }
     mode = out;
+  }
+  if (!season || !event || !mode) {
+    return new HTTP400("Missing Required Parameters\nseason, event, mode");
   }
 
   // Execute
@@ -68,74 +70,54 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "text/plain" },
     });
   }
-}
+});
 
-function rankTeams(supabase: SupabaseClient<Database>, mode, season: number, event: string) {
-    let data: any, error: any = null;
-    
-    if (params.get('season') === '2025') {
-      ({ data, error } = await supabase.from('sum_coral_view')
-      .select('*')
-      .eq('event', params.get('event')));
-    } else {
-      ({ data, error } = await supabase.from(`match_data_${params.get("season")}`)
-      .select("*, match_scouting!inner(event, team)")
-      .eq("match_scouting.event", params.get("event")));
-    }
-    
-    if (!data || data.length === 0) {
+// MatchRecord[] => score
+const rankMethods = {
+  "defense": sumAgg((l: {[key: string]: number | boolean}) => (l["comments_agility"] as number) / ( ((5 * (l["comments_fouls"] as number) + 1) * (l["comments_defensive"] ? 0.7 : 1)) )),
+
+};
+function isValidRankMethod(key: string): key is keyof typeof rankMethods {
+  return key in rankMethods;
+}
+async function rankTeams(
+  supabase: SupabaseClient<Database>,
+  rankMode: keyof typeof rankMethods,
+  season: number,
+  event: string | undefined
+): Promise<Response> {
+    // deno-lint-ignore no-explicit-any
+    let query = supabase.from(`match_data_${season}` as any)
+      .select("*, match_scouting!inner(event, match, team)");
+    if (event != null) query = query.eq("match_scouting.event", event);
+    // deno-lint-ignore no-explicit-any
+    const { data: dbdata, error } = (await query) as any; // shut up typescript
+    if (!dbdata || dbdata.length === 0) {
+      if (error) console.error(error);
       return new Response(
-        `No Data Found for ${params.get('season')}${params.has('event') ? params.get('event') : ''}\n${error?.message}`,
+        `No Data Found for ${season}${event ?? ""}\n${error?.message ?? ""}`,
         {
           status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'text/plain' },
-        }
+          headers: { ...corsHeaders, "Content-Type": "text/plain" },
+        },
       );
     }
     
-    const rankFunc = rankMethods[mode]!;
-    const agg: {[key: string]: Set<number>} = {};
-    // {team: heuristic (one per match)}
-    for (const { match_scouting, ...en......................try } of data) {
-      if (!agg[match_scouting!.team]) agg[match_scouting!.team] = new Set<number>();
-      agg[match_scouting!.team].add(rankFunc(entry));
+    const rankFunc = rankMethods[rankMode];
+    const agg: {[key: string]: {[key: string]: number | boolean}[]} = {};
+    // {team: list of matches}
+    for (const { match_scouting, ...entry } of dbdata) {
+      if (!agg[match_scouting.team]) agg[match_scouting.team] = [];
+      const cleanedEntry = Object.fromEntries(Object.entries(entry).filter((e): e is [string, number | boolean] => typeof e[1] === "number" || typeof e[1] === "boolean"));
+      agg[match_scouting.team].push(cleanedEntry);
     }
     return Response.json(Object.fromEntries(
-      Object.entries(agg).map(([k, v]: [string, Set<number>]) => [k, [...v.values()].reduce((a, b) => a+b) / v.size])
+      Object.entries(agg).map(([k, v]) => [k, rankFunc(v)])
     ), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
-  } catch (e) {
-    console.error(e);
-    return new Response("Internal Server Error", {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "text/plain" },
-    });
-  }
-});
-
-interface RankFunction {
-  (entry: {[key: string]: number | boolean}): number;
 }
-
-const rankMethods: {[key: string]: RankFunction} = {
-  "defense": (entry) => (entry["comments_agility"] as number) / ( ((5 * (entry["comments_fouls"] as number) + 1) * (entry["comments_defensive"] ? 0.7 : 1)) ),
-  "accuracy": (entry) => {
-    const b = Object.keys(entry).filter(k => {
-      if (!k.endsWith("_missed")) return false;
-      const g: number | boolean | undefined = entry[k.slice(0, -7)];
-      if (typeof g !== "number") return false;
-      return g !== 0 || entry[k] !== 0;
-    });
-    return b.map(k => {
-      const denom = entry[k.slice(0, -7)] as number;
-      if (denom === 0) return -0.5;
-      return 1 - (entry[k] as number / denom)
-    }).reduce((a, b) => a+b, 0) / b.length;
-  }
-}
-
 
 class HTTP400 extends Response {
   constructor(message: string) {
@@ -144,4 +126,8 @@ class HTTP400 extends Response {
       headers: { ...corsHeaders, "Content-Type": "text/plain" },
     });
   }
+}
+
+function sumAgg<T>(inputFunction: (arg: T) => number): (arg: T[]) => number {
+  return (arg) => arg.map(inputFunction).reduce((a, b) => a+b, 0) / arg.length;
 }

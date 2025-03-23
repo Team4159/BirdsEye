@@ -133,25 +133,13 @@ class StatGraphPage extends StatelessWidget {
                             } else if (info.season == null) {
                               out = Future.value(["No Season Selected"]);
                             } else {
-                              out = Future.wait(<Future<List<String>>>[
-                                SupabaseInterface.distinctStock.get((
-                                  season: info.season!,
-                                  event: info.event,
-                                  team: info.team
-                                )).then((data) => [
-                                      "${data.matches.length} Match${data.matches.length != 1 ? 'es' : ''}"
-                                    ]),
-                                if (info.event != null && info.team != null)
-                                  BlueAlliance.getOPR(info.season!, info.event!, info.team!)
-                                      .then<List<String>>((data) => data != null
-                                          ? [
-                                              if (data.opr != null)
-                                                "${data.opr!.toStringAsPrecision(4)} OPR",
-                                              if (data.dpr != null)
-                                                "${data.dpr!.toStringAsPrecision(4)} DPR"
-                                            ]
-                                          : [])
-                              ]).then((futures) => futures.expand((e) => e).toList());
+                              out = SupabaseInterface.distinctStock.get((
+                                season: info.season!,
+                                event: info.event,
+                                team: info.team
+                              )).then((data) => [
+                                    "${data.matches.length} Match${data.matches.length != 1 ? 'es' : ''}"
+                                  ]);
                             }
                             return ValueDetailTabView(out);
                           })
@@ -466,8 +454,9 @@ class TeamAtEventGraph extends StatelessWidget {
                               HorizontalLine(
                                   y: snapshot.data!.data.entries
                                           .map((e) => scoreTotal(e.value, season: season))
-                                          .followedBy([0]).reduce((v, e) => v + e) /
-                                      snapshot.data!.data.length.toDouble(),
+                                          .fold(0.0, (v, e) => v + e) /
+                                      snapshot.data!.data.length
+                                          .toDouble(), // todo report this nuerically
                                   dashArray: [20, 10])
                             ])),
               duration: Durations.extralong3,
@@ -559,9 +548,8 @@ class TeamInSeasonGraph extends StatelessWidget {
                                     .map((e) => StatChartData(
                                         e.key,
                                         e.value.count,
-                                        Theme.of(context)
-                                            .colorScheme
-                                            .primaryContainer, // TODO colorize
+                                        gamepiececolors[season]?[e.key] ??
+                                            Theme.of(context).colorScheme.primaryContainer,
                                         e.value.score.toStringAsFixed(2)))
                                     .toList(),
                                 radius:
@@ -647,7 +635,8 @@ class EventInSeasonRankings extends StatelessWidget {
                         hasScrollBody: false, child: Center(child: CircularProgressIndicator()));
                   }
                   return SliverAnimatedInList(snapshot.data!.entries.toList(),
-                      builder: (context, dynamic e) => ListTile(
+                      key: GlobalObjectKey(snapshot.data!),
+                      builder: (context, e) => ListTile(
                           title: Text(e.key, style: Theme.of(context).textTheme.bodyLarge),
                           trailing: Text(e.value.toStringAsFixed(2),
                               style: Theme.of(context).textTheme.bodyMedium),

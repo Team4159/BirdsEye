@@ -103,7 +103,7 @@ class SupabaseInterface {
               .invoke("event_aggregator", body: {
             "season": key.season,
             "event": key.event,
-            "method": key.method.name
+            "mode": key.method.name
           }).then((resp) => resp.status >= 400
                   ? throw Exception("HTTP Error ${resp.status}")
                   : LinkedHashMap.fromEntries((Map<String, double?>.from(resp.data)
@@ -178,4 +178,4 @@ class PitInterface {
               map.reduce((c, v) => c.map((key, value) => MapEntry(key, "$value\n${v[key]}")))))));
 }
 
-enum EventAggregateMethod { defense, accuracy }
+enum EventAggregateMethod { defense }

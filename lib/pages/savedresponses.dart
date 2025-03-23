@@ -37,7 +37,6 @@ class SavedResponsesPage extends StatelessWidget {
                                       SupabaseInterface.matchscoutStock.clearAll();
                                       PitInterface.pitscoutStock.clearAll();
                                       BlueAlliance.stockSoT.deleteAll();
-                                      BlueAlliance.refreshOPRs(null);
                                     },
                                     context: context,
                                     toConfirm: "clear the cache")

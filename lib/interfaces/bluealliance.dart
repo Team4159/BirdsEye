@@ -68,8 +68,6 @@ class TBAInfo {
       season.toString() + (event != null ? event! : "") + (match != null ? "_${match!}" : "");
 }
 
-typedef OPRData = ({double? opr, double? dpr, double? ccwms});
-
 class BlueAlliance {
   static final _client = Client();
 
@@ -183,29 +181,6 @@ class BlueAlliance {
     await stockSoT.write(TBAInfo(season: season, event: event), matches);
     await stockSoT.write(TBAInfo(season: season, event: event, match: "*"), pitTeams);
   }
-
-  static final _oprStockSoT =
-      CachedSourceOfTruth<({int season, String event}), Map<String, OPRData>>();
-  static final _oprStock = Stock<({int season, String event}), Map<String, OPRData>>(
-      sourceOfTruth: _oprStockSoT,
-      fetcher: Fetcher.ofFuture((key) async {
-        Map<String, Map<String, double>> data = {};
-        Set<String> teams = {};
-        for (MapEntry<String, dynamic> methodInfo
-            in Map<String, dynamic>.from(await _getJson("event/${key.season}${key.event}/oprs"))
-                .entries) {
-          var values = Map<String, double>.from(methodInfo.value)
-              .map((key, value) => MapEntry(key.substring(3), value));
-          data[methodInfo.key] = values;
-          teams.addAll(values.keys);
-        }
-        return Map.fromEntries(teams.map((team) => MapEntry(team,
-            (opr: data["oprs"]?[team], dpr: data["dprs"]?[team], ccwms: data["ccwms"]?[team]))));
-      }));
-  static void refreshOPRs(({int season, String event})? key) =>
-      key == null ? _oprStockSoT.deleteAll() : _oprStockSoT.delete(key);
-  static Future<OPRData?> getOPR(int season, String event, String team) =>
-      _oprStock.get((season: season, event: event)).then((data) => data[team]);
 }
 
 enum GamePeriod {
@@ -349,6 +324,11 @@ const scoringpoints = {
     "endgame_deep": 12,
     "comments_fouls": -3, // average of -2 (normal) and -6 (major)
   }
+};
+const gamepiececolors = {
+  // used in match scouting buttons + analysis pies
+  2025: {"coral": Color(0xffc0c0c0), "algae": Color(0xff3a854d)},
+  2023: {"cone": Color(0xffccc000), "cube": Color(0xffa000a0)}
 };
 
 const frcred = Color(0xffed1c24);

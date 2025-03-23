@@ -156,9 +156,9 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "public_2023_match_id_fkey"
+            foreignKeyName: "match_data_2023_id_fkey"
             columns: ["id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "match_scouting"
             referencedColumns: ["id"]
           },
@@ -218,7 +218,96 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "public_2024_match_id_fkey"
+            foreignKeyName: "match_data_2024_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "match_scouting"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      match_data_2025: {
+        Row: {
+          auto_algae_intake_failed: number | null
+          auto_algae_net: number
+          auto_algae_net_missed: number
+          auto_algae_processor: number
+          auto_coral_intake_failed: number | null
+          auto_coral_l1: number
+          auto_coral_l2: number
+          auto_coral_l3: number
+          auto_coral_l4: number
+          auto_coral_missed: number
+          comments_agility: number | null
+          comments_defensive: boolean
+          comments_fouls: number
+          id: number
+          teleop_algae_intake_failed: number | null
+          teleop_algae_net: number
+          teleop_algae_net_missed: number
+          teleop_algae_processor: number
+          teleop_coral_intake_failed: number | null
+          teleop_coral_l1: number
+          teleop_coral_l2: number
+          teleop_coral_l3: number
+          teleop_coral_l4: number
+          teleop_coral_missed: number
+        }
+        Insert: {
+          auto_algae_intake_failed?: number | null
+          auto_algae_net: number
+          auto_algae_net_missed: number
+          auto_algae_processor: number
+          auto_coral_intake_failed?: number | null
+          auto_coral_l1: number
+          auto_coral_l2: number
+          auto_coral_l3: number
+          auto_coral_l4: number
+          auto_coral_missed: number
+          comments_agility?: number | null
+          comments_defensive: boolean
+          comments_fouls: number
+          id?: number
+          teleop_algae_intake_failed?: number | null
+          teleop_algae_net: number
+          teleop_algae_net_missed: number
+          teleop_algae_processor: number
+          teleop_coral_intake_failed?: number | null
+          teleop_coral_l1: number
+          teleop_coral_l2: number
+          teleop_coral_l3: number
+          teleop_coral_l4: number
+          teleop_coral_missed: number
+        }
+        Update: {
+          auto_algae_intake_failed?: number | null
+          auto_algae_net?: number
+          auto_algae_net_missed?: number
+          auto_algae_processor?: number
+          auto_coral_intake_failed?: number | null
+          auto_coral_l1?: number
+          auto_coral_l2?: number
+          auto_coral_l3?: number
+          auto_coral_l4?: number
+          auto_coral_missed?: number
+          comments_agility?: number | null
+          comments_defensive?: boolean
+          comments_fouls?: number
+          id?: number
+          teleop_algae_intake_failed?: number | null
+          teleop_algae_net?: number
+          teleop_algae_net_missed?: number
+          teleop_algae_processor?: number
+          teleop_coral_intake_failed?: number | null
+          teleop_coral_l1?: number
+          teleop_coral_l2?: number
+          teleop_coral_l3?: number
+          teleop_coral_l4?: number
+          teleop_coral_missed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_data_2025_id_fkey"
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "match_scouting"
@@ -256,7 +345,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "public_match_scouting_scouter_fkey"
+            foreignKeyName: "match_scouting_scouter_fkey"
             columns: ["scouter"]
             isOneToOne: false
             referencedRelation: "users"
@@ -270,21 +359,21 @@ export type Database = {
           economy_manager: boolean
           graph_viewer: boolean
           id: string
-          qualitative_analyzer: boolean
+          pit_viewer: boolean
         }
         Insert: {
           achievement_approver?: boolean
           economy_manager?: boolean
           graph_viewer?: boolean
           id: string
-          qualitative_analyzer?: boolean
+          pit_viewer?: boolean
         }
         Update: {
           achievement_approver?: boolean
           economy_manager?: boolean
           graph_viewer?: boolean
           id?: string
-          qualitative_analyzer?: boolean
+          pit_viewer?: boolean
         }
         Relationships: [
           {
@@ -296,46 +385,49 @@ export type Database = {
           },
         ]
       }
-      pit_data_2023: {
+      pit_questions: {
         Row: {
-          comments_generic: string | null
-          driveraccuracy: string | null
-          driverproficency: string | null
-          driverreaction: string | null
-          driverskill: string | null
+          id: string
+          question: string
+        }
+        Insert: {
+          id: string
+          question: string
+        }
+        Update: {
+          id?: string
+          question?: string
+        }
+        Relationships: []
+      }
+      pit_scouting: {
+        Row: {
+          created_at: string
+          data: Json
           event: string
-          experiencebuildseason: string | null
-          robotcomments: string | null
           scouter: string
+          season: number
           team: number
         }
         Insert: {
-          comments_generic?: string | null
-          driveraccuracy?: string | null
-          driverproficency?: string | null
-          driverreaction?: string | null
-          driverskill?: string | null
+          created_at?: string
+          data: Json
           event: string
-          experiencebuildseason?: string | null
-          robotcomments?: string | null
-          scouter: string
+          scouter?: string
+          season: number
           team: number
         }
         Update: {
-          comments_generic?: string | null
-          driveraccuracy?: string | null
-          driverproficency?: string | null
-          driverreaction?: string | null
-          driverskill?: string | null
+          created_at?: string
+          data?: Json
           event?: string
-          experiencebuildseason?: string | null
-          robotcomments?: string | null
           scouter?: string
+          season?: number
           team?: number
         }
         Relationships: [
           {
-            foreignKeyName: "public_2023_pit_scouter_fkey"
+            foreignKeyName: "pit_scouting_scouter_fkey"
             columns: ["scouter"]
             isOneToOne: false
             referencedRelation: "users"
@@ -343,46 +435,25 @@ export type Database = {
           },
         ]
       }
-      pit_data_2024: {
+      pit_seasons: {
         Row: {
-          comments_generic: string | null
-          driverskill: string | null
-          event: string
-          experiencebuildseason: string | null
-          outreachinitiatives: string | null
-          rookieinvolvement: string | null
-          scoringstructures: string | null
-          scouter: string
-          team: number
+          qid: string
+          season: number
         }
         Insert: {
-          comments_generic?: string | null
-          driverskill?: string | null
-          event: string
-          experiencebuildseason?: string | null
-          outreachinitiatives?: string | null
-          rookieinvolvement?: string | null
-          scoringstructures?: string | null
-          scouter?: string
-          team: number
+          qid: string
+          season: number
         }
         Update: {
-          comments_generic?: string | null
-          driverskill?: string | null
-          event?: string
-          experiencebuildseason?: string | null
-          outreachinitiatives?: string | null
-          rookieinvolvement?: string | null
-          scoringstructures?: string | null
-          scouter?: string
-          team?: number
+          qid?: string
+          season?: number
         }
         Relationships: [
           {
-            foreignKeyName: "public_2024_pit_scouter_fkey"
-            columns: ["scouter"]
+            foreignKeyName: "pit_seasons_qid_fkey"
+            columns: ["qid"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "pit_questions"
             referencedColumns: ["id"]
           },
         ]
@@ -444,24 +515,52 @@ export type Database = {
           team?: number
           updated?: string | null
         }
+        Relationships: []
+      }
+    }
+    Views: {
+      sum_coral_view: {
+        Row: {
+          auto_algae_net: number | null
+          auto_algae_processor: number | null
+          auto_coral: number | null
+          auto_coral_l1: number | null
+          auto_coral_l2: number | null
+          auto_coral_l3: number | null
+          auto_coral_l4: number | null
+          comments_fouls: number | null
+          event: string | null
+          id: number | null
+          team: string | null
+          teleop_algae_net: number | null
+          teleop_algae_processor: number | null
+          teleop_coral: number | null
+          teleop_coral_l1: number | null
+          teleop_coral_l2: number | null
+          teleop_coral_l3: number | null
+          teleop_coral_l4: number | null
+        }
         Relationships: [
           {
-            foreignKeyName: "users_id_fkey"
+            foreignKeyName: "match_data_2025_id_fkey"
             columns: ["id"]
             isOneToOne: true
-            referencedRelation: "users"
+            referencedRelation: "match_scouting"
             referencedColumns: ["id"]
           },
         ]
       }
     }
-    Views: {
-      [_ in never]: never
-    }
     Functions: {
       getavailableseasons: {
         Args: Record<PropertyKey, never>
         Returns: number[]
+      }
+      getpitschema: {
+        Args: {
+          pitseason: number
+        }
+        Returns: Json
       }
       gettableschema: {
         Args: {
@@ -563,4 +662,19 @@ export type Enums<
   ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
     ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof PublicSchema["CompositeTypes"]
+    | { schema: keyof Database },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
+    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never

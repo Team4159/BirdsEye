@@ -5,6 +5,9 @@
     },
     {
       "path": "supabase/functions/match_aggregator_js"
+    },
+    {
+      "path": "supabase/functions/event_aggregator"
     }
   ],
   "settings": {

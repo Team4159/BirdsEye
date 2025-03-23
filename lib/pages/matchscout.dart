@@ -637,15 +637,10 @@ class CounterFormField extends FormField<int> {
                   ])));
         });
 
-  static const _buttonColors = {
-    // change every season to add new pieces
-    2025: {"coral": Color(0xffc0c0c0), "algae": Color(0xff3a854d)},
-    2023: {"cone": Color(0xffccc000), "cube": Color(0xffa000a0)}
-  };
   static Color? _getColor(String? labelText, int season) {
     if (labelText == null) return null;
     final lower = labelText.toLowerCase();
-    return (_buttonColors[season]?.entries as Iterable<MapEntry<String, Color>?>)
+    return (gamepiececolors[season]?.entries as Iterable<MapEntry<String, Color>?>)
         .firstWhere((c) => lower.startsWith(c!.key), orElse: () => null)
         ?.value;
   }

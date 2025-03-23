@@ -118,6 +118,7 @@ async function aggregateMatches(
   // deno-lint-ignore no-explicit-any
   const { data: dbdata, error } = (await query) as any; // shut up typescript
   if (!dbdata || dbdata.length === 0) {
+    if (error) console.error(error);
     return new Response(
       `No Data Found for ${team == null ? "" : team + "@ "}${season}${
         event ?? ""

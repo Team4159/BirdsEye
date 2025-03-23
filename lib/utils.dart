@@ -515,15 +515,16 @@ class ToplessHitchedBorder extends BoxBorder {
 class SliverAnimatedInList<T> extends StatefulWidget {
   final List<T> list;
   final Widget Function(BuildContext, T) builder;
-  const SliverAnimatedInList(this.list, {required this.builder, super.key});
+  final GlobalKey<SliverAnimatedListState> animKey;
+  SliverAnimatedInList(this.list,
+      {required this.builder, GlobalKey<SliverAnimatedListState>? animKey, super.key})
+      : animKey = animKey ?? GlobalKey();
 
   @override
-  State<StatefulWidget> createState() => _SliverAnimatedInListState();
+  State<StatefulWidget> createState() => _SliverAnimatedInListState<T>();
 }
 
-class _SliverAnimatedInListState extends State<SliverAnimatedInList> {
-  final GlobalKey<SliverAnimatedListState> _animKey = GlobalKey();
-
+class _SliverAnimatedInListState<T> extends State<SliverAnimatedInList<T>> {
   @override
   void initState() {
     _refresh();
@@ -537,14 +538,14 @@ class _SliverAnimatedInListState extends State<SliverAnimatedInList> {
           (e) => Future.delayed(
               Durations.short2,
               () => setState(() {
-                    _animKey.currentState!.insertItem(e.$1, duration: Durations.medium3);
+                    widget.animKey.currentState!.insertItem(e.$1, duration: Durations.medium3);
                   }))).then((_) => Future.delayed(Durations.medium3, () => setState(() {})));
     }, debugLabel: "AnimatedList Handler");
   }
 
   @override
   Widget build(BuildContext context) => SliverAnimatedList(
-      key: _animKey,
+      key: widget.animKey,
       itemBuilder: (context, i, anim) => i >= widget.list.length
           ? const SizedBox()
           : AnimatedSlide(
