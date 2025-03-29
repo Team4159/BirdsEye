@@ -8,9 +8,35 @@ import '../../pages/metadata.dart';
 import 'achievementqueue.dart';
 import 'statgraph.dart';
 
-final _adminNavigatorKey = GlobalKey<NavigatorState>();
+enum AdminRoutePaths {
+  statgraphs(Icons.auto_graph_rounded, "Stat Graphs"),
+  achiqueue(Icons.queue_rounded, "Achievement Queue"),
+  pitresp(Icons.textsms_outlined, "Pit Responses"),
+  nextmatch(Icons.visibility, "Match Insight");
 
-enum AdminRoutePaths { statgraphs, achiqueue, pitresp, nextmatch }
+  final IconData icon;
+  final String title;
+  const AdminRoutePaths(this.icon, this.title);
+}
+
+final _accessPerms = {
+  AdminRoutePaths.achiqueue: (
+    perms: () => UserMetadata.instance.cachedPermissions.value.achievementApprover,
+    page: () => AchievementQueuePage()
+  ),
+  AdminRoutePaths.nextmatch: (
+    perms: () => UserMetadata.instance.cachedPermissions.value.graphViewer,
+    page: () => MatchInsightPage()
+  ),
+  AdminRoutePaths.pitresp: (
+    perms: () => UserMetadata.instance.cachedPermissions.value.pitViewer,
+    page: () => PitSummary()
+  ),
+  AdminRoutePaths.statgraphs: (
+    perms: () => UserMetadata.instance.cachedPermissions.value.graphViewer,
+    page: () => StatGraphPage()
+  )
+};
 
 final adminGoRoute = GoRoute(
     path: '/admin',
@@ -20,103 +46,58 @@ final adminGoRoute = GoRoute(
             : null
         : state.namedLocation(RoutePaths.configuration.name),
     routes: [
-      ShellRoute(
-          navigatorKey: _adminNavigatorKey,
-          pageBuilder: (context, state, child) =>
-              NoTransitionPage(child: AdminScaffoldShell(child)),
-          routes: [
-            GoRoute(
-                parentNavigatorKey: _adminNavigatorKey,
-                path: 'home',
-                name: RoutePaths.adminportal.name,
-                pageBuilder: (context, state) => const MaterialPage(child: DrawerButton())),
-            GoRoute(
-                parentNavigatorKey: _adminNavigatorKey,
-                path: AdminRoutePaths.pitresp.name,
-                name: AdminRoutePaths.pitresp.name,
-                pageBuilder: (context, state) =>
-                    const MaterialPage(child: PitSummary(), name: "Pit Responses"),
-                redirect: (context, state) =>
-                    UserMetadata.instance.cachedPermissions.value.pitViewer
+      StatefulShellRoute.indexedStack(
+          pageBuilder: (context, state, shell) =>
+              NoTransitionPage(child: AdminScaffoldShell(shell)),
+          branches: [
+            StatefulShellBranch(routes: [
+              GoRoute(
+                  path: 'home',
+                  name: RoutePaths.adminportal.name,
+                  pageBuilder: (context, state) => const MaterialPage(child: DrawerButton()))
+            ]),
+            ..._accessPerms.entries.map((route) {
+              final GlobalKey<NavigatorState> key = GlobalKey();
+              return StatefulShellBranch(navigatorKey: key, routes: [
+                GoRoute(
+                    parentNavigatorKey: key,
+                    path: route.key.name,
+                    name: route.key.name,
+                    redirect: (context, state) => route.value.perms()
                         ? null
-                        : state.namedLocation(RoutePaths.adminportal.name)),
-            GoRoute(
-                parentNavigatorKey: _adminNavigatorKey,
-                path: AdminRoutePaths.achiqueue.name,
-                name: AdminRoutePaths.achiqueue.name,
-                pageBuilder: (context, state) =>
-                    MaterialPage(child: AchievementQueuePage(), name: "Achievement Queue"),
-                redirect: (context, state) =>
-                    UserMetadata.instance.cachedPermissions.value.achievementApprover
-                        ? null
-                        : state.namedLocation(RoutePaths.adminportal.name)),
-            GoRoute(
-                parentNavigatorKey: _adminNavigatorKey,
-                path: AdminRoutePaths.nextmatch.name,
-                name: AdminRoutePaths.nextmatch.name,
-                pageBuilder: (context, state) =>
-                    MaterialPage(child: MatchInsightPage(), name: "Match Insight"),
-                redirect: (context, state) =>
-                    UserMetadata.instance.cachedPermissions.value.graphViewer
-                        ? null
-                        : state.namedLocation(RoutePaths.adminportal.name))
-          ]),
-      GoRoute(
-          path: AdminRoutePaths.statgraphs.name,
-          name: AdminRoutePaths.statgraphs.name,
-          pageBuilder: (context, state) =>
-              MaterialPage(child: StatGraphPage(), name: "Stat Graphs"),
-          redirect: (context, state) => UserMetadata.instance.cachedPermissions.value.graphViewer
-              ? null
-              : state.namedLocation(RoutePaths.adminportal.name)),
+                        : state.namedLocation(RoutePaths.adminportal.name),
+                    builder: (context, state) => route.value.page())
+              ]);
+            })
+          ])
     ]);
 
 class AdminScaffoldShell extends StatelessWidget {
-  final Widget child;
-  const AdminScaffoldShell(this.child, {super.key});
-
-  static Drawer drawer() => Drawer(
-      width: 250,
-      child: ListenableBuilder(
-          listenable: UserMetadata.instance.cachedPermissions,
-          builder: (context, _) => Column(children: [
-                ListTile(
-                    leading: const Icon(Icons.chevron_left_rounded),
-                    title: const Text("Back"),
-                    onTap: () => GoRouter.of(context)
-                      ..pop()
-                      ..goNamed(RoutePaths.configuration.name)),
-                const Divider(),
-                ListTile(
-                    leading: const Icon(Icons.auto_graph_rounded),
-                    title: const Text("Stat Graphs"),
-                    enabled: UserMetadata.instance.cachedPermissions.value.graphViewer,
-                    onTap: () => GoRouter.of(context)
-                      ..pop()
-                      ..goNamed(AdminRoutePaths.statgraphs.name)),
-                ListTile(
-                    leading: const Icon(Icons.textsms_outlined),
-                    title: const Text("Pit Responses"),
-                    enabled: UserMetadata.instance.cachedPermissions.value.pitViewer,
-                    onTap: () => GoRouter.of(context)
-                      ..pop()
-                      ..goNamed(AdminRoutePaths.pitresp.name)),
-                ListTile(
-                    leading: const Icon(Icons.queue_rounded),
-                    title: const Text("Achievement Queue"),
-                    enabled: UserMetadata.instance.cachedPermissions.value.achievementApprover,
-                    onTap: () => GoRouter.of(context)
-                      ..pop()
-                      ..goNamed(AdminRoutePaths.achiqueue.name)),
-                ListTile(
-                    leading: const Icon(Icons.visibility),
-                    title: const Text("Match Insight"),
-                    enabled: UserMetadata.instance.cachedPermissions.value.graphViewer,
-                    onTap: () => GoRouter.of(context)
-                      ..pop()
-                      ..goNamed(AdminRoutePaths.nextmatch.name)),
-              ])));
+  const AdminScaffoldShell(this.navigationShell, {super.key});
+  final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) => Scaffold(drawer: drawer(), body: child);
+  Widget build(BuildContext context) => Scaffold(
+      drawer: NavigationDrawer(
+        selectedIndex: navigationShell.currentIndex,
+        onDestinationSelected: (int index) {
+          if (index == 0) {
+            GoRouter.of(context).replaceNamed(RoutePaths.configuration.name);
+          } else {
+            GoRouter.of(context).pop();
+            navigationShell.goBranch(index);
+          }
+        },
+        children: [
+          const NavigationDrawerDestination(
+              icon: Icon(Icons.chevron_left_rounded), label: Text("Back")),
+          const Divider(),
+          for (final route in _accessPerms.entries)
+            NavigationDrawerDestination(
+                icon: Icon(route.key.icon),
+                label: Text(route.key.title),
+                enabled: route.value.perms())
+        ],
+      ),
+      body: navigationShell);
 }

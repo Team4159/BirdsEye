@@ -1,4 +1,6 @@
-import 'package:flutter/gestures.dart';
+import 'dart:math' show max;
+import 'dart:ui' show PointerDeviceKind;
+
 import 'package:flutter/material.dart';
 
 import '../../interfaces/bluealliance.dart';
@@ -71,11 +73,15 @@ class _PitSummaryState extends State<PitSummary> {
                       scrollBehavior: ScrollConfiguration.of(context).copyWith(
                           scrollbars: false,
                           overscroll: false,
-                          dragDevices: PointerDeviceKind.values.toSet()),
-                      itemCount: snapshot.data![1].length,
+                          dragDevices: PointerDeviceKind.values
+                              .toSet() // Permit ALL devices to swipe, including mouse.
+                          ),
+                      itemCount: _selectedTeam == null ? 0 : max(snapshot.data![1].length, 1),
                       itemBuilder: (context, i) {
+                        if (snapshot.data![1].isEmpty) {
+                          return Center(child: Text("No Data"));
+                        }
                         var item = snapshot.data![1].entries.elementAt(i);
-                        var question = snapshot.data![0][item.key]!;
                         return Padding(
                             padding: const EdgeInsets.all(24),
                             child: Material(
@@ -85,7 +91,9 @@ class _PitSummaryState extends State<PitSummary> {
                                 child: Padding(
                                     padding: const EdgeInsets.all(24),
                                     child: Column(children: [
-                                      Text(question,
+                                      Text(
+                                          snapshot.data![0][item.key] ??
+                                              item.key, // the question text with that key
                                           style: Theme.of(context).textTheme.titleSmall,
                                           textScaler: const TextScaler.linear(1.5)),
                                       const SizedBox(height: 16),

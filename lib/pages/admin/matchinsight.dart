@@ -3,10 +3,10 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 
 import '../../interfaces/bluealliance.dart';
-import '../admin/statgraph.dart';
 import '../configuration.dart';
 import '../matchscout.dart';
 import '../metadata.dart';
+import 'graphs/teaminseason.dart';
 
 class MatchInsightPage extends StatelessWidget {
   final ValueNotifier<MatchInfo?> _selectedMatch = ValueNotifier(null);

@@ -127,6 +127,7 @@ enum RoutePaths {
   const RoutePaths([this.label]);
 }
 
+/// The object that handles most of the routing in the app, effectively translating urls into pages to show.
 final GoRouter router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -234,6 +235,7 @@ class ScaffoldShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+      resizeToAvoidBottomInset: true,
       drawer: Drawer(
           // Legacy code. To be replaced once I can figure out how the hell to calculate the current page from GoRouter.
           width: 225,

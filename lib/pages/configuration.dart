@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../interfaces/bluealliance.dart';
 import '../interfaces/supabase.dart';
 import '../main.dart' show prefs;
-import '../utils.dart';
 
 class ConfigurationPage extends StatelessWidget {
   final _eventCarouselController = CarouselSliderController();
@@ -194,4 +193,37 @@ class Configuration extends ChangeNotifier {
       await BlueAlliance.stock
           .get(TBAInfo(season: season))
           .then((value) => value.containsKey(event));
+}
+
+/// A [ChangeNotifier] that holds a single double value.
+///
+/// When [value] is replaced with something that is not equal to the old
+/// value as evaluated by the equality operator == and switches between
+/// zero and nonzero, this class notifies its listeners.
+@Deprecated('Unpragmatic. Bad UI')
+class BinaryValueNotifier extends ChangeNotifier implements ValueListenable<double> {
+  /// Creates a [ChangeNotifier] that wraps this value.
+  BinaryValueNotifier(this._value) {
+    if (kFlutterMemoryAllocationsEnabled) {
+      ChangeNotifier.maybeDispatchObjectCreation(this);
+    }
+  }
+
+  /// The current value stored in this notifier.
+  ///
+  /// When the value is replaced with something that is not equal to the old
+  /// value as evaluated by the equality operator ==, this class notifies its
+  /// listeners.
+  @override
+  double get value => _value;
+  double _value;
+  set value(double newValue) {
+    if (_value == newValue) return;
+    double oldValue = _value;
+    _value = newValue;
+    if (oldValue == 0 || newValue == 0) notifyListeners();
+  }
+
+  @override
+  String toString() => '${describeIdentity(this)}($value)';
 }

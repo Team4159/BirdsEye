@@ -16,10 +16,10 @@
     "javascript.format.enable": false,
     "deno.enable": true,
     "deno.lint": true,
-    "deno.unstable": false,
+    "deno.unstable": [],
     "[typescript]": {
       "editor.defaultFormatter": "denoland.vscode-deno"
     },
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
   }
 }

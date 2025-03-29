@@ -58,7 +58,9 @@ class MetadataPage extends StatelessWidget {
                         suffixIcon: IconButton(
                             onPressed: () => showDialog(
                                 context: context,
-                                builder: (context) => TBAInfoDialog(context: context)),
+                                builder: (context) => TBAInfoDialog(
+                                    littleText: Theme.of(context).textTheme.bodySmall!,
+                                    titleText: Theme.of(context).textTheme.titleLarge!)),
                             tooltip: "Instructions",
                             icon: const Icon(Icons.info_outline_rounded))),
                     keyboardType: TextInputType.none,
@@ -73,6 +75,7 @@ class MetadataPage extends StatelessWidget {
                           OutlinedButton(
                               onPressed: () async {
                                 await UserMetadata.instance.fetch(hard: true);
+                                UserMetadata.instance.fetchPerms();
                                 _tbaFieldController.text = prefs.getString("tbaKey") ?? "";
                                 if (!_formKey.currentState!.validate()) return;
                                 if (!context.mounted) return;
@@ -103,33 +106,29 @@ class MetadataPage extends StatelessWidget {
 }
 
 class TBAInfoDialog extends Dialog {
-  TBAInfoDialog({super.key, required BuildContext context})
+  TBAInfoDialog({super.key, required TextStyle titleText, required TextStyle littleText})
       : super(
             child: Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Text.rich(TextSpan(children: [
-                  TextSpan(
-                      text: "Getting a TheBlueAlliance API Key\n\n",
-                      style: Theme.of(context).textTheme.titleLarge),
+                  TextSpan(text: "Getting a TheBlueAlliance API Key\n\n", style: titleText),
                   const TextSpan(text: "Visit the "),
                   TextSpan(
                       text: "account page",
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall!
-                          .copyWith(decoration: TextDecoration.underline, color: Colors.blue),
+                      style: littleText.copyWith(
+                          decoration: TextDecoration.underline, color: Colors.blue),
                       recognizer: TapGestureRecognizer()
                         ..onTap = () => launchUrl(Uri.https("thebluealliance.com", "/account"))),
                   const TextSpan(text: " (may ask for sign-in)\n"),
                   const TextSpan(text: "Scroll down to "),
-                  TextSpan(text: 'Read API Keys', style: Theme.of(context).textTheme.bodySmall),
+                  TextSpan(text: 'Read API Keys', style: littleText),
                   const TextSpan(text: " and enter "),
-                  TextSpan(text: 'BirdsEye', style: Theme.of(context).textTheme.bodySmall),
+                  TextSpan(text: 'BirdsEye', style: littleText),
                   const TextSpan(text: " as the description\n"),
                   const TextSpan(text: "Click "),
-                  TextSpan(text: 'Add New Key', style: Theme.of(context).textTheme.bodySmall),
+                  TextSpan(text: 'Add New Key', style: littleText),
                   const TextSpan(text: " then copy the "),
-                  TextSpan(text: 'X-TBA-Auth-Key', style: Theme.of(context).textTheme.bodySmall),
+                  TextSpan(text: 'X-TBA-Auth-Key', style: littleText),
                   const TextSpan(text: " text (base 64 string)")
                 ]))));
 }

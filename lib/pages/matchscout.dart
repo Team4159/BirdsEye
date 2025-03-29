@@ -45,6 +45,15 @@ class MatchScoutPage extends StatefulWidget {
   State<MatchScoutPage> createState() => _MatchScoutPageState();
 }
 
+///Typical Usage Flow:
+/// - Initialize MatchScoutInfo with season/event
+/// - Bind to MatchScoutInfoFields widget
+/// - User selects match via input/buttons
+/// - System loads teams for match
+/// - User selects team from dropdown
+/// - Selection updates propagate through notifiers
+/// - Session data syncs to Supabase automatically
+/// - Scouting form appears
 class _MatchScoutPageState extends State<MatchScoutPage> with WidgetsBindingObserver {
   final GlobalKey<FormState> _formKey = GlobalKey();
   late MatchScoutInfoImmutable info;
@@ -303,6 +312,17 @@ class RobotPositionChip extends Container {
   }
 }
 
+/// Immutable container for basic match scouting information.
+///
+/// Provides core properties and serialization support. Subclasses handle mutable operations.
+///
+/// Properties:
+/// - [season]: Competition season year (e.g., 2025)
+/// - [event]: Event key (e.g., "casf")
+/// - [matches]: Cached list of matches in selected event (lazy-loaded)
+/// - [match]: Currently selected match
+/// - [teams]: Cached list of teams participating in selected match
+/// - [team]: Currently selected team
 class MatchScoutInfoImmutable {
   final int season;
   final String event;
@@ -332,9 +352,16 @@ class MatchScoutInfoImmutable {
   bool get isFilled => team != null;
 }
 
+/// Mutable extension of [MatchScoutInfoImmutable] with data fetching capabilities.
+///
+/// Handles:
+/// - Match/team data loading from TBA
+/// - Session tracking with Supabase
+/// - Match progression logic
+/// - UI controller integration
 class MatchScoutInfo extends MatchScoutInfoImmutable {
   MatchScoutInfo(super.season, super.event) : matchController = NotifiableTextEditingController() {
-    fetchMatches().then((m) => matches = m);
+    _fetchMatches().then((m) => matches = m);
   }
 
   /// Validates a [MatchScoutInfoImmutable], promoting it to a [MatchScoutInfo].
@@ -349,7 +376,7 @@ class MatchScoutInfo extends MatchScoutInfoImmutable {
     return info;
   }
 
-  Future<LinkedHashMap<String, MatchInfo>> fetchMatches() => BlueAlliance.stock
+  Future<LinkedHashMap<String, MatchInfo>> _fetchMatches() => BlueAlliance.stock
       .get(TBAInfo(season: season, event: event))
       .then((matchesdata) => LinkedHashMap.fromEntries(
           matchesdata.keys.map((k) => MapEntry(k, MatchInfo.fromString(k))).toList()
@@ -383,13 +410,13 @@ class MatchScoutInfo extends MatchScoutInfoImmutable {
     _match = m;
     matchController.text = m.toString();
     teams = null;
-    fetchTeams().then((t) => teams = t);
+    _fetchTeams().then((t) => teams = t);
   }
 
   void setMatchStr(String? m) =>
       match = m == null ? null : MatchInfo.fromString(m); // invoke the other setter
 
-  Future<LinkedHashMap<String, MatchRobotPositionInfo>?> fetchTeams() {
+  Future<LinkedHashMap<String, MatchRobotPositionInfo>?> _fetchTeams() {
     String mstr = _match!.toString();
     Future<Map<String, String>> tbaDataFuture =
         _match!.level != MatchLevel.qualification && BlueAlliance.dirtyConnected
@@ -428,6 +455,7 @@ class MatchScoutInfo extends MatchScoutInfoImmutable {
     SupabaseInterface.setSession(match: getMatchStr(), team: team);
   }
 
+  /// Resets match selection and dependent data
   void resetInfo() => match = null;
 
   void progressOrReset() {
@@ -439,6 +467,13 @@ class MatchScoutInfo extends MatchScoutInfoImmutable {
   }
 }
 
+/// Compact UI widget for displaying/editing match scouting information.
+///
+/// Features:
+/// - Event display (read-only)
+/// - Match selection with text input + increment/decrement buttons
+/// - Team dropdown with scouting session indicators
+/// - Validation and auto-complete support
 class MatchScoutInfoFields extends StatelessWidget {
   const MatchScoutInfoFields({super.key, required this.info});
   final MatchScoutInfo? info;
@@ -578,7 +613,7 @@ class CounterFormField extends FormField<int> {
   CounterFormField(
       {super.key, super.onSaved, super.initialValue = 0, String? labelText, required int season})
       : super(builder: (FormFieldState<int> state) {
-          Color? customColor = _getColor(labelText, season);
+          Color? customColor = labelText == null ? null : _getColor(labelText, season);
           return Material(
               type: MaterialType.button,
               borderRadius: BorderRadius.circular(4),
@@ -637,17 +672,20 @@ class CounterFormField extends FormField<int> {
                   ])));
         });
 
-  static Color? _getColor(String? labelText, int season) {
-    if (labelText == null) return null;
+  static Color? _getColor(String labelText, int season) {
     final lower = labelText.toLowerCase();
-    return (gamepiececolors[season]?.entries as Iterable<MapEntry<String, Color>?>)
-        .firstWhere((c) => lower.startsWith(c!.key), orElse: () => null)
-        ?.value;
+    if (gamepiececolors.containsKey(season)) {
+      for (final c in gamepiececolors[season]!.entries) {
+        if (lower.startsWith(c.key)) return c.value;
+      }
+    }
+    return null;
   }
 }
 
+/// A 0-5 star rating field, based on
 class RatingFormField extends FormField<double> {
-  RatingFormField({super.key, super.onSaved, super.initialValue = 3 / 5, String? labelText})
+  RatingFormField({super.key, super.onSaved, super.initialValue, String? labelText})
       : super(
             builder: (FormFieldState<double> state) => Material(
                 type: MaterialType.button,
@@ -688,7 +726,7 @@ class RatingFormField extends FormField<double> {
                       const Expanded(flex: 1, child: SizedBox(width: 4)),
                     ])));
 
-  static final List<String> _labels = ["poor", "bad", "okay", "good", "pro"];
+  static const List<String> _labels = ["poor", "bad", "okay", "good", "pro"];
 }
 
 class ToggleFormField extends FormField<bool> {
