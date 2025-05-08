@@ -21,12 +21,6 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
-        },
-        {
-            "name": "match_aggregator",
-            "cwd": "supabase\\functions\\match_aggregator",
-            "request": "launch",
-            "type": "dart"
         }
     ]
 }

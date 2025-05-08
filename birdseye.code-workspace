@@ -4,10 +4,7 @@
       "path": "."
     },
     {
-      "path": "supabase/functions/match_aggregator_js"
-    },
-    {
-      "path": "supabase/functions/event_aggregator"
+      "path": "supabase/functions/analysis"
     }
   ],
   "settings": {
