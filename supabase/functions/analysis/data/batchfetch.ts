@@ -1,5 +1,4 @@
 // deno-lint-ignore-file no-explicit-any
-import { HttpError, Status } from "@oak/oak";
 import { DBClient } from "../supabase/supabase.ts";
 import { MatchInfo, tba } from "../thebluealliance/tba.ts";
 import dynamicMap from "./dynamic/dynamic.ts";
@@ -40,7 +39,7 @@ async function batchFetchRobotInMatch(
   },
 ): Promise<Map<RobotInMatchIdentifier, RobotInMatch>> {
   if (!("mostRecentN" in filter) && (!filter.event && !filter.team)) {
-    throw new HttpError<Status.BadRequest>(
+    throw new Error(
       "Illegal Arguments: must provide filter.event and/or filter.team.",
     );
   }
@@ -63,7 +62,7 @@ async function batchFetchRobotInMatch(
   const { data: dbdataraw, error: error } = await query;
 
   if (dbdataraw?.length == 0) { // If dbdata is null or empty
-    throw new HttpError<Status.NotFound>();
+    return new Map();
   }
   if (error) {
     console.error(error);

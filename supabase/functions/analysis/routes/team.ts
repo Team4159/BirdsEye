@@ -40,7 +40,7 @@ router.get("/epa", async (ctx) => { // note: this function pretty much ignores t
   const mostRecentN = parseNatural(ctx.request.url.searchParams.get("last")) ??
     5;
   if (mostRecentN !== null && mostRecentN < 3) {
-    throw new oak.HttpError<oak.Status.BadRequest>(
+    throw oak.createHttpError(oak.Status.BadRequest,
       "Illegal Arguments: last must be >= 3.",
     );
   }
@@ -59,7 +59,7 @@ router.get("/epa", async (ctx) => { // note: this function pretty much ignores t
       break;
     case "dhr":
       if (!("event" in ctx.params)) {
-        throw new oak.HttpError<oak.Status.BadRequest>(
+        throw oak.createHttpError(oak.Status.BadRequest,
           "Illegal Arguments: method cannot be dhr on this path.",
         );
       }
@@ -71,7 +71,7 @@ router.get("/epa", async (ctx) => { // note: this function pretty much ignores t
       break;
     default:
       if (!isCategorizer(method)) {
-        throw new oak.HttpError<oak.Status.BadRequest>(
+        throw oak.createHttpError(oak.Status.BadRequest,
           "Illegal Arguments: categorizer must be one of ().",
         );
       }

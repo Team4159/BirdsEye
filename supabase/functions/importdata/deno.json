@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "@std/csv": "jsr:@std/csv@^1.0.6",
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.49.4"
+  }
+}

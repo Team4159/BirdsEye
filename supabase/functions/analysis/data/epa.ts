@@ -1,8 +1,7 @@
 import stats from "@stdlib/stats-base-dists-normal";
 import { DBClient } from "../supabase/supabase.ts";
 import { MatchInfo, tba } from "../thebluealliance/tba.ts";
-import type { Normal as NormalType } from "../util.ts";
-import { avg, normalDifference, normalSum, sigmoid, std } from "../util.ts";
+import { avg, normalDifference, normalSum, Normal as NormalType, sigmoid, std } from "../util.ts";
 import { batchFetchRobotInMatch, batchFetchRobotScores } from "./batchfetch.ts";
 import dynamicMap from "./dynamic/dynamic.ts";
 
@@ -34,12 +33,13 @@ export function categorizerSupertype(
   season: keyof typeof dynamicMap,
   category: string,
 ): Exclude<keyof typeof categorizers, "total"> | undefined {
-  if (category in dynamicMap[season].scoringelements) return "gameelements";
+  if (dynamicMap[season].scoringelements.includes(category)) {
+    return "gameelements";
+  }
   if (
-    category in
-      Object.keys(dynamicMap[season].scoringpoints).map(
-        categorizers.gameperiod(season),
-      )
+    Object.keys(dynamicMap[season].scoringpoints).map(
+      categorizers.gameperiod(season),
+    ).includes(category)
   ) return "gameperiod";
   return;
 }

@@ -20,7 +20,7 @@ router.get("/match/:match/epa", async (ctx) => {
 
   const lastNMatches = parseNatural(ctx.request.url.searchParams.get("last"));
   if (lastNMatches !== null && lastNMatches < 3) {
-    throw new oak.HttpError<oak.Status.BadRequest>(
+    throw oak.createHttpError(oak.Status.BadRequest,
       "Illegal Arguments: last must be >= 3.",
     );
   }
@@ -43,7 +43,7 @@ router.get("/rankings", async (ctx) => { // note: this function pretty much igno
   const mostRecentN = parseNatural(ctx.request.url.searchParams.get("last")) ??
     5;
   if (mostRecentN < 3) {
-    throw new oak.HttpError<oak.Status.BadRequest>(
+    throw oak.createHttpError(oak.Status.BadRequest,
       "Illegal Arguments: last must be >= 3.",
     );
   }
@@ -52,8 +52,15 @@ router.get("/rankings", async (ctx) => { // note: this function pretty much igno
     t.trim()
   );
   if (!teams) {
-    throw new oak.HttpError<oak.Status.BadRequest>(
-      "Illegal Arguments: must provide teams",
+    throw oak.createHttpError(oak.Status.BadRequest,
+      "Illegal Arguments: must provide teams"
+    );
+  }
+
+  const percentile = parseNatural(ctx.request.url.searchParams.get("percentile"));
+  if (percentile !== null && percentile >= 100) {
+    throw oak.createHttpError(oak.Status.BadRequest,
+      "Illegal Arguments: percentile must be ℤ ∈ (0, 100).",
     );
   }
 
@@ -72,12 +79,12 @@ router.get("/rankings", async (ctx) => { // note: this function pretty much igno
           client,
           { season, team, mostRecentN },
           method,
-        ).then((norm) => norm.mean);
+        ).then((norm) => percentile === null ? norm.mean : norm.quantile(percentile/100));
       break;
     default: {
       const methodFormal = categorizerSupertype(season, method);
       if (!methodFormal) {
-        throw new oak.HttpError<oak.Status.BadRequest>(
+        throw oak.createHttpError(oak.Status.BadRequest,
           "Illegal Arguments: categorizer must be one of ().",
         );
       }
@@ -86,17 +93,16 @@ router.get("/rankings", async (ctx) => { // note: this function pretty much igno
           client,
           { season, team, mostRecentN },
           methodFormal,
-        ).then((res) => res[method].mean);
+        ).then((res) => percentile === null ? res[method].mean : res[method].quantile(percentile/100));
       break;
     }
   }
 
-  const rankedTeams = await Promise.all(
-    teams.map(async (
+  ctx.response.body = Object.fromEntries(await Promise.all(
+    new Set(teams).keys().map(async (
       t,
     ): Promise<[string, number]> => [t, await rankingFunction(t)]),
-  );
-  return new Map(rankedTeams.sort((a, b) => b[1] - a[1]));
+  ));
 });
 
 export default router;

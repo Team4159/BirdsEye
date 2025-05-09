@@ -15,4 +15,8 @@ export class InvalidSeason extends HttpError<Status.BadRequest> {
       }.`,
     );
   }
+
+  override get status(): Status.BadRequest {
+    return Status.BadRequest;
+  }
 }
