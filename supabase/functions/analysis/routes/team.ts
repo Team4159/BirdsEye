@@ -1,77 +1,33 @@
 import * as oak from "@oak/oak";
-import {
-  batchFetchRobotInMatch,
-  zipCountsAndScores,
-} from "../data/batchfetch.ts";
 import { dhrRobot, epaRobot, erpaRobot, isCategorizer } from "../data/epa.ts";
 import { createSupaClient } from "../supabase/supabase.ts";
-import { parseNatural } from "../util.ts";
-import { InvalidSeason, validateSeason } from "./shared.ts";
+import { matches, ParameterParser } from "./shared.ts";
 
 const router = new oak.Router({ prefix: "/team/:team" });
 
-router.get("/matches", async (ctx) => {
-  const season = parseNatural(ctx.params["season"]);
-  if (!validateSeason(season)) throw new InvalidSeason();
-
-  ctx.response.body = Object.fromEntries(
-    (await batchFetchRobotInMatch(
-      createSupaClient(
-        ctx.request.headers.get("Authorization")!,
-      ),
-      {
-        season,
-        event: ctx.params["event"],
-        team: ctx.params["team"]!,
-      },
-    )).entries().map((
-      [id, rim],
-    ) => [
-      `${id.season}${id.event}_${id.match}-${id.team}`,
-      zipCountsAndScores(id, rim),
-    ]),
-  );
-});
-
-router.get("/epa", async (ctx) => { // note: this function pretty much ignores the :event. This is eh, fine.
-  const season = parseNatural(ctx.params["season"]);
-  if (!validateSeason(season)) throw new InvalidSeason();
-
-  const mostRecentN = parseNatural(ctx.request.url.searchParams.get("last")) ??
-    5;
-  if (mostRecentN !== null && mostRecentN < 3) {
-    throw oak.createHttpError(oak.Status.BadRequest,
-      "Illegal Arguments: last must be >= 3.",
-    );
-  }
+router.get("/matches", matches);
+router.get("/epa", async (ctx) => {
+  const filter = {
+    season: ParameterParser.season(ctx.params),
+    event: ctx.params["event"],
+    team: ctx.params["team"]!,
+    mostRecentN: ParameterParser.mostRecentN(ctx.request) ?? 10,
+  };
 
   const client = createSupaClient(ctx.request.headers.get("Authorization")!);
-  const team = ctx.params["team"]!;
 
   const method = ctx.request.url.searchParams.get("categorize") || "total";
   switch (method) {
     case "rp":
-      ctx.response.body = await erpaRobot(client, {
-        season,
-        team,
-        mostRecentN,
-      });
+      ctx.response.body = await erpaRobot(client, filter);
       break;
     case "dhr":
-      if (!("event" in ctx.params)) {
-        throw oak.createHttpError(oak.Status.BadRequest,
-          "Illegal Arguments: method cannot be dhr on this path.",
-        );
-      }
-      ctx.response.body = await dhrRobot(client, {
-        season,
-        event: ctx.params["event"]!,
-        team,
-      });
+      ctx.response.body = await dhrRobot(client, filter);
       break;
     default:
       if (!isCategorizer(method)) {
-        throw oak.createHttpError(oak.Status.BadRequest,
+        throw oak.createHttpError(
+          oak.Status.BadRequest,
           "Illegal Arguments: categorizer must be one of ().",
         );
       }
@@ -79,12 +35,12 @@ router.get("/epa", async (ctx) => { // note: this function pretty much ignores t
       ctx.response.body = await (method === "total"
         ? epaRobot(
           client,
-          { season, team, mostRecentN },
+          filter,
           method,
         )
         : epaRobot(
           client,
-          { season, team, mostRecentN },
+          filter,
           method,
         ));
       break;

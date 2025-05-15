@@ -32,7 +32,6 @@ app.use(async (ctx, next) => {
       ctx.response.status = e.status;
       ctx.response.body = e.message;
       ctx.response.type = "text/plain";
-      console.log(ctx.response);
     } else {
       ctx.response.status = oak.Status.InternalServerError;
       // deno-lint-ignore no-explicit-any

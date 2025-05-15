@@ -1,5 +1,4 @@
-import { MatchIdentifier } from "../data/epa.ts";
-import { parseNatural } from "../util.ts";
+import { MatchIdentifier } from "./epa.ts";
 
 export interface MatchInfo {
   "comp_level": "qm" | "ef" | "qf" | "sf" | "f";
@@ -54,10 +53,10 @@ type CacheParams = {
 function serialize(obj: CacheParams): string {
   return [obj.season, obj.event ?? "", obj.team ?? ""].join("|");
 }
-function _deserialize(str: string): CacheParams {
-  const [season, event, team] = str.split("|");
-  return { season: parseNatural(season)!, event, team };
-}
+// function _deserialize(str: string): CacheParams {
+//   const [season, event, team] = str.split("|");
+//   return { season: parseNatural(season)!, event, team };
+// }
 
 class TBAInterface {
   private readonly cache: Map<string, MatchInfo[]> = new Map();

@@ -2,16 +2,7 @@ import stats from "@stdlib/stats-base-dists-normal";
 import stdev from "@stdlib/stats-base-stdev";
 
 export type Normal = { mean: number; stdev: number, quantile( p: number ): number; }; // no idea why we need this but we do
-// FIXME switch to skewed normal distribution
-
-// deno-lint-ignore no-explicit-any
-export function parseNatural(x: any): number | null { // FIXME this needs to discriminate between null and invalid
-  if (x === null) return null;
-  const i = parseInt(x, 10);
-  if (Number.isNaN(i)) return null;
-  if (i <= 0) return null;
-  return i;
-}
+// TODO switch to skewed normal distribution
 
 export function std(x: number[]) {
   return stdev(x.length, 1, x, 1) || Number.EPSILON; // std cannot be 0, or things get unhappy.

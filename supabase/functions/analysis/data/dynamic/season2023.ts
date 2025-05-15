@@ -1,4 +1,4 @@
-import { getRobotPosition, MatchInfo } from "../../thebluealliance/tba.ts";
+import { getRobotPosition, MatchInfo } from "../tba.ts";
 
 // interface ScoreBreakdown { // for reference
 //   "activationBonusAchieved": boolean;

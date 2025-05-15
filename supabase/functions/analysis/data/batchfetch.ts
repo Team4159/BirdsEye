@@ -1,11 +1,11 @@
 // deno-lint-ignore-file no-explicit-any
 import { DBClient } from "../supabase/supabase.ts";
-import { MatchInfo, tba } from "../thebluealliance/tba.ts";
+import { MatchInfo, tba } from "./tba.ts";
 import dynamicMap from "./dynamic/dynamic.ts";
 import type { MatchIdentifier } from "./epa.ts";
 
 /**
- * `{ objective: scorecount }[]`
+ * `{ objective: scorecount }`
  */
 type RobotInMatch = { [key: string]: number };
 
@@ -20,6 +20,12 @@ function fuseData(
   return dynamicMap[season].fuseData(dbdata, team, tbadata);
 }
 
+type BatchFetchFilter = {
+    season: keyof typeof dynamicMap;
+    event?: string;
+    team?: string;
+    mostRecentN?: number;
+  };
 /**
  * Fetches records from the database and corresponding data from TBA, then fuses them.
  * @param supabase {@link DBClient}
@@ -28,17 +34,9 @@ function fuseData(
  */
 async function batchFetchRobotInMatch(
   supabase: DBClient,
-  filter: {
-    season: keyof typeof dynamicMap;
-    event?: string;
-    team?: string;
-  } | {
-    season: keyof typeof dynamicMap;
-    team: string;
-    mostRecentN: number;
-  },
+  filter: BatchFetchFilter,
 ): Promise<Map<RobotInMatchIdentifier, RobotInMatch>> {
-  if (!("mostRecentN" in filter) && (!filter.event && !filter.team)) {
+  if (!filter.event && !filter.team) {
     throw new Error(
       "Illegal Arguments: must provide filter.event and/or filter.team.",
     );
@@ -52,12 +50,8 @@ async function batchFetchRobotInMatch(
     .select(matchdataquery + " , match_scouting!inner(event, match, team)");
 
   // Apply filters
-  if ("mostRecentN" in filter) {
-    query = query.eq("match_scouting.team", filter.team);
-  } else {
-    if (filter.event) query = query.eq("match_scouting.event", filter.event);
-    if (filter.team) query = query.eq("match_scouting.team", filter.team);
-  }
+  if (filter.event) query = query.eq("match_scouting.event", filter.event);
+  if (filter.team) query = query.eq("match_scouting.team", filter.team);
 
   const { data: dbdataraw, error: error } = await query;
 
@@ -174,15 +168,7 @@ function scoreRobotInMatch(
  */
 function batchFetchRobotScores(
   supabase: DBClient,
-  filter: {
-    season: keyof typeof dynamicMap;
-    event?: string;
-    team?: string;
-  } | {
-    season: keyof typeof dynamicMap;
-    team: string;
-    mostRecentN: number;
-  },
+  filter: BatchFetchFilter,
 ): Promise<Map<RobotInMatchIdentifier, number>>;
 /**
  * Aggregates score earned in various objectives
@@ -193,28 +179,12 @@ function batchFetchRobotScores(
  */
 function batchFetchRobotScores(
   supabase: DBClient,
-  filter: {
-    season: keyof typeof dynamicMap;
-    event?: string;
-    team?: string;
-  } | {
-    season: keyof typeof dynamicMap;
-    team: string;
-    mostRecentN: number;
-  },
+  filter: BatchFetchFilter,
   categorizer: (objective: string) => string | null,
 ): Promise<Map<string, number[]>>;
 async function batchFetchRobotScores(
   supabase: DBClient,
-  filter: {
-    season: keyof typeof dynamicMap;
-    event?: string;
-    team?: string;
-  } | {
-    season: keyof typeof dynamicMap;
-    team: string;
-    mostRecentN: number;
-  },
+  filter: BatchFetchFilter,
   categorizer?: (objective: string) => string | null,
 ): Promise<Map<RobotInMatchIdentifier | string, number | number[]>> {
   const scores: Map<RobotInMatchIdentifier | string, number | number[]> =
@@ -249,3 +219,4 @@ function zipCountsAndScores(id: RobotInMatchIdentifier, rim: RobotInMatch) {
 }
 
 export { batchFetchRobotInMatch, batchFetchRobotScores, zipCountsAndScores };
+export type { BatchFetchFilter }

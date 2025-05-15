@@ -1,4 +1,4 @@
-import { MatchInfo } from "../../thebluealliance/tba.ts";
+import { MatchInfo } from "../tba.ts";
 import * as season2023 from "./season2023.ts";
 import * as season2024 from "./season2024.ts";
 import * as season2025 from "./season2025.ts";
