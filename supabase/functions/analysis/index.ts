@@ -5,7 +5,7 @@ import { oakCors } from "https://deno.land/x/cors/mod.ts";
 import robotRouter from "./routes/team.ts"
 import eventRouter from "./routes/event.ts"
 
-const router = new oak.Router({ prefix: "/season/:season" });
+const router = new oak.Router({ prefix: "/analysis/season/:season" });
 router.use(robotRouter.routes());
 router.use(eventRouter.routes());
 

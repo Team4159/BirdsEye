@@ -20,6 +20,7 @@ function fuseData(
   return dynamicMap[season].fuseData(dbdata, team, tbadata);
 }
 
+// TODO add a filter for a list of specific matches
 type BatchFetchFilter = {
     season: keyof typeof dynamicMap;
     event?: string;
