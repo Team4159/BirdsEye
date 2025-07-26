@@ -94,9 +94,7 @@ class TBAInterface {
     }
 
     // 3. Fallback to API request
-    const data = await this.fetchWithRetry(this.buildUrl(params));
-    this.cacheSet(params, data);
-    return data;
+    return await this.fresh(params);
   }
 
   async getMatch(identifier: MatchIdentifier): Promise<MatchInfo> {
@@ -127,7 +125,7 @@ class TBAInterface {
       let delay = 1000;
       for (let i = 0; i < retries; i++) {
         try {
-          console.log(`fetch("${url}", #${3 - retries})`)
+          console.log(`fetch("${url}", #${i})`)
           const response = await fetch(url, {
             headers: { "X-TBA-Auth-Key": this.APIKEY },
           });

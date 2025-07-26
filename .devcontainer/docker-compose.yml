@@ -1,0 +1,9 @@
+services:
+  flutter:
+    build:
+      context: ./
+    tty: true
+    volumes:
+      - ../:/home/developer/workspace
+    # LinuxのFlutterがx64アーキテクチャにしか対応していないため設定
+    platform: linux/x86_64

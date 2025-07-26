@@ -46,7 +46,7 @@ export function categorizerSupertype(
 
 /**
  * Estimated Points Added
- * @returns Normal distribution of robot's EPA
+ * @returns Normal distribution of team's EPA
  */
 async function epaRobot(
   supabase: DBClient,

@@ -1,4 +1,4 @@
-import 'dart:async' show Completer, Timer;
+import 'dart:async' show Completer;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -74,17 +74,6 @@ extension Optional<T> on Iterable<T> {
   Iterable<T?> get optional => this as Iterable<T?>;
 }
 
-class ListenableOrNot extends StatelessWidget {
-  final Listenable? listenable;
-  final Widget Function(BuildContext, Widget?) builder;
-  const ListenableOrNot({super.key, required this.listenable, required this.builder});
-
-  @override
-  Widget build(BuildContext context) => listenable == null
-      ? Builder(builder: (context) => builder(context, null))
-      : ListenableBuilder(listenable: listenable!, builder: builder);
-}
-
 /// A [ChangeNotifier] that holds a single lazily-initialized value.
 ///
 /// When [value] is replaced with something that is not equal to the old
@@ -137,71 +126,21 @@ class LateValueNotifier<T extends Object> extends ChangeNotifier implements Valu
   String toString() => '${describeIdentity(this)}($value)';
 }
 
-class NotifiableTextEditingController extends TextEditingController {
+class NotifiableChangeNotifier extends ChangeNotifier {
   @override
   void notifyListeners() => super.notifyListeners();
-}
-
-class NotifiableValueNotifier<T> extends ValueNotifier<T> {
-  NotifiableValueNotifier(super.value);
-
-  @override
-  void notifyListeners() => super.notifyListeners();
-}
-
-class SliverAnimatedInList<T> extends StatefulWidget {
-  final List<T> list;
-  final Widget Function(BuildContext, T) builder;
-  final GlobalKey<SliverAnimatedListState> animKey;
-  SliverAnimatedInList(this.list,
-      {required this.builder, GlobalKey<SliverAnimatedListState>? animKey, super.key})
-      : animKey = animKey ?? GlobalKey();
-
-  @override
-  State<StatefulWidget> createState() => _SliverAnimatedInListState<T>();
-}
-
-class _SliverAnimatedInListState<T> extends State<SliverAnimatedInList<T>> {
-  late Timer animation;
-
-  @override
-  void initState() {
-    int i = 0;
-    animation = Timer.periodic(Durations.short2, (t) {
-      if (i < widget.list.length) {
-        setState(() => widget.animKey.currentState!.insertItem(i++, duration: Durations.medium3));
-      } else {
-        t.cancel();
-        setState(() {});
-      }
-    });
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    if (animation.isActive) animation.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => SliverAnimatedList(
-      key: widget.animKey,
-      itemBuilder: (context, i, anim) => i >= widget.list.length
-          ? const SizedBox()
-          : AnimatedSlide(
-              offset: Offset(0, (1 - anim.value) * (widget.list.length - i)),
-              duration: Durations.medium3,
-              child: widget.builder(context, widget.list[i])));
 }
 
 class SensibleDropdown<T> extends StatefulWidget {
   final String? label;
-  final double width;
+  final double? width;
 
   final List<T>? values;
+  final T? initial;
   final void Function(T?)? onChanged;
-  const SensibleDropdown(this.values, {super.key, required this.width, this.label, this.onChanged});
+  final DropdownMenuItem<T> Function(T value)? itemBuilder;
+  const SensibleDropdown(this.values,
+      {super.key, this.width, this.label, this.initial, this.onChanged, this.itemBuilder});
 
   @override
   State<StatefulWidget> createState() => SensibleDropdownState<T>();
@@ -209,6 +148,12 @@ class SensibleDropdown<T> extends StatefulWidget {
 
 class SensibleDropdownState<T> extends State<SensibleDropdown<T>> {
   T? value;
+
+  @override
+  void initState() {
+    value = widget.initial;
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) => ButtonTheme(
@@ -229,13 +174,35 @@ class SensibleDropdownState<T> extends State<SensibleDropdown<T>> {
               : [
                   DropdownMenuItem(value: null, child: SizedBox()),
                   for (final v in widget.values!)
-                    DropdownMenuItem(
-                        value: v,
-                        alignment: Alignment.center,
-                        child: Text(v.toString(), overflow: TextOverflow.ellipsis))
+                    (widget.itemBuilder ??
+                        (v) => DropdownMenuItem(
+                            value: v,
+                            alignment: Alignment.center,
+                            child: Text(v.toString(), overflow: TextOverflow.ellipsis)))(v)
                 ],
           onChanged: (v) {
             setState(() => value = v);
             if (widget.onChanged != null) widget.onChanged!(v);
           }));
+}
+
+class SensibleFutureBuilder<T> extends FutureBuilder<T> {
+  SensibleFutureBuilder(
+      {super.key,
+      required super.future,
+      required AsyncWidgetBuilder<T> builder,
+      ProgressIndicator progressIndicator = const CircularProgressIndicator()})
+      : super(builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(Icons.warning_rounded, color: Colors.red[700], size: 50),
+                  Text(snapshot.error?.toString() ?? "No Data")
+                ]);
+          }
+          if (!snapshot.hasData) return Center(child: progressIndicator);
+          return builder(context, snapshot);
+        });
 }

@@ -4,26 +4,28 @@ publish_to: 'none'
 version: 2.1.1
 
 environment:
-  sdk: '>=3.0.5 <4.0.0'
+  sdk: '^3.8.1'
 
 dependencies:
   carousel_slider: ^5.0.0
-  fl_chart: ^0.70.2
+  fl_chart: ^1.0.0
   flutter:
     sdk: flutter
-  flutter_markdown: ^0.7.1
   flutter_svg: ^2.0.7
   flutter_swipe_action_cell: ^3.1.2
-  go_router: ^14.1.2
+  go_router: ^16.0.0
   http: ^1.0.0
   localstore: ^1.3.5
+  markdown_widget: ^2.3.2+8
   shared_preferences: ^2.1.2
   stock: ^1.0.1
   supabase_flutter: ^2.3.1
-  url_launcher: ^6.1.14
+  url_launcher: any
 
 dev_dependencies:
-  flutter_lints: ^5.0.0
+  flutter_lints: any
+  build_runner: any
+  go_router_builder: any
 
 flutter:
   uses-material-design: true

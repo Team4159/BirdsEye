@@ -1,7 +1,11 @@
 import 'dart:collection';
 
-typedef PitScoutInfoSerialized = ({int season, String event, int team});
+import 'package:birdseye/interfaces/bluealliance.dart' show MatchInfo;
 
+/// identifier for pit scouting responses
+typedef PitScoutIdentifier = ({int season, String event, int team});
+
+/// encodes conversions between match scouting form field, form field type, and database column type
 enum MatchScoutQuestionTypes<T> {
   text<String>(sqlType: "text"),
   counter<int>(sqlType: "smallint"), // int2
@@ -17,7 +21,14 @@ enum MatchScoutQuestionTypes<T> {
 
 typedef MatchScoutQuestionSchema
     = LinkedHashMap<String, LinkedHashMap<String, MatchScoutQuestionTypes>>;
-typedef MatchScoutInfoSerialized = ({int season, String event, String match, String team});
+typedef MatchScoutIdentifier = ({int season, String event, MatchInfo match, String team});
+typedef MatchScoutIdentifierPartial = ({int season, String event, MatchInfo? match, String? team});
+typedef MatchScoutIdentifierOptional = ({
+  int? season,
+  String? event,
+  MatchInfo? match,
+  String? team
+});
 
 /// A record to represent various data aggregation requests
 typedef AggInfo = ({int season, String? event, String? team});

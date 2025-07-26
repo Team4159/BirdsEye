@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:birdseye/interfaces/bluealliance.dart';
+
 import '../types.dart';
 import 'package:localstore/localstore.dart';
 import 'package:stock/stock.dart';
@@ -7,16 +9,16 @@ import 'package:stock/stock.dart';
 class LocalStoreInterface {
   static final _db = Localstore.instance;
 
-  static Future<void> addMatch(MatchScoutInfoSerialized key, Map<String, dynamic> data) => _db
+  static Future<void> addMatch(MatchScoutIdentifier key, Map<String, dynamic> data) => _db
       .collection("scout")
       .doc("match-${key.season}${key.event}_${key.match}-${key.team}")
       .set(data
         ..['season'] = key.season
         ..['event'] = key.event
-        ..['match'] = key.match
+        ..['match'] = key.match.toString()
         ..['team'] = key.team);
 
-  static Future<void> addPit(PitScoutInfoSerialized key, Map<String, dynamic> data) =>
+  static Future<void> addPit(PitScoutIdentifier key, Map<String, dynamic> data) =>
       _db.collection("scout").doc("pit-${key.season}${key.event}-${key.team}").set(data
         ..['season'] = key.season
         ..['event'] = key.event
@@ -24,7 +26,7 @@ class LocalStoreInterface {
 
   static Future<void> remove(String id) => _db.collection("scout").doc(id).delete();
 
-  static Future<({MatchScoutInfoSerialized key, Map<String, dynamic> data})?> getMatch(
+  static Future<({MatchScoutIdentifier key, Map<String, dynamic> data})?> getMatch(
       String id) async {
     assert(id.startsWith("match"));
     var data = await _db.collection("scout").doc(id).get();
@@ -34,15 +36,14 @@ class LocalStoreInterface {
             key: (
               season: data.remove('season') as int,
               event: data.remove('event') as String,
-              match: data.remove('match') as String,
+              match: MatchInfo.fromString(data.remove('match')),
               team: data.remove('team') as String
             ),
             data: data
           );
   }
 
-  static Future<({PitScoutInfoSerialized key, Map<String, dynamic> data})?> getPit(
-      String id) async {
+  static Future<({PitScoutIdentifier key, Map<String, dynamic> data})?> getPit(String id) async {
     assert(id.startsWith("pit"));
     var data = await _db.collection("scout").doc(id).get();
     return data == null

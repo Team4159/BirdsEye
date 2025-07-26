@@ -1,8 +1,8 @@
+import 'package:birdseye/routing.dart';
+import 'package:birdseye/utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
-
-import '../main.dart';
+import 'package:markdown_widget/widget/markdown.dart';
 
 class LegalShell extends StatelessWidget {
   final Widget child;
@@ -15,19 +15,17 @@ class LegalShell extends StatelessWidget {
         floatingActionButton: IconButton.filledTonal(
             onPressed: () => GoRouter.of(context).canPop()
                 ? GoRouter.of(context).pop()
-                : GoRouter.of(context).goNamed(RoutePaths.landing.name),
+                : const LandingRoute().go(context),
             icon: const Icon(Icons.arrow_back_rounded)),
       );
 }
 
-class MarkdownWidget extends StatelessWidget {
+class MarkdownPage extends StatelessWidget {
   final String file;
-  const MarkdownWidget(this.file, {super.key});
+  const MarkdownPage(this.file, {super.key});
 
   @override
-  Widget build(BuildContext context) => FutureBuilder(
+  Widget build(BuildContext context) => SensibleFutureBuilder(
       future: DefaultAssetBundle.of(context).loadString("assets/documents/$file.md"),
-      builder: ((context, snapshot) => !snapshot.hasData
-          ? const Center(child: CircularProgressIndicator())
-          : Markdown(data: snapshot.data!, selectable: true)));
+      builder: (context, snapshot) => MarkdownWidget(data: snapshot.data!));
 }

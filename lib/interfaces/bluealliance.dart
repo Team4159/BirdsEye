@@ -1,11 +1,12 @@
 import 'dart:convert' show json;
 
+import 'package:birdseye/interfaces/sharedprefs.dart';
+import 'package:birdseye/types.dart';
+
 import '../interfaces/localstore.dart' show LocalSourceOfTruth;
 import 'package:flutter/material.dart' show Color;
 import 'package:http/http.dart' show Client;
 import 'package:stock/stock.dart';
-
-import '../main.dart' show prefs;
 
 enum MatchLevel {
   qualification(compLevel: "qm"),
@@ -15,26 +16,89 @@ enum MatchLevel {
 
   final String compLevel;
   const MatchLevel({required this.compLevel});
-  static fromCompLevel(String s) => MatchLevel.values.firstWhere((type) => type.compLevel == s);
+  static MatchLevel fromCompLevel(String s) =>
+      MatchLevel.values.firstWhere((type) => type.compLevel == s);
 }
 
 class MatchInfo implements Comparable {
   static final _qualificationPattern = RegExp(r'^(?<level>qm)(?<index>\d+)$');
   static final _finalsPattern = RegExp(r'^(?<level>qf|sf|f)(?<finalnum>\d{1,2})m(?<index>\d+)$');
+  static final highestSemi = 12;
 
-  final MatchLevel level;
-  final int? finalnum;
-  final int index;
-  MatchInfo({required this.level, this.finalnum, required this.index});
+  MatchLevel level;
+  int? finalnum;
+  int index;
+  MatchInfo({required this.level, this.finalnum, required this.index}) {
+    /// It must be a qualification XOR (or but not and) not have a finalnum
+    assert((level == MatchLevel.qualification) ^ (finalnum != null));
+  }
   factory MatchInfo.fromString(String s) {
     RegExpMatch? match = _qualificationPattern.firstMatch(s) ?? _finalsPattern.firstMatch(s);
-    if (match == null) throw Exception("Invalid Match String - Could not parse");
+    if (match == null) throw Exception("Malformed Match String '$s'");
     return MatchInfo(
         level: MatchLevel.fromCompLevel(match.namedGroup("level")!),
         finalnum: match.groupNames.contains("finalnum")
             ? int.tryParse(match.namedGroup("finalnum") ?? "")
             : null,
         index: int.parse(match.namedGroup("index")!));
+  }
+
+  void increment({required int highestQual}) {
+    switch (level) {
+      case MatchLevel.qualification:
+        if (index < highestQual) {
+          index++;
+        } else {
+          level = MatchLevel.semifinals;
+          index = 1;
+          finalnum = 1;
+        }
+      case MatchLevel.semifinals:
+        assert(finalnum != null);
+        if (index < highestSemi) {
+          index++;
+        } else {
+          level = MatchLevel.finals;
+          index = 1;
+          finalnum = 1;
+        }
+      case MatchLevel.finals:
+        assert(finalnum != null);
+        if (finalnum! < 2) {
+          finalnum = finalnum! + 1;
+        }
+      default:
+      // ignore
+    }
+  }
+
+  void decrement({required int highestQual}) {
+    switch (level) {
+      case MatchLevel.qualification:
+        if (index > 0) {
+          index--;
+        }
+      case MatchLevel.semifinals:
+        assert(finalnum != null);
+        if (index > 0) {
+          index--;
+        } else {
+          level = MatchLevel.qualification;
+          index = highestQual;
+          finalnum = null;
+        }
+      case MatchLevel.finals:
+        assert(finalnum != null);
+        if (finalnum! > 0) {
+          finalnum = finalnum! - 1;
+        } else {
+          level = MatchLevel.semifinals;
+          index = highestSemi;
+          finalnum = 1;
+        }
+      default:
+      // ignore
+    }
   }
 
   @override
@@ -56,6 +120,39 @@ class MatchInfo implements Comparable {
       other.level == level &&
       other.finalnum == finalnum &&
       other.index == index;
+}
+
+enum Alliance {
+  red(color: Color(0xffed1c24)),
+  blue(color: Color(0xff0066b3));
+
+  final Color color;
+  const Alliance({required this.color});
+  static Alliance fromString(String s) => Alliance.values.firstWhere((a) => a.name == s);
+}
+
+class RobotInfo implements Comparable {
+  static final _robotPositionPattern = RegExp(r'^(?<color>red|blue)(?<number>[1-3])$');
+
+  final String team;
+  final Alliance alliance;
+  final int ordinal;
+  RobotInfo({required this.team, required this.alliance, required this.ordinal}) {
+    assert(1 <= ordinal && ordinal <= 3);
+  }
+
+  factory RobotInfo.fromString({required String team, required String position}) {
+    RegExpMatch? patternMatch = _robotPositionPattern.firstMatch(position);
+    if (patternMatch == null) throw Exception("Malformed Robot Position '$position'");
+    return RobotInfo(
+        team: team,
+        alliance: Alliance.fromString(patternMatch.namedGroup("color")!),
+        ordinal: int.parse(patternMatch.namedGroup("number")!));
+  }
+
+  @override
+  int compareTo(b) =>
+      alliance != b.alliance ? b.alliance.index - alliance.index : b.ordinal - ordinal;
 }
 
 class TBAInfo {
@@ -93,51 +190,54 @@ class BlueAlliance {
 
   static Future _getJson(String path, {String? key}) => _client
           .get(Uri.https("www.thebluealliance.com", "/api/v3/$path",
-              {"X-TBA-Auth-Key": key ?? prefs.getString('tbaKey')}))
+              {"X-TBA-Auth-Key": key ?? SharedPreferencesInterface.tbakey}))
           .then(
               (resp) => resp.statusCode < 400 ? json.decode(resp.body) : throw Exception(resp.body))
           .then((n) {
         dirtyConnected = true;
         return n;
       }).catchError((n) {
+        // TODO only if n is a connection error, then set connected to false
         dirtyConnected = false;
         throw n;
       });
 
   static final Set<String> _keyCache = {};
   static Future<bool> isKeyValid(String? key) {
-    if (key?.isEmpty ?? true) return Future.value(false);
+    if (key == null) return Future.value(false);
+    if (key.isEmpty) return Future.value(false);
     if (_keyCache.contains(key)) return Future.value(true);
     return _getJson("status", key: key).then((_) {
-      _keyCache.add(key!);
+      _keyCache.add(key);
       return true;
     }).catchError((_) => false);
   }
 
   static final stockSoT = LocalSourceOfTruth<TBAInfo>("tba");
   static final stock = Stock<TBAInfo, Map<String, String>>(
+      // TODO add handling for 404s
       sourceOfTruth: stockSoT.mapTo<Map<String, String>>(
           (p) => p.map((k, v) => MapEntry(k, v.toString())), (p) => p),
       fetcher: Fetcher.ofFuture((key) async {
         if (key.event == null) {
-          // season -> {eventcode: event name}
+          /// season -> {eventcode: event name}
           var data = List<Map<String, dynamic>>.from(await _getJson("events/${key.season}/simple"),
               growable: false);
           return Map.fromEntries(data.map((event) => MapEntry(event['event_code'], event['name'])));
         } else if (key.match == null) {
-          // event -> {matchcode: full match name}
+          /// event -> {matchcode: full match name}
           var data = List<String>.from(
               await _getJson("event/${key.season}${key.event}/matches/keys"),
               growable: false);
           return Map.fromEntries(
               data.map((matchCode) => MapEntry(matchCode.split("_").last, matchCode)));
         } else if (key.match == "*") {
-          // match* -> {teamcode: *}
+          /// match* -> {teamcode: *}
           var data = List<String>.from(await _getJson("event/${key.season}${key.event}/teams/keys"),
               growable: false);
           return Map.fromEntries(data.map((teamCode) => MapEntry(teamCode.substring(3), "*")));
         } else {
-          // match -> {teamcode: team position}
+          /// match -> {teamcode: team position}
           var data = Map<String, dynamic>.from(
               await _getJson("match/${key.season}${key.event}_${key.match}/simple"));
           Map<String, String> o = {};
@@ -181,155 +281,57 @@ class BlueAlliance {
     await stockSoT.write(TBAInfo(season: season, event: event), matches);
     await stockSoT.write(TBAInfo(season: season, event: event, match: "*"), pitTeams);
   }
-}
 
-enum GamePeriod {
-  auto(Color.fromARGB(128, 200, 50, 50)),
-  teleop(Color.fromARGB(128, 50, 200, 50)),
-  endgame(Color.fromARGB(128, 50, 50, 200)),
-  others(Color.fromARGB(128, 50, 50, 50));
+  /// Returns an partial identifier of fully correct items.
+  static Future<MatchScoutIdentifierOptional> validate(
+      MatchScoutIdentifierOptional identifier) async {
+    // unpack record for type promotion
+    int? season = identifier.season;
+    String? event = identifier.event;
+    MatchInfo? match = identifier.match;
+    String? team = identifier.team;
 
-  final Color graphColor;
-  const GamePeriod(this.graphColor);
-  static GamePeriod fromString(String key) =>
-      GamePeriod.values.asNameMap()[key] ?? GamePeriod.others;
-}
-
-num scoreTotal(Map<String, num> scores, {required int season, GamePeriod? period}) {
-  var entries = scores.entries;
-  if (period != null) {
-    if (period == GamePeriod.others) {
-      for (GamePeriod p in GamePeriod.values) {
-        entries = entries.where((e) => !e.key.startsWith("${p.name}_"));
+    try {
+      if (season == null) throw Exception("No Season");
+      final events = await stock.get(TBAInfo(season: season));
+      if (event == null || !events.containsKey(event)) {
+        return (season: season, event: null, match: null, team: null);
       }
-    } else {
-      entries = entries.where((e) => e.key.startsWith("${period.name}_"));
+      // fallthrough to next try/catch
+    } catch (_) {
+      return (season: null, event: null, match: null, team: null);
     }
-  }
-  if (entries.isEmpty) return 0;
-  if (!scoringpoints.containsKey(season)) {
-    throw Exception("Can't total scores - Unrecognized Season");
-  }
-  return entries
-      .where((e) => scoringpoints[season]!.containsKey(e.key) && e.value != 0)
-      .map((e) => scoringpoints[season]![e.key]! * e.value)
-      .fold(0, (v, e) => v + e);
-}
 
-Map<GamePeriod, int> scoreTotalByPeriod(Map<String, int> scorecounts, {required int season}) {
-  if (!scoringpoints.containsKey(season)) {
-    throw Exception("Can't total scores - Unrecognized Season");
-  }
-  final scores = scorecounts.entries
-      .where((e) => scoringpoints[season]!.containsKey(e.key) && e.value != 0)
-      .map((e) => MapEntry(e.key.split("_").first, scoringpoints[season]![e.key]! * e.value));
-  Map<GamePeriod, int> out = {};
-  for (final scoreentry in scores) {
-    var period = GamePeriod.fromString(scoreentry.key);
-    out[period] = (out[period] ?? 0) + scoreentry.value;
-  }
-  return out;
-}
+    try {
+      final matches = await stock.get(TBAInfo(season: season, event: event));
+      if (match == null || !matches.containsKey(match.toString())) {
+        return (season: season, event: event, match: null, team: null);
+      }
+      // fallthrough to next try/catch
+    } catch (_) {
+      return (season: season, event: null, match: null, team: null);
+    }
 
-Map<String, ({int count, int score})> aggByType(Map<String, int> scorecounts,
-    {required int season}) {
-  if (!scoringpoints.containsKey(season)) {
-    throw Exception("Can't total scores - Unrecognized Season");
-  }
-  scorecounts.removeWhere((k, v) => !scoringpoints[season]!.containsKey(k) || v == 0);
-  var scores = switch (season) {
-    2025 => scorecounts.entries
-        .where((e) => (e.key.contains("coral") || e.key.contains("algae")))
-        .map((e) => MapEntry(e.key.split("_")[1],
-            (count: e.value, score: scoringpoints[season]![e.key]! * e.value))),
-    2024 => scorecounts.entries
-        .where((e) => (e.key.endsWith("amp") || e.key.endsWith("speaker")))
-        .map((e) => MapEntry(e.key.split("_").last,
-            (count: e.value, score: scoringpoints[season]![e.key]! * e.value))),
-    2023 => scorecounts.entries
-        .where((e) => (e.key.contains("cube") || e.key.contains("cone")))
-        .map((e) => MapEntry(e.key.split("_")[1],
-            (count: e.value, score: scoringpoints[season]![e.key]! * e.value))),
-    _ => throw Exception("Can't total scores - Unimplemented Season")
-  };
-  Map<String, ({int count, int score})> out = {};
-  for (final scoreentry in scores) {
-    out[scoreentry.key] = (
-      count: (out[scoreentry.key]?.count ?? 0) + scoreentry.value.count,
-      score: (out[scoreentry.key]?.score ?? 0) + scoreentry.value.score
-    );
-  }
-  return out;
-}
+    try {
+      final teams = await (match.level == MatchLevel.qualification
+          ? stock.get
+          : stock.fresh)(TBAInfo(season: season, event: event, match: match.toString()));
+      if (team == null || !teams.containsKey(team)) {
+        return (season: season, event: event, match: match, team: null);
+      }
+    } catch (_) {
+      return (season: season, event: event, match: null, team: null);
+    }
 
-Map<String, num> nonScoreFilter(Map<String, num> scorecounts, {required int season}) {
-  if (!scoringpoints.containsKey(season)) {
-    throw Exception("Can't total scores - Unrecognized Season");
+    return identifier;
   }
-  return Map.from(scorecounts)..removeWhere((k, v) => scoringpoints[season]!.containsKey(k));
 }
 
 /// The number of digits in the longest FRC team number
 const longestTeam = 5;
 
-const scoringpoints = {
-  2023: {
-    "auto_cone_low": 3,
-    "auto_cone_mid": 4,
-    "auto_cone_high": 6,
-    "auto_cube_low": 3,
-    "auto_cube_mid": 4,
-    "auto_cube_high": 6,
-    "auto_mobility": 3,
-    "auto_docked": 8,
-    "auto_engaged": 4,
-    "teleop_cone_low": 2,
-    "teleop_cone_mid": 3,
-    "teleop_cone_high": 5,
-    "teleop_cube_low": 2,
-    "teleop_cube_mid": 3,
-    "teleop_cube_high": 5,
-    "endgame_parked": 2,
-    "endgame_docked": 6,
-    "endgame_engaged": 4,
-    "comments_fouls": -5
-  },
-  2024: {
-    "auto_amp": 5,
-    "auto_speaker": 5,
-    "teleop_amp": 1,
-    "teleop_speaker": 2,
-    "teleop_loudspeaker": 5,
-    "endgame_trap": 5,
-    "endgame_parked": 1,
-    "endgame_onstage": 3,
-    "endgame_spotlit": 4,
-    "comments_fouls": -2
-  },
-  2025: {
-    "auto_coral_l1": 3,
-    "auto_coral_l2": 4,
-    "auto_coral_l3": 6,
-    "auto_coral_l4": 7,
-    "auto_algae_net": 4,
-    "auto_algae_processor": 6,
-    "teleop_coral_l1": 2,
-    "teleop_coral_l2": 3,
-    "teleop_coral_l3": 4,
-    "teleop_coral_l4": 5,
-    "teleop_algae_net": 4,
-    "teleop_algae_processor": 6,
-    "endgame_parked": 2,
-    "endgame_shallow": 6,
-    "endgame_deep": 12,
-    "comments_fouls": -3, // average of -2 (normal) and -6 (major)
-  }
-};
+/// match scouting counter button custom colors
 const gamepiececolors = {
-  // used in match scouting buttons + analysis pies
   2025: {"coral": Color(0xffc0c0c0), "algae": Color(0xff3a854d)},
   2023: {"cone": Color(0xffccc000), "cube": Color(0xffa000a0)}
 };
-
-const frcred = Color(0xffed1c24);
-const frcblue = Color(0xff0066b3);

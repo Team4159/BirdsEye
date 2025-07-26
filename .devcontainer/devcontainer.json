@@ -1,0 +1,33 @@
+{
+  "name": "debian_flutter",
+  "workspaceFolder": "/home/developer/workspace",
+  "dockerComposeFile": [
+    "docker-compose.yml"
+  ],
+  "service": "flutter",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        // VSCodeの好みの設定を追加可能
+        "files.autoSave": "onFocusChange",
+        "[dart]": {
+          "editor.formatOnSave": true,
+          "editor.formatOnType": true,
+          "editor.rulers": [],
+          "editor.selectionHighlight": false,
+          "editor.tabCompletion": "onlySnippets",
+          "editor.wordBasedSuggestions": "off"
+        }
+      },
+      "extensions": [
+        // 好みの拡張機能を追加可能
+        "Dart-Code.flutter",
+        "Dart-Code.dart-code",
+        "christian-kohler.path-intellisense",
+        "esbenp.prettier-vscode",
+        "donjayamanne.githistory",
+        "eamodio.gitlens"
+      ]
+    }
+  }
+}

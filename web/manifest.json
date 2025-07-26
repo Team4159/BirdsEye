@@ -4,7 +4,7 @@
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
-    "theme_color": "#cf2e2e",
+    "theme_color": "#0175C2",
     "description": "FRC Scouting App",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,

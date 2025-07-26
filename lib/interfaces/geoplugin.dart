@@ -5,7 +5,8 @@ import 'dart:math';
 import 'package:http/http.dart' show Client;
 
 class Coordinates {
-  static final _earthDiameter = 2 * 6378137.0; // WGS84 major axis
+  /// WGS84 major axis (meters)
+  static final _earthDiameter = 2 * 6378137.0;
   static double _degToRad(final double degrees) => degrees * (pi / 180.0);
 
   /// RADIANS

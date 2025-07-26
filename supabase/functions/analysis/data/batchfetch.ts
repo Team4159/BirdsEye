@@ -48,15 +48,15 @@ async function batchFetchRobotInMatch(
     .map((columnname) => `${columnname}:${columnname}.avg()`).join(", ");
   let query = supabase
     .from(dynamicMap[filter.season].dbtable as any)
-    .select(matchdataquery + " , match_scouting!inner(event, match, team)");
+    .select(matchdataquery + " , match_scouting!inner(season, event, match, team)");
 
   // Apply filters
-  if (filter.event) query = query.eq("match_scouting.event", filter.event);
-  if (filter.team) query = query.eq("match_scouting.team", filter.team);
+  if (filter.event !== undefined) query = query.eq("match_scouting.event", filter.event);
+  if (filter.team !== undefined) query = query.eq("match_scouting.team", filter.team);
 
-  const { data: dbdataraw, error: error } = await query;
+  const { data: dbdata, error: error } = await query;
 
-  if (dbdataraw?.length == 0) { // If dbdata is null or empty
+  if (dbdata?.length == 0) { // If dbdata is null or empty
     return new Map();
   }
   if (error) {
@@ -64,21 +64,11 @@ async function batchFetchRobotInMatch(
     throw error;
   }
 
-  const dbdata = Object.fromEntries(dbdataraw.map(
-    (
-      entry: any,
-    ) => [
-      `${filter.season}${entry["match_scouting"].event}_${
-        entry["match_scouting"].match
-      }`,
-      entry,
-    ],
-  ));
-
   let tbadataraw: MatchInfo[] = await tba.get(filter);
   if ("mostRecentN" in filter) {
+    const dbmatches = new Set(dbdata.map((entry: any) => `${filter.season}${entry["match_scouting"].event}_${entry["match_scouting"].match}`));
     tbadataraw = tbadataraw
-      .filter((m) => m.key in dbdata)
+      .filter((m) => dbmatches.has(m.key))
       .sort((a, b) => (b.actual_time || b.time) - (a.actual_time || a.time))
       .slice(0, filter.mostRecentN);
   }
@@ -89,10 +79,11 @@ async function batchFetchRobotInMatch(
 
   const output = new Map<RobotInMatchIdentifier, RobotInMatch>();
   // Iterate through each row from the database and fuse the data.
-  for (const [matchkey, entry] of Object.entries(dbdata)) {
-    if (!(matchkey in tbadata)) {
+  for (const entry of dbdata as any[]) {
+    const matchKey = `${filter.season}${entry["match_scouting"].event}_${entry["match_scouting"].match}`;
+    if (!(matchKey in tbadata)) {
       if (!("mostRecentN" in filter)) {
-        console.warn(`Missing referencing TBA data for ${matchkey}`);
+        console.warn(`Missing referencing TBA data for ${matchKey}`);
       }
       continue;
     }
@@ -109,7 +100,7 @@ async function batchFetchRobotInMatch(
       fuseData(
         identifier.season,
         entry,
-        tbadata[matchkey],
+        tbadata[matchKey],
         identifier.team,
       ),
     );

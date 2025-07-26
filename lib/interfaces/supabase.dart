@@ -3,11 +3,9 @@ import 'dart:collection';
 import 'package:stock/stock.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../pages/configuration.dart' show Configuration;
 import '../types.dart';
 
-// "Aren't supabase functions all over the code?" Yes, but here are the ones that require big think (and big caching)
-/// A container for all generic database interactions
+/// A container for complex and/or cached database interactions
 class SupabaseInterface {
   /// Checks if the database is accessible.
   static Future<bool> get canConnect => Supabase.instance.client
@@ -26,23 +24,25 @@ class SupabaseInterface {
           .then((resp) => _availableSeasons = List<int>.from(resp, growable: false));
 
   /// Sets the current activity the user is doing.
-  static Future<void> setSession({String? match, String? team}) =>
+  static Future<void> setSession(MatchScoutIdentifierPartial identifier) =>
       Supabase.instance.client.from("sessions").upsert({
-        "season": Configuration.instance.season,
-        "event": Configuration.event,
-        "match": match,
-        "team": team
+        "season": identifier.season,
+        "event": identifier.event,
+        "match": identifier.match?.toString(),
+        "team": identifier.team
       }).then((_) {});
 
   /// Clears the current activity the user is doing.
   static Future<void> clearSession() => Supabase.instance.client.from("sessions").delete();
 
   /// Fetches the current activities of other users.
-  static Future<Map<String, int>> getSessions({required String match}) => Supabase.instance.client
+  static Future<Map<String, int>> getSessions(
+          {required int season, required String event, required String match}) =>
+      Supabase.instance.client
           .from("sessions")
           .select("team")
-          .eq("season", Configuration.instance.season)
-          .eq("event", Configuration.event!)
+          .eq("season", season)
+          .eq("event", event)
           .eq("match", match)
           .neq("scouter", Supabase.instance.client.auth.currentUser!.id)
           .gte('updated', DateTime.now().subtract(const Duration(minutes: 5)))
@@ -72,9 +72,6 @@ class SupabaseInterface {
           })),
       sourceOfTruth: CachedSourceOfTruth());
 
-  static Future<MatchScoutQuestionSchema> get matchSchema =>
-      matchscoutStock.get(Configuration.instance.season);
-
   static Set<Achievement>? _achievements;
   static Future<Set<Achievement>?> get achievements async =>
       (_achievements == null && await canConnect)
@@ -94,6 +91,8 @@ class SupabaseInterface {
                   .toSet())
               .then((data) => _achievements = data)
           : Future.value(_achievements);
+
+  /// Clears the in-memory achievement cache, forcing a fresh fetch next time
   static void clearAchievements() => _achievements = null;
 
   static final eventAggregateStock = Stock<
@@ -149,10 +148,7 @@ class PitInterface {
           await Supabase.instance.client.rpc('getpitschema', params: {"pitseason": season}))),
       sourceOfTruth: CachedSourceOfTruth());
 
-  static Future<Map<String, String>> get pitSchema =>
-      pitscoutStock.get(Configuration.instance.season);
-
-  static Future<List<Map<String, String>>> pitResponseFetch(PitScoutInfoSerialized info,
+  static Future<List<Map<String, String>>> pitResponseFetch(PitScoutIdentifier info,
       [String? scouter]) {
     var request = Supabase.instance.client
         .from("pit_scouting")
@@ -165,12 +161,12 @@ class PitInterface {
         .withConverter((resp) => resp.map((row) => Map<String, String>.from(row["data"])).toList());
   }
 
-  static Future<void> pitResponseUpsert(PitScoutInfoSerialized info, Map<String, dynamic> data) =>
+  static Future<void> pitResponseUpsert(PitScoutIdentifier info, Map<String, dynamic> data) =>
       Supabase.instance.client
           .from("pit_scouting")
           .upsert({"season": info.season, "event": info.event, "team": info.team, "data": data});
 
-  static final pitAggregateStock = Stock<PitScoutInfoSerialized, LinkedHashMap<String, String>>(
+  static final pitAggregateStock = Stock<PitScoutIdentifier, LinkedHashMap<String, String>>(
       sourceOfTruth: CachedSourceOfTruth(),
       fetcher: Fetcher.ofFuture((key) => pitResponseFetch(key).then((map) => map.isEmpty
           ? LinkedHashMap<String, String>()

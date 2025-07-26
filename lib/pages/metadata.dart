@@ -1,25 +1,26 @@
+import 'dart:async';
+
+import 'package:birdseye/routing.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../interfaces/bluealliance.dart';
-import '../interfaces/supabase.dart';
-import '../main.dart';
+import '../interfaces/sharedprefs.dart' show SharedPreferencesInterface;
 import '../utils.dart';
 
 class MetadataPage extends StatelessWidget {
   final GlobalKey<FormState> _formKey = GlobalKey();
-  final _nameController = TextEditingController(text: UserMetadata.instance.name);
-  final _teamController = TextEditingController(text: UserMetadata.instance.team.toString());
-  final _tbaFieldController = TextEditingController(text: prefs.getString("tbaKey"));
+  final _nameController = TextEditingController(text: UserMetadata.name);
+  final _teamController = TextEditingController(text: UserMetadata.team?.toString());
+  final _tbaFieldController = TextEditingController(text: SharedPreferencesInterface.tbakey);
   final _tbaFieldError = ValueNotifier<String?>(null);
   MetadataPage({super.key}) {
-    UserMetadata.instance.addListener(() {
-      _nameController.text = UserMetadata.instance.name ?? "";
-      _teamController.text = UserMetadata.instance.team?.toString() ?? "";
+    UserMetadata.changeNotifier.addListener(() {
+      _nameController.text = UserMetadata.name ?? "";
+      _teamController.text = UserMetadata.team?.toString() ?? "";
     });
   }
 
@@ -74,15 +75,14 @@ class MetadataPage extends StatelessWidget {
                         children: [
                           OutlinedButton(
                               onPressed: () async {
-                                await UserMetadata.instance.fetch(hard: true);
-                                UserMetadata.instance.fetchPerms();
-                                _tbaFieldController.text = prefs.getString("tbaKey") ?? "";
+                                await UserMetadata.fetch(hard: true);
+                                _tbaFieldController.text = SharedPreferencesInterface.tbakey ?? "";
                                 if (!_formKey.currentState!.validate()) return;
                                 if (!context.mounted) return;
-                                final router = GoRouter.of(context);
+                                final goConfiguration = const ConfigurationRoute().goLater(context);
                                 BlueAlliance.isKeyValid(_tbaFieldController.text)
                                     .then((valid) => valid
-                                        ? router.goNamed(RoutePaths.configuration.name)
+                                        ? goConfiguration()
                                         : throw Exception("Invalid TBA Key!"))
                                     .reportError(context);
                               },
@@ -91,13 +91,13 @@ class MetadataPage extends StatelessWidget {
                           FilledButton(
                               onPressed: () {
                                 if (!_formKey.currentState!.validate()) return;
-                                final router = GoRouter.of(context);
+                                final goConfiguration = const ConfigurationRoute().goLater(context);
                                 BlueAlliance.isKeyValid(_tbaFieldController.text).then((valid) {
                                   if (!valid) throw Exception("Invalid TBA Key!");
-                                  prefs.setString("tbaKey", _tbaFieldController.text);
-                                  return UserMetadata.instance
-                                      .update(_nameController.text, int.parse(_teamController.text))
-                                      .then((_) => router.goNamed(RoutePaths.configuration.name));
+                                  SharedPreferencesInterface.tbakey = _tbaFieldController.text;
+                                  return UserMetadata.update(
+                                          _nameController.text, int.parse(_teamController.text))
+                                      .then((_) => goConfiguration());
                                 }).reportError(context);
                               },
                               child: const Text("Submit"))
@@ -133,100 +133,59 @@ class TBAInfoDialog extends Dialog {
                 ]))));
 }
 
-typedef PermissionSet = ({
-  bool achievementApprover,
-  bool graphViewer,
-  bool pitViewer,
-  bool economyManager
-});
+class UserMetadata {
+  static String? _id;
+  static ({String name, int team})? _info;
 
-class UserMetadata extends ChangeNotifier {
-  static void initialize() => Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-        switch (event.event) {
-          case AuthChangeEvent.mfaChallengeVerified ||
-                AuthChangeEvent.passwordRecovery ||
-                AuthChangeEvent.tokenRefreshed:
-            break;
-          // ignore: deprecated_member_use
-          case AuthChangeEvent.signedOut || AuthChangeEvent.userDeleted:
-            SupabaseInterface.clearSession();
-            UserMetadata.instance._name = UserMetadata.instance._team = null;
-            break;
-          case AuthChangeEvent.initialSession:
-            if (isAuthenticated) continue fetchCase;
-          fetchCase:
-          case AuthChangeEvent.signedIn || AuthChangeEvent.userUpdated:
-            assert(isAuthenticated);
-            UserMetadata.instance.fetch();
-            UserMetadata.instance.fetchPerms();
-            break;
-        }
-      });
-  static UserMetadata instance = UserMetadata();
-  static bool get isAuthenticated => Supabase.instance.client.auth.currentUser != null;
+  static String? get id => _id;
+  static String? get name => _info?.name;
+  static int? get team => _info?.team;
 
-  final String? id = Supabase.instance.client.auth.currentUser?.id;
-  String? _name;
-  int? _team;
+  static final NotifiableChangeNotifier changeNotifier = NotifiableChangeNotifier();
 
-  String? get name => _name;
-  int? get team => _team;
+  static bool get signedIn => id != null;
+  static Future<bool> get isValid async =>
+      _info != null && await BlueAlliance.isKeyValid(SharedPreferencesInterface.tbakey);
 
-  Future<void> update(String? name, int? team) {
-    _name = name;
-    _team = team;
-    return Supabase.instance.client
-        .from("users")
-        .update({"name": _name ?? "User", "team": _team ?? 0})
-        .eq("id", id!)
-        .then((_) => notifyListeners());
+  static Future<void> signIn(Session session) {
+    _id = session.user.id;
+    return fetch();
   }
 
-  Future<void> fetch({bool hard = false}) => Supabase.instance.client
-          .from("users")
-          .select('name, team')
-          .eq('id', id!)
-          .maybeSingle()
-          .then((value) {
-        if (value == null) throw Exception("No User Found");
-        if (!hard && _name == value['name'] && _team == value['team']) return;
-        _name = value['name'];
-        _team = value['team'];
-        notifyListeners();
-      }).catchError((e) {
-        if (hard || _name != null || _team != null) {
-          _name = _team = null;
-          notifyListeners();
-        }
-        throw e;
+  static Future<void> fetch({bool hard = false}) {
+    return Supabase.instance.client
+        .from("users")
+        .select('name, team')
+        .eq('id', id!)
+        .maybeSingle()
+        .then((resp) {
+      if (resp == null) throw Exception("No User Found");
+      if (!hard && name == resp['name'] && team == resp['team']) return;
+      _info = (name: resp['name'], team: resp['team']);
+      changeNotifier.notifyListeners();
+    }).catchError((e) {
+      _info = null;
+      changeNotifier.notifyListeners();
+      throw e;
+    });
+  }
+
+  static Future<void> update(String name, int team) => Supabase.instance.client
+      .from("users")
+      .update({"name": name, "team": team})
+      .eq("id", id!)
+      .select()
+      .single()
+      .then((resp) {
+        _info = (name: resp['name'], team: resp['team']);
+        changeNotifier.notifyListeners();
       });
 
-  Future<bool> get isValid async =>
-      _name != null &&
-      _team != null &&
-      prefs.containsKey("tbaKey") &&
-      await BlueAlliance.isKeyValid(prefs.getString("tbaKey"));
-
-  final ValueNotifier<PermissionSet> cachedPermissions = ValueNotifier(
-      (achievementApprover: false, graphViewer: false, pitViewer: false, economyManager: false));
-
-  bool get hasAnyAdminPerms =>
-      UserMetadata.instance.cachedPermissions.value.achievementApprover ||
-      UserMetadata.instance.cachedPermissions.value.economyManager ||
-      UserMetadata.instance.cachedPermissions.value.graphViewer ||
-      UserMetadata.instance.cachedPermissions.value.pitViewer;
-
-  Future<void> fetchPerms() => Supabase.instance.client
-      .from("permissions")
-      .select("*")
-      .eq("id", id!)
-      .maybeSingle()
-      .withConverter((data) => data == null ? null : Map<String, bool>.from(data..remove("id")))
-      .then((value) => (
-            achievementApprover: value?["achievement_approver"] ?? false,
-            graphViewer: value?["graph_viewer"] ?? false,
-            pitViewer: value?["pit_viewer"] ?? false,
-            economyManager: value?["economy_manager"] ?? false
-          ))
-      .then((perms) => cachedPermissions.value = perms);
+  static Future<void> signOut() async {
+    await Supabase.instance.client.auth.signOut();
+    await Supabase.instance.client.auth.onAuthStateChange
+        .firstWhere((event) => event.session == null);
+    _id = _info = null;
+    changeNotifier.notifyListeners();
+  }
 }
