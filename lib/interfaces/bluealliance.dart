@@ -25,25 +25,29 @@ class MatchInfo implements Comparable {
   static final _finalsPattern = RegExp(r'^(?<level>qf|sf|f)(?<finalnum>\d{1,2})m(?<index>\d+)$');
   static final highestSemi = 12;
 
-  MatchLevel level;
-  int? finalnum;
-  int index;
-  MatchInfo({required this.level, this.finalnum, required this.index}) {
-    /// It must be a qualification XOR (or but not and) not have a finalnum
-    assert((level == MatchLevel.qualification) ^ (finalnum != null));
-  }
+  final MatchLevel level;
+  final int? finalnum;
+  final int index;
+  const MatchInfo({required this.level, this.finalnum, required this.index})
+    : /// It must be a qualification XOR (or but not and) not have a finalnum
+      assert((level == MatchLevel.qualification) ^ (finalnum != null));
+
   factory MatchInfo.fromString(String s) {
     RegExpMatch? match = _qualificationPattern.firstMatch(s) ?? _finalsPattern.firstMatch(s);
     if (match == null) throw Exception("Malformed Match String '$s'");
     return MatchInfo(
-        level: MatchLevel.fromCompLevel(match.namedGroup("level")!),
-        finalnum: match.groupNames.contains("finalnum")
-            ? int.tryParse(match.namedGroup("finalnum") ?? "")
-            : null,
-        index: int.parse(match.namedGroup("index")!));
+      level: MatchLevel.fromCompLevel(match.namedGroup("level")!),
+      finalnum: match.groupNames.contains("finalnum")
+          ? int.tryParse(match.namedGroup("finalnum") ?? "")
+          : null,
+      index: int.parse(match.namedGroup("index")!),
+    );
   }
 
-  void increment({required int highestQual}) {
+  MatchInfo increment({required int highestQual}) {
+    int index = this.index;
+    int? finalnum = this.finalnum;
+    MatchLevel level = this.level;
     switch (level) {
       case MatchLevel.qualification:
         if (index < highestQual) {
@@ -65,14 +69,18 @@ class MatchInfo implements Comparable {
       case MatchLevel.finals:
         assert(finalnum != null);
         if (finalnum! < 2) {
-          finalnum = finalnum! + 1;
+          finalnum++;
         }
       default:
       // ignore
     }
+    return MatchInfo(level: level, index: index, finalnum: finalnum);
   }
 
-  void decrement({required int highestQual}) {
+  MatchInfo decrement({required int highestQual}) {
+    int index = this.index;
+    int? finalnum = this.finalnum;
+    MatchLevel level = this.level;
     switch (level) {
       case MatchLevel.qualification:
         if (index > 0) {
@@ -90,7 +98,7 @@ class MatchInfo implements Comparable {
       case MatchLevel.finals:
         assert(finalnum != null);
         if (finalnum! > 0) {
-          finalnum = finalnum! - 1;
+          finalnum--;
         } else {
           level = MatchLevel.semifinals;
           index = highestSemi;
@@ -99,6 +107,7 @@ class MatchInfo implements Comparable {
       default:
       // ignore
     }
+    return MatchInfo(level: level, index: index, finalnum: finalnum);
   }
 
   @override
@@ -108,8 +117,8 @@ class MatchInfo implements Comparable {
   int compareTo(b) => level != b.level
       ? b.level.index - level.index
       : finalnum != null && b.finalnum != null && finalnum != b.finalnum
-          ? b.finalnum! - finalnum!
-          : b.index - index;
+      ? b.finalnum! - finalnum!
+      : b.index - index;
 
   @override
   int get hashCode => Object.hash(level, finalnum, index);
@@ -145,14 +154,18 @@ class RobotInfo implements Comparable {
     RegExpMatch? patternMatch = _robotPositionPattern.firstMatch(position);
     if (patternMatch == null) throw Exception("Malformed Robot Position '$position'");
     return RobotInfo(
-        team: team,
-        alliance: Alliance.fromString(patternMatch.namedGroup("color")!),
-        ordinal: int.parse(patternMatch.namedGroup("number")!));
+      team: team,
+      alliance: Alliance.fromString(patternMatch.namedGroup("color")!),
+      ordinal: int.parse(patternMatch.namedGroup("number")!),
+    );
   }
 
   @override
   int compareTo(b) =>
       alliance != b.alliance ? b.alliance.index - alliance.index : b.ordinal - ordinal;
+
+  @override
+  String toString() => team;
 }
 
 class TBAInfo {
@@ -189,14 +202,19 @@ class BlueAlliance {
   }
 
   static Future _getJson(String path, {String? key}) => _client
-          .get(Uri.https("www.thebluealliance.com", "/api/v3/$path",
-              {"X-TBA-Auth-Key": key ?? SharedPreferencesInterface.tbakey}))
-          .then(
-              (resp) => resp.statusCode < 400 ? json.decode(resp.body) : throw Exception(resp.body))
-          .then((n) {
+      .get(
+        Uri.https("www.thebluealliance.com", "/api/v3/$path"),
+        headers: {
+          if (key != null || SharedPreferencesInterface.tbakey != null)
+            "X-TBA-Auth-Key": (key ?? SharedPreferencesInterface.tbakey)!,
+        },
+      )
+      .then((resp) => resp.statusCode < 400 ? json.decode(resp.body) : throw Exception(resp.body))
+      .then((n) {
         dirtyConnected = true;
         return n;
-      }).catchError((n) {
+      })
+      .catchError((n) {
         // TODO only if n is a connection error, then set connected to false
         dirtyConnected = false;
         throw n;
@@ -207,55 +225,68 @@ class BlueAlliance {
     if (key == null) return Future.value(false);
     if (key.isEmpty) return Future.value(false);
     if (_keyCache.contains(key)) return Future.value(true);
-    return _getJson("status", key: key).then((_) {
-      _keyCache.add(key);
-      return true;
-    }).catchError((_) => false);
+    return _getJson("status", key: key)
+        .then((_) {
+          _keyCache.add(key);
+          return true;
+        })
+        .catchError((_) => false);
   }
 
   static final stockSoT = LocalSourceOfTruth<TBAInfo>("tba");
   static final stock = Stock<TBAInfo, Map<String, String>>(
-      // TODO add handling for 404s
-      sourceOfTruth: stockSoT.mapTo<Map<String, String>>(
-          (p) => p.map((k, v) => MapEntry(k, v.toString())), (p) => p),
-      fetcher: Fetcher.ofFuture((key) async {
-        if (key.event == null) {
-          /// season -> {eventcode: event name}
-          var data = List<Map<String, dynamic>>.from(await _getJson("events/${key.season}/simple"),
-              growable: false);
-          return Map.fromEntries(data.map((event) => MapEntry(event['event_code'], event['name'])));
-        } else if (key.match == null) {
-          /// event -> {matchcode: full match name}
-          var data = List<String>.from(
-              await _getJson("event/${key.season}${key.event}/matches/keys"),
-              growable: false);
-          return Map.fromEntries(
-              data.map((matchCode) => MapEntry(matchCode.split("_").last, matchCode)));
-        } else if (key.match == "*") {
-          /// match* -> {teamcode: *}
-          var data = List<String>.from(await _getJson("event/${key.season}${key.event}/teams/keys"),
-              growable: false);
-          return Map.fromEntries(data.map((teamCode) => MapEntry(teamCode.substring(3), "*")));
-        } else {
-          /// match -> {teamcode: team position}
-          var data = Map<String, dynamic>.from(
-              await _getJson("match/${key.season}${key.event}_${key.match}/simple"));
-          Map<String, String> o = {};
-          for (MapEntry<String, dynamic> alliance
-              in Map<String, dynamic>.from(data['alliances']).entries) {
-            for (MapEntry<int, String> team
-                in List<String>.from(alliance.value['team_keys'], growable: false)
-                    .asMap()
-                    .entries) {
-              if (team.value.substring(3) != "0") {
-                o[team.value.substring(3)] = "${alliance.key}${team.key + 1}";
-              }
+    // TODO add handling for 404s
+    sourceOfTruth: stockSoT.mapTo<Map<String, String>>(
+      (p) => p.map((k, v) => MapEntry(k, v.toString())),
+      (p) => p,
+    ),
+    fetcher: Fetcher.ofFuture((key) async {
+      if (key.event == null) {
+        /// season -> {eventcode: event name}
+        var data = List<Map<String, dynamic>>.from(
+          await _getJson("events/${key.season}/simple"),
+          growable: false,
+        );
+        return Map.fromEntries(data.map((event) => MapEntry(event['event_code'], event['name'])));
+      } else if (key.match == null) {
+        /// event -> {matchcode: full match name}
+        var data = List<String>.from(
+          await _getJson("event/${key.season}${key.event}/matches/keys"),
+          growable: false,
+        );
+        return Map.fromEntries(
+          data.map((matchCode) => MapEntry(matchCode.split("_").last, matchCode)),
+        );
+      } else if (key.match == "*") {
+        /// match* -> {teamcode: *}
+        var data = List<String>.from(
+          await _getJson("event/${key.season}${key.event}/teams/keys"),
+          growable: false,
+        );
+        return Map.fromEntries(data.map((teamCode) => MapEntry(teamCode.substring(3), "*")));
+      } else {
+        /// match -> {teamcode: team position}
+        var data = Map<String, dynamic>.from(
+          await _getJson("match/${key.season}${key.event}_${key.match}/simple"),
+        );
+        Map<String, String> o = {};
+        for (MapEntry<String, dynamic> alliance in Map<String, dynamic>.from(
+          data['alliances'],
+        ).entries) {
+          for (MapEntry<int, String> team in List<String>.from(
+            alliance.value['team_keys'],
+            growable: false,
+          ).asMap().entries) {
+            if (team.value.substring(3) != "0") {
+              o[team.value.substring(3)] = "${alliance.key}${team.key + 1}";
             }
           }
-          assert(o.length == 6, "Incorrect Team Count for ${key.season}${key.event}_${key.match}");
-          return o;
         }
-      }));
+        assert(o.length == 6, "Incorrect Team Count for ${key.season}${key.event}_${key.match}");
+        return o;
+      }
+    }),
+  );
 
   static Future<void> batchFetch(int season, String event) async {
     final data = List.from(await _getJson("event/$season$event/matches/simple"), growable: false);
@@ -263,10 +294,12 @@ class BlueAlliance {
     Map<String, String> pitTeams = {};
     for (dynamic matchdata in data) {
       Map<String, String> o = {};
-      for (MapEntry<String, dynamic> alliance
-          in Map<String, dynamic>.from(matchdata['alliances']).entries) {
-        for (MapEntry<int, String> team
-            in List<String>.from(alliance.value['team_keys']).asMap().entries) {
+      for (MapEntry<String, dynamic> alliance in Map<String, dynamic>.from(
+        matchdata['alliances'],
+      ).entries) {
+        for (MapEntry<int, String> team in List<String>.from(
+          alliance.value['team_keys'],
+        ).asMap().entries) {
           String teamkey = team.value.substring(3);
           if (teamkey != "0") {
             o[teamkey] = "${alliance.key}${team.key + 1}";
@@ -284,7 +317,8 @@ class BlueAlliance {
 
   /// Returns an partial identifier of fully correct items.
   static Future<MatchScoutIdentifierOptional> validate(
-      MatchScoutIdentifierOptional identifier) async {
+    MatchScoutIdentifierOptional identifier,
+  ) async {
     // unpack record for type promotion
     int? season = identifier.season;
     String? event = identifier.event;
@@ -313,9 +347,9 @@ class BlueAlliance {
     }
 
     try {
-      final teams = await (match.level == MatchLevel.qualification
-          ? stock.get
-          : stock.fresh)(TBAInfo(season: season, event: event, match: match.toString()));
+      final teams = await (match.level == MatchLevel.qualification ? stock.get : stock.fresh)(
+        TBAInfo(season: season, event: event, match: match.toString()),
+      );
       if (team == null || !teams.containsKey(team)) {
         return (season: season, event: event, match: match, team: null);
       }
@@ -333,5 +367,5 @@ const longestTeam = 5;
 /// match scouting counter button custom colors
 const gamepiececolors = {
   2025: {"coral": Color(0xffc0c0c0), "algae": Color(0xff3a854d)},
-  2023: {"cone": Color(0xffccc000), "cube": Color(0xffa000a0)}
+  2023: {"cone": Color(0xffccc000), "cube": Color(0xffa000a0)},
 };

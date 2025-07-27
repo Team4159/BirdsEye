@@ -10,14 +10,15 @@ class LegalShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: SafeArea(minimum: const EdgeInsets.all(16), child: child),
-        floatingActionButtonLocation: FloatingActionButtonLocation.miniStartTop,
-        floatingActionButton: IconButton.filledTonal(
-            onPressed: () => GoRouter.of(context).canPop()
-                ? GoRouter.of(context).pop()
-                : const LandingRoute().go(context),
-            icon: const Icon(Icons.arrow_back_rounded)),
-      );
+    body: SafeArea(minimum: const EdgeInsets.all(16), child: child),
+    floatingActionButtonLocation: FloatingActionButtonLocation.miniStartTop,
+    floatingActionButton: IconButton.filledTonal(
+      onPressed: () => GoRouter.of(context).canPop()
+          ? GoRouter.of(context).pop()
+          : const LandingRoute().go(context),
+      icon: const Icon(Icons.arrow_back_rounded),
+    ),
+  );
 }
 
 class MarkdownPage extends StatelessWidget {
@@ -26,6 +27,7 @@ class MarkdownPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SensibleFutureBuilder(
-      future: DefaultAssetBundle.of(context).loadString("assets/documents/$file.md"),
-      builder: (context, snapshot) => MarkdownWidget(data: snapshot.data!));
+    future: DefaultAssetBundle.of(context).loadString("assets/documents/$file.md"),
+    builder: (context, data) => MarkdownWidget(data: data),
+  );
 }

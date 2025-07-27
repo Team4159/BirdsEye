@@ -1,5 +1,6 @@
 import 'package:birdseye/interfaces/sharedprefs.dart';
-import 'package:birdseye/routing.dart' show routerConfig;
+import 'package:birdseye/pages/metadata.dart';
+import 'package:birdseye/routing.dart' show appRouter;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show Supabase;
 
@@ -13,9 +14,10 @@ void main() async {
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjY2traXdvc3h6dXB4YmxvY2ZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODY4NDk3MzMsImV4cCI6MjAwMjQyNTczM30.IVIT9yIxQ9JiwbDB6v10ZI8eP7c1oQhwoWZejoODllQ",
   );
   WidgetsFlutterBinding.ensureInitialized();
+  UserMetadata.init();
   runApp(
     MaterialApp.router(
-      routerConfig: routerConfig,
+      routerConfig: appRouter,
       title: "Bird's Eye",
       themeMode: ThemeMode.system,
       theme: ThemeData.from(

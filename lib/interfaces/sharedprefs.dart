@@ -25,8 +25,9 @@ class SharedPreferencesInterface {
     seasonListenable.value = s;
   }
 
-  static final seasonListenable =
-      ValueNotifier<int>(season); // holds a risk of desyncing from stored value but idc
+  static final seasonListenable = ValueNotifier<int>(
+    _prefs.containsKey("season") ? _prefs.getInt("season")! : DateTime.now().year,
+  ); // holds a risk of desyncing from stored value but idc
 
   static String? get event => _prefs.containsKey("event") ? _prefs.getString("event") : null;
   static set event(String? e) => e == null ? _prefs.remove("event") : _prefs.setString("event", e);

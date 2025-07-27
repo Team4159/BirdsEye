@@ -12,19 +12,38 @@ class MatchScoutPage extends StatelessWidget {
   const MatchScoutPage(this.initial, {super.key});
 
   @override
-  Widget build(BuildContext context) => MatchScoutIdentifierConfig(
-      initial: initial,
-      submit: (identifier) async {
-        if (identifier == null) return;
-        final nav = Navigator.of(context);
-        await SupabaseInterface.setSession(identifier).nullifyErrors;
-        final formContent = await nav.push<Map<String, dynamic>>(MaterialPageRoute(
-            builder: (context) => MatchScoutForm(identifier.season,
-                reset: () async => Navigator.pop(context),
-                submit: (fields) async => Navigator.pop(context, fields))));
-        if (formContent != null) MixedInterfaces.submitMatchResponse(identifier, formContent);
-        await SupabaseInterface.setSession(
-                (season: identifier.season, event: identifier.event, match: null, team: null))
-            .nullifyErrors;
-      });
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.max,
+    children: [
+      AppBar(title: const Text("Match Scouting")),
+      Expanded(
+        child: MatchScoutConfig(
+          initial: initial,
+          submit: (identifier) async {
+            if (identifier == null) return;
+            final nav = Navigator.of(context);
+            await SupabaseInterface.setSession(identifier).nullifyErrors;
+            final formContent = await nav.push<Map<String, dynamic>>(
+              MaterialPageRoute(
+                builder: (context) => SizedBox.expand(
+                  child: MatchScoutForm(
+                    identifier.season,
+                    reset: () async => Navigator.pop(context),
+                    submit: (fields) async => Navigator.pop(context, fields),
+                  ),
+                ),
+              ),
+            );
+            if (formContent != null) MixedInterfaces.submitMatchResponse(identifier, formContent);
+            await SupabaseInterface.setSession((
+              season: identifier.season,
+              event: identifier.event,
+              match: null,
+              team: null,
+            )).nullifyErrors;
+          },
+        ),
+      ),
+    ],
+  );
 }
