@@ -6,83 +6,15 @@ part of 'routing.dart';
 // GoRouterGenerator
 // **************************************************************************
 
-List<RouteBase> get $appRoutes => [$landingRoute];
+List<RouteBase> get $appRoutes => [
+  $landingRoute,
+  $legalShellRoute,
+  $metadataRoute,
+  $scoutingShellRoute,
+];
 
-RouteBase get $landingRoute => GoRouteData.$route(
-  path: '/',
-
-  factory: _$LandingRoute._fromState,
-  routes: [
-    ShellRouteData.$route(
-      factory: $LegalShellRouteExtension._fromState,
-      routes: [
-        GoRouteData.$route(
-          path: 'legal/privacy',
-
-          factory: _$LegalPrivacyRoute._fromState,
-        ),
-        GoRouteData.$route(
-          path: 'legal/terms',
-
-          factory: _$LegalTermsRoute._fromState,
-        ),
-        GoRouteData.$route(
-          path: 'legal/cookies',
-
-          factory: _$LegalCookiesRoute._fromState,
-        ),
-      ],
-    ),
-    GoRouteData.$route(
-      path: 'metadata',
-
-      caseSensitive: false,
-
-      factory: _$MetadataRoute._fromState,
-    ),
-    ShellRouteData.$route(
-      navigatorKey: ScoutingShellRoute.$navigatorKey,
-      factory: $ScoutingShellRouteExtension._fromState,
-      routes: [
-        GoRouteData.$route(
-          path: 'configuration',
-
-          caseSensitive: false,
-
-          factory: _$ConfigurationRoute._fromState,
-        ),
-        GoRouteData.$route(
-          path: 'pitscout',
-
-          caseSensitive: false,
-
-          factory: _$PitScoutRoute._fromState,
-        ),
-        GoRouteData.$route(
-          path: 'matchscout',
-
-          caseSensitive: false,
-
-          factory: _$MatchScoutRoute._fromState,
-        ),
-        GoRouteData.$route(
-          path: 'savedresponses',
-
-          caseSensitive: false,
-
-          factory: _$SavedResponsesRoute._fromState,
-        ),
-        GoRouteData.$route(
-          path: 'achievements',
-
-          caseSensitive: false,
-
-          factory: _$AchievementsRoute._fromState,
-        ),
-      ],
-    ),
-  ],
-);
+RouteBase get $landingRoute =>
+    GoRouteData.$route(path: '/', factory: _$LandingRoute._fromState);
 
 mixin _$LandingRoute on GoRouteData {
   static LandingRoute _fromState(GoRouterState state) => const LandingRoute();
@@ -103,6 +35,27 @@ mixin _$LandingRoute on GoRouteData {
   @override
   void replace(BuildContext context) => context.replace(location);
 }
+
+RouteBase get $legalShellRoute => ShellRouteData.$route(
+  factory: $LegalShellRouteExtension._fromState,
+  routes: [
+    GoRouteData.$route(
+      path: '/legal/privacy',
+
+      factory: _$LegalPrivacyRoute._fromState,
+    ),
+    GoRouteData.$route(
+      path: '/legal/terms',
+
+      factory: _$LegalTermsRoute._fromState,
+    ),
+    GoRouteData.$route(
+      path: '/legal/cookies',
+
+      factory: _$LegalCookiesRoute._fromState,
+    ),
+  ],
+);
 
 extension $LegalShellRouteExtension on LegalShellRoute {
   static LegalShellRoute _fromState(GoRouterState state) => LegalShellRoute();
@@ -170,9 +123,23 @@ mixin _$LegalCookiesRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
+RouteBase get $metadataRoute => GoRouteData.$route(
+  path: '/metadata',
+
+  caseSensitive: false,
+
+  factory: _$MetadataRoute._fromState,
+);
+
 mixin _$MetadataRoute on GoRouteData {
   static MetadataRoute _fromState(GoRouterState state) => MetadataRoute(
-    redir: _$boolConverter(state.uri.queryParameters['redir']!)!,
+    redir:
+        _$convertMapValue(
+          'redir',
+          state.uri.queryParameters,
+          _$boolConverter,
+        ) ??
+        false,
   );
 
   MetadataRoute get _self => this as MetadataRoute;
@@ -180,7 +147,7 @@ mixin _$MetadataRoute on GoRouteData {
   @override
   String get location => GoRouteData.$location(
     '/metadata',
-    queryParams: {'redir': _self.redir.toString()},
+    queryParams: {if (_self.redir != false) 'redir': _self.redir.toString()},
   );
 
   @override
@@ -196,6 +163,68 @@ mixin _$MetadataRoute on GoRouteData {
   @override
   void replace(BuildContext context) => context.replace(location);
 }
+
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
+}
+
+bool _$boolConverter(String value) {
+  switch (value) {
+    case 'true':
+      return true;
+    case 'false':
+      return false;
+    default:
+      throw UnsupportedError('Cannot convert "$value" into a bool.');
+  }
+}
+
+RouteBase get $scoutingShellRoute => ShellRouteData.$route(
+  navigatorKey: ScoutingShellRoute.$navigatorKey,
+  factory: $ScoutingShellRouteExtension._fromState,
+  routes: [
+    GoRouteData.$route(
+      path: '/configuration',
+
+      caseSensitive: false,
+
+      factory: _$ConfigurationRoute._fromState,
+    ),
+    GoRouteData.$route(
+      path: '/pitscout',
+
+      caseSensitive: false,
+
+      factory: _$PitScoutRoute._fromState,
+    ),
+    GoRouteData.$route(
+      path: '/matchscout',
+
+      caseSensitive: false,
+
+      factory: _$MatchScoutRoute._fromState,
+    ),
+    GoRouteData.$route(
+      path: '/savedresponses',
+
+      caseSensitive: false,
+
+      factory: _$SavedResponsesRoute._fromState,
+    ),
+    GoRouteData.$route(
+      path: '/achievements',
+
+      caseSensitive: false,
+
+      factory: _$AchievementsRoute._fromState,
+    ),
+  ],
+);
 
 extension $ScoutingShellRouteExtension on ScoutingShellRoute {
   static ScoutingShellRoute _fromState(GoRouterState state) =>
@@ -324,24 +353,4 @@ mixin _$AchievementsRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
-}
-
-bool _$boolConverter(String value) {
-  switch (value) {
-    case 'true':
-      return true;
-    case 'false':
-      return false;
-    default:
-      throw UnsupportedError('Cannot convert "$value" into a bool.');
-  }
-}
-
-T? _$convertMapValue<T>(
-  String key,
-  Map<String, String> map,
-  T? Function(String) converter,
-) {
-  final value = map[key];
-  return value == null ? null : converter(value);
 }

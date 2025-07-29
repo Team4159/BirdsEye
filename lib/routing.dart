@@ -1,9 +1,10 @@
 import 'dart:async' show FutureOr;
 
+import 'package:birdseye/usermetadata.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'interfaces/bluealliance.dart' show MatchInfo;
+import 'interfaces/bluealliance.dart' show BlueAlliance, MatchInfo;
 import 'interfaces/sharedprefs.dart';
 import 'pages/achievements.dart';
 import 'pages/configuration.dart';
@@ -19,35 +20,14 @@ part 'routing.g.dart';
 
 final appRouter = GoRouter(routes: $appRoutes, initialLocation: '/');
 
-@TypedGoRoute<LandingRoute>(
-  path: '/',
-  routes: [
-    TypedShellRoute<LegalShellRoute>(
-      routes: [
-        TypedGoRoute<LegalPrivacyRoute>(path: 'legal/privacy'),
-        TypedGoRoute<LegalTermsRoute>(path: 'legal/terms'),
-        TypedGoRoute<LegalCookiesRoute>(path: 'legal/cookies'),
-      ],
-    ),
-    TypedGoRoute<MetadataRoute>(path: 'metadata', caseSensitive: false),
-    TypedShellRoute<ScoutingShellRoute>(
-      routes: [
-        TypedGoRoute<ConfigurationRoute>(path: 'configuration', caseSensitive: false),
-        TypedGoRoute<PitScoutRoute>(path: 'pitscout', caseSensitive: false),
-        TypedGoRoute<MatchScoutRoute>(path: 'matchscout', caseSensitive: false),
-        TypedGoRoute<SavedResponsesRoute>(path: 'savedresponses', caseSensitive: false),
-        TypedGoRoute<AchievementsRoute>(path: 'achievements', caseSensitive: false),
-      ],
-    ),
-  ],
-)
+@TypedGoRoute<LandingRoute>(path: '/')
 @immutable
 class LandingRoute extends GoRouteData with _$LandingRoute {
   const LandingRoute();
 
   @override
   FutureOr<String?> redirect(BuildContext context, GoRouterState state) {
-    if (state.uri.path == location && UserMetadata.signedIn) {
+    if (state.uri.path == location && (UserMetadata.read(context)?.isSignedIn ?? false)) {
       return const MetadataRoute(redir: true).location;
     }
     return null;
@@ -57,6 +37,13 @@ class LandingRoute extends GoRouteData with _$LandingRoute {
   Widget build(BuildContext context, GoRouterState state) => const LandingPage();
 }
 
+@TypedShellRoute<LegalShellRoute>(
+  routes: [
+    TypedGoRoute<LegalPrivacyRoute>(path: '/legal/privacy'),
+    TypedGoRoute<LegalTermsRoute>(path: '/legal/terms'),
+    TypedGoRoute<LegalCookiesRoute>(path: '/legal/cookies'),
+  ],
+)
 @immutable
 class LegalShellRoute extends ShellRouteData {
   @override
@@ -82,11 +69,12 @@ class LegalCookiesRoute extends GoRouteData with _$LegalCookiesRoute {
   Widget build(BuildContext context, GoRouterState state) => const MarkdownPage("cookies");
 }
 
+@TypedGoRoute<MetadataRoute>(path: '/metadata', caseSensitive: false)
 @immutable
 class MetadataRoute extends GoRouteData with _$MetadataRoute implements Navigable {
   /// whether or not to check if metadata is already available, and skip the metadata page if so
   final bool redir;
-  const MetadataRoute({required this.redir});
+  const MetadataRoute({this.redir = false});
 
   @override
   get destination => const NavigationDrawerDestination(
@@ -96,11 +84,12 @@ class MetadataRoute extends GoRouteData with _$MetadataRoute implements Navigabl
 
   @override
   Future<String?> redirect(BuildContext context, GoRouterState state) async {
-    if (!UserMetadata.signedIn) {
+    final userMeta = UserMetadata.of(context);
+    if (!userMeta.isSignedIn) {
       return const LandingRoute().location;
     }
     if (!redir) return null;
-    if (await UserMetadata.isValid) {
+    if (userMeta.hasMeta && await BlueAlliance.isKeyValid(SharedPreferencesInterface.tbakey)) {
       return const ConfigurationRoute().location;
     }
     return null;
@@ -112,16 +101,26 @@ class MetadataRoute extends GoRouteData with _$MetadataRoute implements Navigabl
 
 final shellNavigatorKey = GlobalKey<NavigatorState>();
 
+@TypedShellRoute<ScoutingShellRoute>(
+  routes: [
+    TypedGoRoute<ConfigurationRoute>(path: '/configuration', caseSensitive: false),
+    TypedGoRoute<PitScoutRoute>(path: '/pitscout', caseSensitive: false),
+    TypedGoRoute<MatchScoutRoute>(path: '/matchscout', caseSensitive: false),
+    TypedGoRoute<SavedResponsesRoute>(path: '/savedresponses', caseSensitive: false),
+    TypedGoRoute<AchievementsRoute>(path: '/achievements', caseSensitive: false),
+  ],
+)
 @immutable
 class ScoutingShellRoute extends ShellRouteData {
   static final GlobalKey<NavigatorState> $navigatorKey = shellNavigatorKey;
 
   @override
   FutureOr<String?> redirect(BuildContext context, GoRouterState state) async {
-    if (!UserMetadata.signedIn) {
+    var userMeta = UserMetadata.of(context);
+    if (!userMeta.isSignedIn) {
       return const LandingRoute().location;
     }
-    if (!await UserMetadata.isValid) {
+    if (!userMeta.hasMeta || !await BlueAlliance.isKeyValid(SharedPreferencesInterface.tbakey)) {
       return const MetadataRoute(redir: false).location;
     }
     return null;
@@ -148,11 +147,9 @@ class ConfigurationRoute extends GoRouteData with _$ConfigurationRoute implement
 
 @immutable
 class PitScoutRoute extends GoRouteData with _$PitScoutRoute implements Navigable {
-  final int season;
+  final int? season;
   final String? event;
-  PitScoutRoute({int? season, String? event})
-    : season = season ?? SharedPreferencesInterface.season,
-      event = event ?? SharedPreferencesInterface.event;
+  PitScoutRoute({this.season, this.event});
 
   @override
   get destination => const NavigationDrawerDestination(
@@ -162,13 +159,15 @@ class PitScoutRoute extends GoRouteData with _$PitScoutRoute implements Navigabl
 
   @override
   FutureOr<String?> redirect(BuildContext context, GoRouterState state) {
-    if (event == null) return const ConfigurationRoute().location;
+    if (SharedPreferencesInterface.event == null) return const ConfigurationRoute().location;
     return null;
   }
 
   @override
-  Widget build(BuildContext context, GoRouterState state) =>
-      PitScoutPage(season: season, event: event!);
+  Widget build(BuildContext context, GoRouterState state) => PitScoutPage(
+    season: season ?? SharedPreferencesInterface.season,
+    event: event ?? SharedPreferencesInterface.event!,
+  );
 }
 
 final _matchCodeParamPattern = RegExp(
@@ -177,7 +176,6 @@ final _matchCodeParamPattern = RegExp(
 
 @immutable
 class MatchScoutRoute extends GoRouteData with _$MatchScoutRoute implements Navigable {
-  // This must be a string, because go_router_builder doesnt know what to do with a MatchInfo
   final String? matchCode;
   const MatchScoutRoute({this.matchCode});
 
@@ -186,7 +184,7 @@ class MatchScoutRoute extends GoRouteData with _$MatchScoutRoute implements Navi
       var match = _matchCodeParamPattern.firstMatch(matchCode);
       if (match != null) {
         try {
-          // maybe do BlueAlliance.validate(initial)
+          // lowpriority Validate BlueAlliance.validate(initial)
           return MatchScoutPage((
             season: int.parse(match.namedGroup("season")!),
             event: match.namedGroup("event")!,

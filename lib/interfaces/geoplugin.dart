@@ -14,18 +14,22 @@ class Coordinates {
   final String? region;
 
   Coordinates({required double latDegrees, required double longDegrees, this.region})
-      : lat = _degToRad(latDegrees),
-        long = _degToRad(longDegrees);
+    : lat = _degToRad(latDegrees),
+      long = _degToRad(longDegrees);
   Coordinates.fromGP(Map<String, dynamic> resp)
-      : lat = _degToRad(resp['geoplugin_latitude']),
-        long = _degToRad(resp['geoplugin_longitude']),
-        region = resp['geoplugin_regionCode'];
+    : lat = _degToRad(resp['geoplugin_latitude']),
+      long = _degToRad(resp['geoplugin_longitude']),
+      region = resp['geoplugin_regionCode'];
 
   /// The [Haversine Formula](https://en.wikipedia.org/wiki/Haversine_formula) for distance
   double operator -(Coordinates other) =>
       _earthDiameter *
-      asin(sqrt(pow(sin(other.lat - lat) / 2, 2) +
-          cos(lat) * cos(other.lat) * pow(sin(other.long - long) / 2, 2)));
+      asin(
+        sqrt(
+          pow(sin(other.lat - lat) / 2, 2) +
+              cos(lat) * cos(other.lat) * pow(sin(other.long - long) / 2, 2),
+        ),
+      );
 }
 
 class GeoPlugin {
@@ -39,7 +43,7 @@ class GeoPlugin {
         .get(_url)
         .then((resp) => Map<String, dynamic>.from(jsonDecode(resp.body)))
         .then<Coordinates?>(Coordinates.fromGP)
-        .catchError((_) => null);
+        .onError((_, _) => null);
     return _coords;
   }
 

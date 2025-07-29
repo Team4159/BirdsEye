@@ -1,8 +1,6 @@
-import 'package:birdseye/interfaces/mixed.dart';
 import 'package:birdseye/interfaces/supabase.dart';
 import 'package:birdseye/pages/matchscouting/config.dart';
-import 'package:birdseye/types.dart';
-import 'package:birdseye/utils.dart';
+import 'package:birdseye/util/common.dart';
 import 'package:flutter/material.dart';
 
 import 'form.dart' show MatchScoutForm;
@@ -22,7 +20,7 @@ class MatchScoutPage extends StatelessWidget {
           submit: (identifier) async {
             if (identifier == null) return;
             final nav = Navigator.of(context);
-            await SupabaseInterface.setSession(identifier).nullifyErrors;
+            await SupabaseInterface.setSession(identifier);
             final formContent = await nav.push<Map<String, dynamic>>(
               MaterialPageRoute(
                 builder: (context) => SizedBox.expand(
@@ -34,13 +32,16 @@ class MatchScoutPage extends StatelessWidget {
                 ),
               ),
             );
-            if (formContent != null) MixedInterfaces.submitMatchResponse(identifier, formContent);
+            if (formContent != null) {
+              final fut = SupabaseInterface.matchResponseSubmit(identifier, formContent);
+              if (context.mounted) fut.reportError(context);
+            }
             await SupabaseInterface.setSession((
               season: identifier.season,
               event: identifier.event,
               match: null,
               team: null,
-            )).nullifyErrors;
+            ));
           },
         ),
       ),

@@ -1,11 +1,10 @@
 import 'dart:convert' show json;
 
+import 'package:birdseye/interfaces/localstore.dart' show LocalSourceOfTruth;
 import 'package:birdseye/interfaces/sharedprefs.dart';
-import 'package:birdseye/types.dart';
 
-import '../interfaces/localstore.dart' show LocalSourceOfTruth;
 import 'package:flutter/material.dart' show Color;
-import 'package:http/http.dart' show Client;
+import 'package:http/http.dart' show Client, ClientException, Response;
 import 'package:stock/stock.dart';
 
 enum MatchLevel {
@@ -22,31 +21,33 @@ enum MatchLevel {
 
 class MatchInfo implements Comparable {
   static final _qualificationPattern = RegExp(r'^(?<level>qm)(?<index>\d+)$');
-  static final _finalsPattern = RegExp(r'^(?<level>qf|sf|f)(?<finalnum>\d{1,2})m(?<index>\d+)$');
+  static final _finalsPattern = RegExp(r'^(?<level>qf|sf|f)(?<setnum>\d{1,2})m(?<index>\d+)$');
   static final highestSemi = 12;
 
   final MatchLevel level;
-  final int? finalnum;
+  final int? setnum;
   final int index;
-  const MatchInfo({required this.level, this.finalnum, required this.index})
-    : /// It must be a qualification XOR (or but not and) not have a finalnum
-      assert((level == MatchLevel.qualification) ^ (finalnum != null));
+  const MatchInfo({required this.level, this.setnum, required this.index})
+    : /// It must be a qualification XOR (or but not and) not have a setnum
+      assert((level == MatchLevel.qualification) ^ (setnum != null));
 
   factory MatchInfo.fromString(String s) {
     RegExpMatch? match = _qualificationPattern.firstMatch(s) ?? _finalsPattern.firstMatch(s);
-    if (match == null) throw Exception("Malformed Match String '$s'");
+    if (match == null) throw FormatException("Malformed Match String '$s'");
     return MatchInfo(
       level: MatchLevel.fromCompLevel(match.namedGroup("level")!),
-      finalnum: match.groupNames.contains("finalnum")
-          ? int.tryParse(match.namedGroup("finalnum") ?? "")
+      setnum: match.groupNames.contains("setnum")
+          ? int.tryParse(match.namedGroup("setnum") ?? "")
           : null,
       index: int.parse(match.namedGroup("index")!),
     );
   }
 
+  static bool looksLikeFinals(String test) => _finalsPattern.hasMatch(test);
+
   MatchInfo increment({required int highestQual}) {
     int index = this.index;
-    int? finalnum = this.finalnum;
+    int? setnum = this.setnum;
     MatchLevel level = this.level;
     switch (level) {
       case MatchLevel.qualification:
@@ -55,80 +56,77 @@ class MatchInfo implements Comparable {
         } else {
           level = MatchLevel.semifinals;
           index = 1;
-          finalnum = 1;
+          setnum = 1;
         }
       case MatchLevel.semifinals:
-        assert(finalnum != null);
+        assert(setnum != null);
         if (index < highestSemi) {
           index++;
         } else {
           level = MatchLevel.finals;
           index = 1;
-          finalnum = 1;
+          setnum = 1;
         }
       case MatchLevel.finals:
-        assert(finalnum != null);
-        if (finalnum! < 2) {
-          finalnum++;
+        assert(setnum != null);
+        if (setnum! < 2) {
+          setnum++;
         }
       default:
       // ignore
     }
-    return MatchInfo(level: level, index: index, finalnum: finalnum);
+    return MatchInfo(level: level, index: index, setnum: setnum);
   }
 
   MatchInfo decrement({required int highestQual}) {
     int index = this.index;
-    int? finalnum = this.finalnum;
+    int? setnum = this.setnum;
     MatchLevel level = this.level;
     switch (level) {
       case MatchLevel.qualification:
-        if (index > 0) {
+        if (index > 1) {
           index--;
         }
       case MatchLevel.semifinals:
-        assert(finalnum != null);
-        if (index > 0) {
+        assert(setnum != null);
+        if (index > 1) {
           index--;
         } else {
           level = MatchLevel.qualification;
           index = highestQual;
-          finalnum = null;
+          setnum = null;
         }
       case MatchLevel.finals:
-        assert(finalnum != null);
-        if (finalnum! > 0) {
-          finalnum--;
+        assert(setnum != null);
+        if (setnum! > 1) {
+          setnum--;
         } else {
           level = MatchLevel.semifinals;
           index = highestSemi;
-          finalnum = 1;
+          setnum = 1;
         }
       default:
       // ignore
     }
-    return MatchInfo(level: level, index: index, finalnum: finalnum);
+    return MatchInfo(level: level, index: index, setnum: setnum);
   }
 
   @override
-  String toString() => "${level.compLevel}${finalnum != null ? '${finalnum}m' : ''}$index";
+  String toString() => "${level.compLevel}${setnum != null ? '${setnum}m' : ''}$index";
 
   @override
   int compareTo(b) => level != b.level
       ? b.level.index - level.index
-      : finalnum != null && b.finalnum != null && finalnum != b.finalnum
-      ? b.finalnum! - finalnum!
+      : setnum != null && b.setnum != null && setnum != b.setnum
+      ? b.setnum! - setnum!
       : b.index - index;
 
   @override
-  int get hashCode => Object.hash(level, finalnum, index);
+  int get hashCode => Object.hash(level, setnum, index);
 
   @override
   bool operator ==(Object other) =>
-      other is MatchInfo &&
-      other.level == level &&
-      other.finalnum == finalnum &&
-      other.index == index;
+      other is MatchInfo && other.level == level && other.setnum == setnum && other.index == index;
 }
 
 enum Alliance {
@@ -162,7 +160,7 @@ class RobotInfo implements Comparable {
 
   @override
   int compareTo(b) =>
-      alliance != b.alliance ? b.alliance.index - alliance.index : b.ordinal - ordinal;
+      (alliance != b.alliance ? alliance.index - b.alliance.index : ordinal - b.ordinal).toInt();
 
   @override
   String toString() => team;
@@ -201,7 +199,7 @@ class BlueAlliance {
     return false;
   }
 
-  static Future _getJson(String path, {String? key}) => _client
+  static Future<dynamic> _getJson(String path, {String? key}) => _client
       .get(
         Uri.https("www.thebluealliance.com", "/api/v3/$path"),
         headers: {
@@ -209,15 +207,18 @@ class BlueAlliance {
             "X-TBA-Auth-Key": (key ?? SharedPreferencesInterface.tbakey)!,
         },
       )
-      .then((resp) => resp.statusCode < 400 ? json.decode(resp.body) : throw Exception(resp.body))
+      .then((resp) => resp.statusCode < 400 ? json.decode(resp.body) : throw resp)
+      .onError<Response>((resp, _) {
+        print("Error ${resp.statusCode}: ${resp.body}");
+        return null;
+      })
       .then((n) {
         dirtyConnected = true;
         return n;
       })
-      .catchError((n) {
-        // TODO only if n is a connection error, then set connected to false
+      .onError<ClientException>((e, _) {
         dirtyConnected = false;
-        throw n;
+        throw ClientException("Offline");
       });
 
   static final Set<String> _keyCache = {};
@@ -226,11 +227,12 @@ class BlueAlliance {
     if (key.isEmpty) return Future.value(false);
     if (_keyCache.contains(key)) return Future.value(true);
     return _getJson("status", key: key)
-        .then((_) {
+        .then((resp) {
+          if (resp == null) return false;
           _keyCache.add(key);
           return true;
         })
-        .catchError((_) => false);
+        .onError((_, _) => false);
   }
 
   static final stockSoT = LocalSourceOfTruth<TBAInfo>("tba");
@@ -315,57 +317,57 @@ class BlueAlliance {
     await stockSoT.write(TBAInfo(season: season, event: event, match: "*"), pitTeams);
   }
 
-  /// Returns an partial identifier of fully correct items.
-  static Future<MatchScoutIdentifierOptional> validate(
-    MatchScoutIdentifierOptional identifier,
-  ) async {
-    // unpack record for type promotion
-    int? season = identifier.season;
-    String? event = identifier.event;
-    MatchInfo? match = identifier.match;
-    String? team = identifier.team;
+  // /// Returns an partial identifier of fully correct items.
+  // typedef MatchScoutIdentifierOptional = ({
+  //   int? season,
+  //   String? event,
+  //   MatchInfo? match,
+  //   String? team,
+  // });
+  // static Future<MatchScoutIdentifierOptional> validate(
+  //   MatchScoutIdentifierOptional identifier,
+  // ) async {
+  //   // unpack record for type promotion
+  //   int? season = identifier.season;
+  //   String? event = identifier.event;
+  //   MatchInfo? match = identifier.match;
+  //   String? team = identifier.team;
 
-    try {
-      if (season == null) throw Exception("No Season");
-      final events = await stock.get(TBAInfo(season: season));
-      if (event == null || !events.containsKey(event)) {
-        return (season: season, event: null, match: null, team: null);
-      }
-      // fallthrough to next try/catch
-    } catch (_) {
-      return (season: null, event: null, match: null, team: null);
-    }
+  //   try {
+  //     if (season == null) throw Exception("No Season");
+  //     final events = await stock.get(TBAInfo(season: season));
+  //     if (event == null || !events.containsKey(event)) {
+  //       return (season: season, event: null, match: null, team: null);
+  //     }
+  //     /// fallthrough to next try/catch
+  //   } catch (_) {
+  //     return (season: null, event: null, match: null, team: null);
+  //   }
 
-    try {
-      final matches = await stock.get(TBAInfo(season: season, event: event));
-      if (match == null || !matches.containsKey(match.toString())) {
-        return (season: season, event: event, match: null, team: null);
-      }
-      // fallthrough to next try/catch
-    } catch (_) {
-      return (season: season, event: null, match: null, team: null);
-    }
+  //   try {
+  //     final matches = await stock.get(TBAInfo(season: season, event: event));
+  //     if (match == null || !matches.containsKey(match.toString())) {
+  //       return (season: season, event: event, match: null, team: null);
+  //     }
+  //     /// fallthrough to next try/catch
+  //   } catch (_) {
+  //     return (season: season, event: null, match: null, team: null);
+  //   }
 
-    try {
-      final teams = await (match.level == MatchLevel.qualification ? stock.get : stock.fresh)(
-        TBAInfo(season: season, event: event, match: match.toString()),
-      );
-      if (team == null || !teams.containsKey(team)) {
-        return (season: season, event: event, match: match, team: null);
-      }
-    } catch (_) {
-      return (season: season, event: event, match: null, team: null);
-    }
+  //   try {
+  //     final teams = await (match.level == MatchLevel.qualification ? stock.get : stock.fresh)(
+  //       TBAInfo(season: season, event: event, match: match.toString()),
+  //     );
+  //     if (team == null || !teams.containsKey(team)) {
+  //       return (season: season, event: event, match: match, team: null);
+  //     }
+  //   } catch (_) {
+  //     return (season: season, event: event, match: null, team: null);
+  //   }
 
-    return identifier;
-  }
+  //   return identifier;
+  // }
 }
 
 /// The number of digits in the longest FRC team number
 const longestTeam = 5;
-
-/// match scouting counter button custom colors
-const gamepiececolors = {
-  2025: {"coral": Color(0xffc0c0c0), "algae": Color(0xff3a854d)},
-  2023: {"cone": Color(0xffccc000), "cube": Color(0xffa000a0)},
-};

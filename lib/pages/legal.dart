@@ -1,5 +1,4 @@
 import 'package:birdseye/routing.dart';
-import 'package:birdseye/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markdown_widget/widget/markdown.dart';
@@ -26,8 +25,10 @@ class MarkdownPage extends StatelessWidget {
   const MarkdownPage(this.file, {super.key});
 
   @override
-  Widget build(BuildContext context) => SensibleFutureBuilder(
+  Widget build(BuildContext context) => FutureBuilder(
     future: DefaultAssetBundle.of(context).loadString("assets/documents/$file.md"),
-    builder: (context, data) => MarkdownWidget(data: data),
+    builder: (context, snapshot) => snapshot.data == null
+        ? const Center(child: CircularProgressIndicator())
+        : MarkdownWidget(data: snapshot.data!),
   );
 }
