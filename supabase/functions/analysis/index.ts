@@ -1,7 +1,8 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import * as oak from "@oak/oak";
-import { oakCors } from "https://deno.land/x/cors/mod.ts";
+import { oakCors } from "https://deno.land/x/cors@v1.2.2/mod.ts";
+import * as oakCompress from "https://deno.land/x/oak_compress@v0.0.2/mod.ts";
 import robotRouter from "./routes/team.ts"
 import eventRouter from "./routes/event.ts"
 
@@ -11,6 +12,7 @@ router.use(eventRouter.routes());
 
 const app = new oak.Application();
 app.use(oakCors()); // Enable CORS for All Routes
+app.use(oakCompress.gzip()); // Enable gzip compresson
 app.use(async (ctx, next) => {
   const start = Date.now();
   await next();

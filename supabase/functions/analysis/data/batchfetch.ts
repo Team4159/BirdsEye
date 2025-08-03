@@ -64,7 +64,7 @@ async function batchFetchRobotInMatch(
     throw error;
   }
 
-  let tbadataraw: MatchInfo[] = await tba.get(filter);
+  let tbadataraw: MatchInfo[] = await tba.getMatches(filter);
   if ("mostRecentN" in filter) {
     const dbmatches = new Set(dbdata.map((entry: any) => `${filter.season}${entry["match_scouting"].event}_${entry["match_scouting"].match}`));
     tbadataraw = tbadataraw

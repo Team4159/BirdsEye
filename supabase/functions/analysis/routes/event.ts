@@ -8,6 +8,7 @@ import {
 import { createSupaClient } from "../supabase/supabase.ts";
 import { matches, ParameterParser } from "./shared.ts";
 import robotRouter from "./team.ts";
+import { predictEvent } from "../data/simulation.ts";
 
 const router = new oak.Router({ prefix: "/event/:event" });
 
@@ -97,6 +98,16 @@ router.get("/rankings", async (ctx) => {
       ): Promise<[string, number | null]> => [t, await rankingFunction(t)]),
     ),
   );
+});
+
+router.get("/prediction", async (ctx) => {
+  const season = ParameterParser.season(ctx.params);
+  const event = ctx.params["event"]!;
+  const mostRecentN = ParameterParser.mostRecentN(ctx.request);
+
+  const client = createSupaClient(ctx.request.headers.get("Authorization")!);
+
+  ctx.response.body = await predictEvent(client, season, event, mostRecentN ?? 8);
 });
 
 export default router;

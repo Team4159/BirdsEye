@@ -1,6 +1,9 @@
 { "imports": {
+    "@cacheable/memoize": "npm:@cacheable/memoize@^1.1.0",
     "@oak/oak": "jsr:@oak/oak@^17.1.4",
+    "@std/async": "jsr:@std/async@^1.0.14",
     "@stdlib/stats-base-dists-normal": "npm:@stdlib/stats-base-dists-normal@^0.2.2",
     "@stdlib/stats-base-stdev": "npm:@stdlib/stats-base-stdev@^0.2.2",
-    "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.49.4"
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.49.4",
+    "cacheable-request": "npm:cacheable-request@^13.0.8"
   } }

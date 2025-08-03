@@ -1,6 +1,5 @@
-import stats from "@stdlib/stats-base-dists-normal";
 import { DBClient } from "../supabase/supabase.ts";
-import { avg, normalDifference, normalSum, Normal as NormalType, sigmoid, std } from "../util.ts";
+import { avg, normalDifference, normalFit, normalSum, Normal as NormalType, teamworkSum } from "../util.ts";
 import { BatchFetchFilter, batchFetchRobotInMatch, batchFetchRobotScores } from "./batchfetch.ts";
 import dynamicMap from "./dynamic/dynamic.ts";
 import { MatchInfo, tba } from "./tba.ts";
@@ -80,13 +79,13 @@ async function epaRobot(
     return Object.fromEntries(
       scores.entries().map((
         [cat, catscores],
-      ) => [cat, new stats.Normal(avg(catscores), std(catscores))]),
+      ) => [cat, normalFit(catscores)]),
     );
   } else {
     const scores = (await batchFetchRobotScores(supabase, filter))
       .values().toArray();
     if (scores.length === 0) return null;
-    return new stats.Normal(avg(scores), std(scores));
+    return normalFit(scores);
   }
 }
 
@@ -116,7 +115,7 @@ async function erpaRobot(
   return Object.fromEntries(
     Object.entries(rps).map((
       [cat, vals],
-    ) => [cat, new stats.Normal(avg(vals), std(vals))]),
+    ) => [cat, normalFit(vals)]),
   );
 }
 
@@ -162,9 +161,12 @@ async function dhrRobot(
   return avg(dhrs);
 }
 
+/**
+ * rp { ranking point : probability of earning (0, 1) }
+ */
 type AlliancePrediction = {
   winChance: number;
-  points: number;
+  points: NormalType;
   rp: { [key: string]: number };
   teams: string[];
 };
@@ -212,7 +214,7 @@ async function epaMatchup(
     return Object.fromEntries(
       ents.map((
         [rpname, rptotal],
-      ) => [rpname, sigmoid(rptotal)]),
+      ) => [rpname, teamworkSum(rptotal)]),
     );
   }
 
@@ -228,13 +230,13 @@ async function epaMatchup(
   return {
     blue: {
       winChance: redProb === undefined ? undefined : 1 - redProb,
-      points: blueDist?.mean,
+      points: blueDist ?? undefined,
       rp: blueRPDist ?? undefined,
       teams: blue,
     },
     red: {
       winChance: redProb,
-      points: redDist?.mean,
+      points: redDist ?? undefined,
       rp: redRPDist ?? undefined,
       teams: red,
     },
@@ -256,4 +258,4 @@ async function epaMatch(
   return epaMatchup(supabase, match.season, blue, red, mostRecentN);
 }
 
-export { dhrRobot, epaMatch, epaRobot, erpaRobot };
+export { dhrRobot, epaMatch, epaMatchup, epaRobot, erpaRobot };
