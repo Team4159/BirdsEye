@@ -85,7 +85,7 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: widget.menuMaxHeight),
         child: ListView(
-          padding: EdgeInsets.zero,
+          padding: EdgeInsets.all(4),
           shrinkWrap: true,
           children:
               widget.items
@@ -114,6 +114,13 @@ class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
       }
     }
     return const SizedBox.shrink();
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomDropdown<T> oldWidget) {
+    value = widget.value;
+    _closeMenu();
+    super.didUpdateWidget(oldWidget);
   }
 
   @override
