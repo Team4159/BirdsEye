@@ -304,8 +304,8 @@ class _TeamSelectorInternal extends StatelessWidget {
 
     return SizedBox.fromSize(
       size: Size(75, 60),
-      child: CustomDropdown(
-        // decoration: const InputDecoration(helperText: "Team"),
+      child: SensibleDropdown(
+        decoration: const InputDecoration(helperText: "Team"),
         value: snapshot.data?.cast<RobotInfo?>().singleWhere(
           (ri) => ri?.team == initial,
           orElse: () => null,
@@ -316,13 +316,11 @@ class _TeamSelectorInternal extends StatelessWidget {
                 for (final t in snapshot.data!)
                   DropdownMenuItem(
                     value: t,
-                    alignment: Alignment.center,
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
-                      textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Expanded(child: Text(t.toString())),
+                        Text(t.toString()),
                         Container(
                           decoration: BoxDecoration(
                             color: t.alliance.color,

@@ -19,17 +19,17 @@ class _UserMetadataWrapperState extends State<UserMetadataWrapper> {
   @override
   void initState() {
     super.initState();
-
-    /// Begin listening for the initial login event
-    Supabase.instance.client.auth.onAuthStateChange
-        .firstWhere((event) => event.session != null)
-        .then((auth) {
-          _id = auth.session!.user.id;
-          return fetch();
-        })
-        // ignore: use_build_context_synchronously - The context is only used to fetch a router, so async doesn't affect it
-        .then((_) => appRouter.go(const MetadataRoute(redir: true).location));
+    _subscribe();
   }
+
+  /// Begin listening for the initial login event
+  void _subscribe() => Supabase.instance.client.auth.onAuthStateChange
+      .firstWhere((event) => event.session != null)
+      .then((auth) {
+        _id = auth.session!.user.id;
+        return fetch();
+      })
+      .then((_) => appRouter.go(const MetadataRoute(redir: true).location));
 
   Future<void> fetch() {
     return Supabase.instance.client
@@ -63,6 +63,7 @@ class _UserMetadataWrapperState extends State<UserMetadataWrapper> {
       (event) => event.session == null,
     );
     setState(() => _id = _info = null);
+    _subscribe(); // ready the app for the next sign in
   }
 
   @override

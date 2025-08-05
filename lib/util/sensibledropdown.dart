@@ -1,154 +1,201 @@
+import 'dart:math' show min;
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
-class CustomDropdown<T> extends StatefulWidget {
+/// [DropdownButton] alternative utilizing [InputDecoration]
+class SensibleDropdown<T> extends StatefulWidget {
   final T? value;
   final List<DropdownMenuItem<T>>? items;
   final ValueChanged<T?>? onChanged;
+
   final InputDecoration decoration;
-  final Widget? icon;
-  final double iconSize;
-  final double menuElevation;
   final double menuMaxHeight;
 
-  const CustomDropdown({
+  const SensibleDropdown({
     super.key,
     this.value,
     required this.items,
     this.onChanged,
     this.decoration = const InputDecoration(),
-    this.icon,
-    this.iconSize = 24.0,
-    this.menuElevation = 8.0,
     this.menuMaxHeight = 200.0,
   });
 
   @override
-  State<CustomDropdown<T>> createState() => _CustomDropdownState<T>();
+  State<SensibleDropdown<T>> createState() => _SensibleDropdownState<T>();
 }
 
-class _CustomDropdownState<T> extends State<CustomDropdown<T>> {
-  final GlobalKey _widgetKey = GlobalKey();
+class _SensibleDropdownState<T> extends State<SensibleDropdown<T>> {
+  _SensibleDropdownMenu<T>? _menu;
+
   T? value;
 
-  OverlayEntry? _overlayEntry;
-  bool _isMenuOpen = false;
-
   @override
-  void dispose() {
-    _closeMenu();
-    super.dispose();
+  void initState() {
+    value = widget.value;
+    super.initState();
   }
 
-  void _toggleMenu() {
-    if (_isMenuOpen) {
-      _closeMenu();
-    } else {
-      _openMenu();
-    }
+  @override
+  void didUpdateWidget(covariant SensibleDropdown<T> oldWidget) {
+    value = widget.value;
+    _forceCloseMenu();
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    if (value != widget.value && widget.onChanged != null) widget.onChanged!(value);
+  }
+
+  @override
+  void deactivate() {
+    _forceCloseMenu();
+    super.deactivate();
   }
 
   void _openMenu() {
-    if (_isMenuOpen) return;
+    /// If the menu is already open, ignore
+    if (_menu != null) return;
 
-    final renderBox = _widgetKey.currentContext?.findRenderObject() as RenderBox?;
+    /// If the widget is empty, ignore
+    if (widget.items == null) return;
+
+    final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
 
-    final size = renderBox.size;
-    final offset = renderBox.localToGlobal(Offset.zero);
+    final navigator = Navigator.of(context);
 
-    _overlayEntry = OverlayEntry(
-      builder: (context) {
-        return Positioned(
-          left: offset.dx,
-          top: offset.dy + size.height,
-          width: size.width,
-          child: _buildDropdownMenu(context),
-        );
-      },
-    );
+    final buttonRect =
+        renderBox.localToGlobal(Offset.zero, ancestor: navigator.context.findRenderObject()) &
+        renderBox.size;
 
-    Overlay.of(context).insert(_overlayEntry!);
-    _isMenuOpen = true;
+    navigator
+        .push(
+          _menu = _SensibleDropdownMenu(
+            widget.items!,
+            buttonRect: buttonRect,
+            maxHeight: widget.menuMaxHeight,
+          ),
+        )
+        .then((v) => value != v ? setState(() => value = v) : null)
+        .then((_) => _menu = null);
   }
 
-  void _closeMenu() {
-    if (!_isMenuOpen) return;
-    _overlayEntry?.remove();
-    _overlayEntry = null;
-    _isMenuOpen = false;
-  }
-
-  Widget _buildDropdownMenu(BuildContext context) {
-    return Material(
-      elevation: widget.menuElevation,
-      borderRadius: BorderRadius.circular(4.0),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: widget.menuMaxHeight),
-        child: ListView(
-          padding: EdgeInsets.all(4),
-          shrinkWrap: true,
-          children:
-              widget.items
-                  ?.map(
-                    (item) => InkWell(
-                      onTap: () {
-                        widget.onChanged?.call(item.value);
-                        _closeMenu();
-                      },
-                      child: item,
-                    ),
-                  )
-                  .toList(growable: false) ??
-              List.empty(growable: false),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSelectedItem() {
-    if (widget.items != null) {
-      for (final item in widget.items!) {
-        if (item.value == widget.value) {
-          return item.child;
-        }
-      }
-    }
-    return const SizedBox.shrink();
-  }
-
-  @override
-  void didUpdateWidget(covariant CustomDropdown<T> oldWidget) {
-    value = widget.value;
-    _closeMenu();
-    super.didUpdateWidget(oldWidget);
+  void _forceCloseMenu() {
+    if (_menu == null) return;
+    Navigator.of(context).removeRoute(_menu!);
+    _menu = null;
   }
 
   @override
   Widget build(BuildContext context) => GestureDetector(
     behavior: HitTestBehavior.opaque,
-    onTap: (widget.onChanged != null && widget.items != null) ? _toggleMenu : null,
+    onTap: widget.items != null ? _openMenu : null,
     child: InputDecorator(
-      key: _widgetKey,
-      decoration: widget.decoration.copyWith(
-        suffixIcon:
-            widget.decoration.suffixIcon ??
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8.0),
-              child: Icon(
-                Icons.arrow_drop_down,
-                size: widget.iconSize,
-                color: Theme.of(context).iconTheme.color,
-              ),
-            ),
+      decoration: widget.decoration.suffixIcon != null
+          ? widget.decoration
+          : widget.decoration.copyWith(suffixIcon: const Icon(Icons.arrow_drop_down, size: 24)),
+      isEmpty: value == null,
+      child: DefaultTextStyle(
+        style: Theme.of(context).textTheme.titleMedium!,
+        child:
+            widget.items
+                ?.cast<DropdownMenuItem<T>?>()
+                .firstWhere((i) => i!.value == value, orElse: () => null)
+                ?.child ??
+            const SizedBox.expand(),
       ),
-      isEmpty: widget.value == null,
-      child: Align(
-        alignment: AlignmentDirectional.centerStart,
-        child: DefaultTextStyle(
-          style: Theme.of(context).textTheme.titleMedium!,
-          child: _buildSelectedItem(),
+    ),
+  );
+}
+
+class _SensibleDropdownMenu<T> extends PopupRoute<T> {
+  final List<DropdownMenuItem<T>> items;
+  final Rect buttonRect;
+  final double maxHeight;
+  _SensibleDropdownMenu(this.items, {required this.buttonRect, required this.maxHeight});
+
+  @override
+  Color? get barrierColor => null;
+
+  @override
+  bool get barrierDismissible => true;
+
+  @override
+  String? get barrierLabel => "Dismiss Dropdown";
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) => FadeTransition(
+    opacity: animation,
+    child: CustomSingleChildLayout(
+      delegate: _SensibleDropdownMenuLayout(buttonRect: buttonRect, maxHeight: maxHeight),
+      child: Semantics(
+        role: SemanticsRole.menu,
+        scopesRoute: true,
+        namesRoute: true,
+        explicitChildNodes: true,
+        child: Material(
+          elevation: 8,
+          borderRadius: const BorderRadius.all(Radius.circular(8)),
+          clipBehavior: Clip.antiAlias,
+          child: DefaultTextStyle(
+            style: Theme.of(context).textTheme.titleMedium!,
+            child: ListView(
+              physics: const ClampingScrollPhysics(),
+              padding: kMaterialListPadding,
+              shrinkWrap: true,
+              children: [
+                for (final item in items)
+                  Semantics(
+                    role: SemanticsRole.menuItem,
+                    button: true,
+                    child: InkWell(
+                      onTap: () => Navigator.pop(context, item.value),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: item,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     ),
   );
+
+  @override
+  Duration get transitionDuration => Durations.short3;
+}
+
+class _SensibleDropdownMenuLayout<T> extends SingleChildLayoutDelegate {
+  _SensibleDropdownMenuLayout({required this.buttonRect, required this.maxHeight});
+
+  final Rect buttonRect;
+  final double maxHeight;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    // The width of a menu should be at most the view width. This ensures that
+    // the menu does not extend past the left and right edges of the screen.
+    final double width = min(constraints.maxWidth, buttonRect.width);
+    return BoxConstraints(minWidth: width, maxWidth: width, maxHeight: maxHeight);
+  }
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) => Offset(
+    clampDouble(buttonRect.left, 0, size.width),
+    clampDouble(buttonRect.bottom, 0, size.height),
+  );
+
+  @override
+  bool shouldRelayout(_SensibleDropdownMenuLayout<T> oldDelegate) =>
+      buttonRect != oldDelegate.buttonRect;
 }

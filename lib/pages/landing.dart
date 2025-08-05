@@ -51,7 +51,7 @@ class LandingPage extends StatelessWidget {
             icon: SizedBox.square(
               dimension: 36,
               child: Padding(
-                padding: EdgeInsets.all(4),
+                padding: const EdgeInsets.all(4),
                 child: SvgPicture.asset('assets/images/github.svg'),
               ),
             ),
