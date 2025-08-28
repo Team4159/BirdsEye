@@ -1,7 +1,18 @@
 import stats from "@stdlib/stats-base-dists-normal";
 import { DBClient } from "../supabase/supabase.ts";
-import { avg, normalDifference, normalSum, Normal as NormalType, sigmoid, std } from "../util.ts";
-import { BatchFetchFilter, batchFetchRobotInMatch, batchFetchRobotScores } from "./batchfetch.ts";
+import {
+  avg,
+  Normal as NormalType,
+  normalDifference,
+  normalSum,
+  sigmoid,
+  std,
+} from "../util.ts";
+import {
+  BatchFetchFilter,
+  batchFetchRobotInMatches,
+  batchFetchRobotScores,
+} from "./batchfetch.ts";
 import dynamicMap from "./dynamic/dynamic.ts";
 import { MatchInfo, tba } from "./tba.ts";
 
@@ -11,7 +22,7 @@ export type MatchIdentifier = {
   match: string;
 };
 
-const categorizers = {
+export const categorizers = {
   gameperiod: (_: keyof typeof dynamicMap) => (objective: string) =>
     objective.split("_")[0],
   gameelements: (season: keyof typeof dynamicMap) => (objective: string) => {
@@ -19,7 +30,7 @@ const categorizers = {
     return dynamicMap[season].scoringelements.find((e) => objpts.includes(e)) ??
       null;
   },
-  total: null,
+  total: (_: keyof typeof dynamicMap) => (_: string) => "",
 };
 
 export function isCategorizer(x: string): x is keyof typeof categorizers {
@@ -45,49 +56,25 @@ export function categorizerSupertype(
 }
 
 /**
- * Estimated Points Added
- * @returns Normal distribution of team's EPA
- */
-async function epaRobot(
-  supabase: DBClient,
-  filter: BatchFetchFilter,
-  category: "total",
-): Promise<NormalType | null>;
-/**
  * Estimated Points Added per Category
  * @returns Map of Category to Normal Distribution
  */
 async function epaRobot(
   supabase: DBClient,
   filter: BatchFetchFilter,
-  category: Exclude<keyof typeof categorizers, "total">,
-): Promise<{ [key: string]: NormalType } | null>;
-async function epaRobot(
-  supabase: DBClient,
-  filter: BatchFetchFilter,
-  category: keyof typeof categorizers = "total",
-): Promise<NormalType | { [key: string]: NormalType } | null> {
-  const categorizer = categorizers[category] === null
-    ? null
-    : categorizers[category](filter.season);
-  if (categorizer) {
-    const scores = await batchFetchRobotScores(
-      supabase,
-      filter,
-      categorizer,
-    );
-    if (scores.size === 0) return null;
-    return Object.fromEntries(
-      scores.entries().map((
-        [cat, catscores],
-      ) => [cat, new stats.Normal(avg(catscores), std(catscores))]),
-    );
-  } else {
-    const scores = (await batchFetchRobotScores(supabase, filter))
-      .values().toArray();
-    if (scores.length === 0) return null;
-    return new stats.Normal(avg(scores), std(scores));
-  }
+  categorizer: keyof typeof categorizers,
+): Promise<{ [key: string]: NormalType } | undefined> {
+  const scores = await batchFetchRobotScores(
+    supabase,
+    filter,
+    categorizers[categorizer](filter.season),
+  );
+  if (scores.size === 0) return;
+  return Object.fromEntries(
+    scores.entries().map((
+      [cat, catscores],
+    ) => [cat, new stats.Normal(avg(catscores), std(catscores))]),
+  );
 }
 
 /**
@@ -97,8 +84,8 @@ async function epaRobot(
 async function erpaRobot(
   supabase: DBClient,
   filter: BatchFetchFilter,
-): Promise<{ [k: string]: NormalType }> {
-  const rims = (await batchFetchRobotInMatch(supabase, filter))
+): Promise<{ [key: string]: NormalType }> {
+  const rims = (await batchFetchRobotInMatches(supabase, filter))
     .values();
   const rps: { [key: string]: number[] } = {};
 
@@ -127,9 +114,9 @@ async function erpaRobot(
 async function dhrRobot(
   supabase: DBClient,
   filter: BatchFetchFilter,
-): Promise<number | null> {
-  const rims = await batchFetchRobotInMatch(supabase, filter);
-  if (rims.size === 0) return null;
+): Promise<number | undefined> {
+  const rims = await batchFetchRobotInMatches(supabase, filter);
+  if (rims.size === 0) return;
   const dhrs: number[] = [];
 
   type DHRValidRIM = {
@@ -162,6 +149,27 @@ async function dhrRobot(
   return avg(dhrs);
 }
 
+function aggRobot(
+  supabase: DBClient,
+  filter: BatchFetchFilter,
+  categorizer: keyof typeof categorizers,
+): Promise<{ [key: string]: NormalType } | undefined>;
+function aggRobot(supabase: DBClient,
+  filter: BatchFetchFilter,
+  categorizer: "dhr"
+): Promise<{"dhr": number} | undefined>;
+async function aggRobot(
+  supabase: DBClient,
+  filter: BatchFetchFilter,
+  categorizer: keyof typeof categorizers | "dhr",
+): Promise<{ [key: string]: NormalType | number } | undefined> {
+  if (categorizer === "dhr") {
+    const dhr = await dhrRobot(supabase, filter);
+    return dhr === undefined ? undefined : { "dhr": dhr };
+  }
+  return epaRobot(supabase, filter, categorizer);
+}
+
 type AlliancePrediction = {
   winChance: number;
   points: number;
@@ -173,33 +181,34 @@ async function epaMatchup(
   season: keyof typeof dynamicMap,
   blue: string[],
   red: string[],
-  mostRecentN: number,
+  limit: number,
 ): Promise<{
   blue: Partial<AlliancePrediction>;
   red: Partial<AlliancePrediction>;
-  isMissingData: boolean;
+  isMissingData: true;
+} | {
+  blue: AlliancePrediction,
+  red: AlliancePrediction,
+  isMisssingData: false;
 }> {
   let isMissingData: boolean = false;
-  async function epaAlliance(teams: string[]) {
+  async function epaAlliance(teams: string[]): Promise<NormalType | undefined> {
     const epas = (await Promise.all(
-        teams.map((team) =>
-          epaRobot(supabase, { season, team, mostRecentN }, "total")
-        ),
-      )).filter((n): n is NonNullable<typeof n> => {
-          if (n !== null) return true;
-          isMissingData = true;
-          return false;
-        })
-      ;
-      if (epas.length === 0) return null;
-    return normalSum(
-      ...epas)
+      teams.map((robot) => epaRobot(supabase, { season, robot, limit }, "total")),
+    )).filter((n): n is NonNullable<typeof n> => {
+      if (n !== null) return true;
+      isMissingData = true;
+      return false;
+    }).map((epa) => epa[""]);
+
+    if (epas.length === 0) return;
+    return normalSum(...epas);
   }
-  async function erpaAlliance(teams: string[]) {
+  async function erpaAlliance(teams: string[]): Promise<{ [k: string]: number; } | undefined> {
     const output: { [key: string]: number } = {};
     for (
       const erpaTeam of await Promise.all(
-        teams.map((team) => erpaRobot(supabase, { season, team, mostRecentN })),
+        teams.map((robot) => erpaRobot(supabase, { season, robot, limit })),
       )
     ) {
       for (const [rpname, rpvalue] of Object.entries(erpaTeam)) {
@@ -208,7 +217,7 @@ async function epaMatchup(
       }
     }
     const ents = Object.entries(output);
-    if (ents.length === 0) return null;
+    if (ents.length === 0) return;
     return Object.fromEntries(
       ents.map((
         [rpname, rptotal],
@@ -222,30 +231,33 @@ async function epaMatchup(
     erpaAlliance(blue),
     erpaAlliance(red),
   ]);
-  const diff = blueDist === null || redDist === null ? null : normalDifference(blueDist, redDist); // advantage of blue over red
+  const diff = blueDist === undefined || redDist === undefined
+    ? undefined
+    : normalDifference(blueDist, redDist); // advantage of blue over red
   const redProb = diff?.cdf(0); // probability that the advantage is <= 0
 
   return {
     blue: {
       winChance: redProb === undefined ? undefined : 1 - redProb,
       points: blueDist?.mean,
-      rp: blueRPDist ?? undefined,
+      rp: blueRPDist,
       teams: blue,
     },
     red: {
       winChance: redProb,
       points: redDist?.mean,
-      rp: redRPDist ?? undefined,
+      rp: redRPDist,
       teams: red,
     },
-    isMissingData,
+    // deno-lint-ignore no-explicit-any
+    isMissingData: isMissingData as any,
   };
 }
 
 async function epaMatch(
   supabase: DBClient,
   match: MatchIdentifier,
-  mostRecentN: number,
+  limit: number,
 ) {
   const tbadata: MatchInfo = await tba.getMatch(match);
 
@@ -253,7 +265,7 @@ async function epaMatch(
   const blue = tbadata.alliances.blue.team_keys.map((t) => t.slice(3));
   const red = tbadata.alliances.red.team_keys.map((t) => t.slice(3));
 
-  return epaMatchup(supabase, match.season, blue, red, mostRecentN);
+  return epaMatchup(supabase, match.season, blue, red, limit);
 }
 
-export { dhrRobot, epaMatch, epaRobot, erpaRobot };
+export { aggRobot, epaMatch, erpaRobot };

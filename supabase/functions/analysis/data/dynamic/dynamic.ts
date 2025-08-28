@@ -17,7 +17,7 @@ const dynamicMap: {
     dbcolumns: string[];
     fuseData: (
       dbdata: { [key: string]: number },
-      team: string,
+      robot: string,
       tbadata: MatchInfo,
     ) => { [key: string]: number };
     scoringpoints: { [key: string]: number },

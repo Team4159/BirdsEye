@@ -68,10 +68,10 @@ export const dbcolumns = [
 
 export function fuseData(
   dbdata: { [key: string]: number },
-  team: string,
+  robot: string,
   tbamatch: MatchInfo,
 ): { [key: string]: number } {
-  const { alliance, index } = getRobotPosition(tbamatch.alliances, team);
+  const { alliance, index } = getRobotPosition(tbamatch.alliances, robot);
   // deno-lint-ignore no-explicit-any
   const scoreBreak: { [key: string]: any } = tbamatch.score_breakdown[alliance];
   dbdata["auto_mobility"] = scoreBreak[`mobilityRobot${index}`] === "Yes" ? 1 : 0;

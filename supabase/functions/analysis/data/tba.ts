@@ -31,10 +31,10 @@ export interface AllianceInfo {
 
 export function getRobotPosition(
   alliances: { red: AllianceInfo; blue: AllianceInfo },
-  team: string,
+  robot: string,
 ): { alliance: "red" | "blue"; index: number } {
   for (const [alliance, info] of Object.entries(alliances)) {
-    const i = info.team_keys.indexOf(`frc${team}`);
+    const i = info.team_keys.indexOf(`frc${robot}`);
     if (i !== -1) {
       return { "alliance": alliance as "red" | "blue", index: i + 1 };
     }
@@ -46,16 +46,16 @@ export function getRobotPosition(
 type CacheParams = {
   season: number;
   event?: string;
-  team?: string;
+  robot?: string;
 };
 
 // Serialization/deserialization for cache keys
 function serialize(obj: CacheParams): string {
-  return [obj.season, obj.event ?? "", obj.team ?? ""].join("|");
+  return [obj.season, obj.event ?? "", obj.robot ?? ""].join("|");
 }
 // function _deserialize(str: string): CacheParams {
-//   const [season, event, team] = str.split("|");
-//   return { season: parseNatural(season)!, event, team };
+//   const [season, event, robot] = str.split("|");
+//   return { season: parseNatural(season)!, event, robot };
 // }
 
 class TBAInterface {
@@ -108,8 +108,8 @@ class TBAInterface {
   // Constructs API URL based on parameters
   private buildUrl(params: CacheParams): string {
     return "https://www.thebluealliance.com/api/v3" + (
-      params.team
-        ? `/team/frc${params.team}` +
+      params.robot
+        ? `/team/frc${params.robot}` +
           (params.event
             ? `/event/${params.season}${params.event}/matches`
             : `/matches/${params.season}`)
@@ -153,16 +153,16 @@ class TBAInterface {
 
   // Checks for broader cached datasets that can be filtered
   private cacheGetBroader(params: CacheParams): MatchInfo[] | undefined {
-    if (!params.event || !params.team) return; // Already broadest possible query
+    if (!params.event || !params.robot) return; // Already broadest possible query
 
     const season = params.season;
     const eventKey = `${params.season}${params.event!}`;
-    const teamKey = `frc${params.team!}`;
+    const teamKey = `frc${params.robot!}`;
     return this.cacheGet({ season, event: params.event })?.filter((m) =>
         m.alliances.red.team_keys.includes(teamKey) ||
         m.alliances.blue.team_keys.includes(teamKey)
       ) ||
-      this.cacheGet({ season, team: params.team })?.filter((m) =>
+      this.cacheGet({ season, robot: params.robot })?.filter((m) =>
         m.event_key === eventKey
       );
   }

@@ -5,10 +5,14 @@ export type Normal = { mean: number; stdev: number, quantile( p: number ): numbe
 // TODO switch to skewed normal distribution
 
 export function std(x: number[]) {
+  if (x.length === 1) return Number.EPSILON;
   return stdev(x.length, 1, x, 1) || Number.EPSILON; // std cannot be 0, or things get unhappy.
 }
 export function avg(x: number[]) {
-  return x.length === 0 ? 0 : x.reduce((a, b) => a + b, 0) / x.length;
+  return x.length === 0 ? 0 : sum(x) / x.length;
+}
+export function sum(x: number[]) {
+  return x.reduce((a, b) => a + b, 0);
 }
 
 export function normalSum(...terms: Normal[]) {

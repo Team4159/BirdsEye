@@ -2,12 +2,10 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import * as oak from "@oak/oak";
 import { oakCors } from "https://deno.land/x/cors/mod.ts";
-import robotRouter from "./routes/team.ts"
-import eventRouter from "./routes/event.ts"
+import analysisRouter from "./routes/analysis.ts";
 
-const router = new oak.Router({ prefix: "/analysis/season/:season" });
-router.use(robotRouter.routes());
-router.use(eventRouter.routes());
+const router = new oak.Router();
+router.use(analysisRouter.routes());
 
 const app = new oak.Application();
 app.use(oakCors()); // Enable CORS for All Routes

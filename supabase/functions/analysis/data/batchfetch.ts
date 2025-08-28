@@ -9,37 +9,71 @@ import type { MatchIdentifier } from "./epa.ts";
  */
 type RobotInMatch = { [key: string]: number };
 
-type RobotInMatchIdentifier = MatchIdentifier & { team: string };
+type RobotInMatchIdentifier = MatchIdentifier & { robot: string };
 
 function fuseData(
   season: keyof typeof dynamicMap,
   dbdata: { [key: string]: number },
   tbadata: MatchInfo,
-  team: string,
+  robot: string,
 ): RobotInMatch {
-  return dynamicMap[season].fuseData(dbdata, team, tbadata);
+  return dynamicMap[season].fuseData(dbdata, robot, tbadata);
 }
 
-// TODO add a filter for a list of specific matches
+async function fetchRobotInMatch(
+  supabase: DBClient,
+  identifier: RobotInMatchIdentifier,
+): Promise<RobotInMatch | undefined> {
+  // Create a query to get the average of each scoreable column.
+  const matchdataquery = dynamicMap[identifier.season].dbcolumns
+    .map((columnname) => `${columnname}:${columnname}.avg()`).join(", ");
+  const { data: dbdata, error: error } = await supabase
+    .from(dynamicMap[identifier.season].dbtable as any)
+    .select(
+      matchdataquery + ", match_scouting!inner(season, event, match, team)",
+    )
+    .eq("match_scouting.event", identifier.event)
+    .eq("match_scouting.match", identifier.match)
+    .eq("match_scouting.team", identifier.robot)
+    .maybeSingle();
+
+  if (dbdata === null) return;
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  const entry = dbdata as any;
+  const tbadata: MatchInfo = (await tba.get(identifier))[0];
+
+  delete entry.match_scouting;
+  return fuseData(
+    identifier.season,
+    entry,
+    tbadata,
+    identifier.robot,
+  );
+}
+
 type BatchFetchFilter = {
-    season: keyof typeof dynamicMap;
-    event?: string;
-    team?: string;
-    mostRecentN?: number;
-  };
+  season: keyof typeof dynamicMap;
+  event?: string;
+  robot?: string;
+  limit?: number;
+};
 /**
  * Fetches records from the database and corresponding data from TBA, then fuses them.
  * @param supabase {@link DBClient}
  * @param filter parameters to select information
  * @returns Map of {@link RobotInMatchIdentifier} to {@link RobotInMatch}
  */
-async function batchFetchRobotInMatch(
+async function batchFetchRobotInMatches(
   supabase: DBClient,
   filter: BatchFetchFilter,
 ): Promise<Map<RobotInMatchIdentifier, RobotInMatch>> {
-  if (!filter.event && !filter.team) {
+  if (!filter.event && !filter.robot) {
     throw new Error(
-      "Illegal Arguments: must provide filter.event and/or filter.team.",
+      "Illegal Arguments: must provide filter.event and/or filter.robot.",
     );
   }
 
@@ -48,11 +82,17 @@ async function batchFetchRobotInMatch(
     .map((columnname) => `${columnname}:${columnname}.avg()`).join(", ");
   let query = supabase
     .from(dynamicMap[filter.season].dbtable as any)
-    .select(matchdataquery + " , match_scouting!inner(season, event, match, team)");
+    .select(
+      matchdataquery + " , match_scouting!inner(season, event, match, team)",
+    );
 
   // Apply filters
-  if (filter.event !== undefined) query = query.eq("match_scouting.event", filter.event);
-  if (filter.team !== undefined) query = query.eq("match_scouting.team", filter.team);
+  if (filter.event !== undefined) {
+    query = query.eq("match_scouting.event", filter.event);
+  }
+  if (filter.robot !== undefined) {
+    query = query.eq("match_scouting.team", filter.robot);
+  }
 
   const { data: dbdata, error: error } = await query;
 
@@ -65,12 +105,18 @@ async function batchFetchRobotInMatch(
   }
 
   let tbadataraw: MatchInfo[] = await tba.get(filter);
-  if ("mostRecentN" in filter) {
-    const dbmatches = new Set(dbdata.map((entry: any) => `${filter.season}${entry["match_scouting"].event}_${entry["match_scouting"].match}`));
+  if ("limit" in filter) {
+    const dbmatches = new Set(
+      dbdata.map((entry: any) =>
+        `${filter.season}${entry["match_scouting"].event}_${
+          entry["match_scouting"].match
+        }`
+      ),
+    );
     tbadataraw = tbadataraw
       .filter((m) => dbmatches.has(m.key))
       .sort((a, b) => (b.actual_time || b.time) - (a.actual_time || a.time))
-      .slice(0, filter.mostRecentN);
+      .slice(0, filter.limit);
   }
 
   const tbadata: { [key: string]: MatchInfo } = Object.fromEntries(
@@ -80,9 +126,11 @@ async function batchFetchRobotInMatch(
   const output = new Map<RobotInMatchIdentifier, RobotInMatch>();
   // Iterate through each row from the database and fuse the data.
   for (const entry of dbdata as any[]) {
-    const matchKey = `${filter.season}${entry["match_scouting"].event}_${entry["match_scouting"].match}`;
+    const matchKey = `${filter.season}${entry["match_scouting"].event}_${
+      entry["match_scouting"].match
+    }`;
     if (!(matchKey in tbadata)) {
-      if (!("mostRecentN" in filter)) {
+      if (!("limit" in filter)) {
         console.warn(`Missing referencing TBA data for ${matchKey}`);
       }
       continue;
@@ -92,7 +140,7 @@ async function batchFetchRobotInMatch(
       season: filter.season,
       event: entry.match_scouting.event,
       match: entry.match_scouting.match,
-      team: entry.match_scouting.team,
+      robot: entry.match_scouting.team,
     };
     delete entry.match_scouting;
     output.set(
@@ -101,7 +149,7 @@ async function batchFetchRobotInMatch(
         identifier.season,
         entry,
         tbadata[matchKey],
-        identifier.team,
+        identifier.robot,
       ),
     );
   }
@@ -112,18 +160,19 @@ async function batchFetchRobotInMatch(
  * Calculates the score a robot earned in a match.
  * @param identifier {@link RobotInMatchIdentifier}
  * @param data The robot's objective counts
- * @returns The robot's points-added this match
+ * @returns Map of objective to score[]
  */
 function scoreRobotInMatch(
   identifier: RobotInMatchIdentifier,
   data: RobotInMatch,
-): number;
+  categorizer?: undefined,
+): { [key: string]: number };
 /**
  * Calculates the score a robot earned in a match in each category.
  * @param identifier {@link RobotInMatchIdentifier}
  * @param data The robot's objective counts
  * @param categorizer function to aggregate types of objectives
- * @returns Map of category to points-added
+ * @returns Map of category to score[]
  */
 function scoreRobotInMatch(
   identifier: RobotInMatchIdentifier,
@@ -134,14 +183,13 @@ function scoreRobotInMatch(
   identifier: RobotInMatchIdentifier,
   data: RobotInMatch,
   categorizer?: (objective: string) => string | null,
-): { [key: string]: number } | number {
+): { [key: string]: number } {
   const scores: { [key: string]: number } = {};
-  if (!categorizer) scores[""] = 0;
 
   const scoringpoints = dynamicMap[identifier.season].scoringpoints;
   for (const [objective, scorecount] of Object.entries(data)) {
-    if (!(objective in scoringpoints)) continue;
-    const category = categorizer ? categorizer(objective) : "";
+    if (!(objective in scoringpoints)) continue; // if this objective (e.g. comments_agility) isn't worth points, ignore
+    const category = categorizer ? categorizer(objective) : objective; // if there is no categorizer, dont categorize
     if (category === null) continue; // If the categorizer returns null, ignore this objective
 
     const score = scoringpoints[objective] * scorecount;
@@ -149,19 +197,32 @@ function scoreRobotInMatch(
     scores[category] += score;
   }
 
-  return categorizer ? scores : scores[""];
+  return scores;
+}
+
+async function fetchRobotScore(
+  supabase: DBClient,
+  identifier: RobotInMatchIdentifier,
+  categorizer?: (objective: string) => string | null,
+): Promise<{ [key: string]: number } | undefined> {
+  const match = await fetchRobotInMatch(supabase, identifier);
+  if (match === undefined) return;
+  return categorizer === undefined
+    ? scoreRobotInMatch(identifier, match, categorizer)
+    : scoreRobotInMatch(identifier, match, categorizer);
 }
 
 /**
  * Calculates score earned per RobotInMatch
  * @param supabase {@link DBClient}
  * @param filter parameters to select information
- * @returns Map of {@link RobotInMatchIdentifier} to score
+ * @returns Map of objective to score[]
  */
 function batchFetchRobotScores(
   supabase: DBClient,
   filter: BatchFetchFilter,
-): Promise<Map<RobotInMatchIdentifier, number>>;
+  categorizer?: undefined,
+): Promise<Map<string, number[]>>;
 /**
  * Aggregates score earned in various objectives
  * @param supabase {@link DBClient}
@@ -178,37 +239,25 @@ async function batchFetchRobotScores(
   supabase: DBClient,
   filter: BatchFetchFilter,
   categorizer?: (objective: string) => string | null,
-): Promise<Map<RobotInMatchIdentifier | string, number | number[]>> {
-  const scores: Map<RobotInMatchIdentifier | string, number | number[]> =
-    new Map();
+): Promise<Map<string, number[]>> {
+  const scores: Map<string, number[]> = new Map();
 
-  const matches = await batchFetchRobotInMatch(supabase, filter);
+  const matches = await batchFetchRobotInMatches(supabase, filter);
   for (const [key, match] of matches) {
-    if (categorizer) {
-      for (
-        const [category, score] of Object.entries(
-          scoreRobotInMatch(key, match, categorizer),
-        )
-      ) {
-        if (!scores.has(category)) scores.set(category, []);
-        (scores.get(category)! as number[]).push(score);
-      }
-    } else {
-      scores.set(key, scoreRobotInMatch(key, match));
+    for (
+      const [category, score] of Object.entries(
+        categorizer === undefined
+          ? scoreRobotInMatch(key, match, undefined)
+          : scoreRobotInMatch(key, match, categorizer),
+      )
+    ) {
+      if (!scores.has(category)) scores.set(category, []);
+      (scores.get(category)! as number[]).push(score);
     }
   }
 
   return scores;
 }
 
-function zipCountsAndScores(id: RobotInMatchIdentifier, rim: RobotInMatch) {
-  const scoringpoints = dynamicMap[id.season].scoringpoints;
-  return Object.fromEntries(
-    Object.entries(rim).map((
-      [objective, count],
-    ) => [objective, { count, score: scoringpoints[objective] * count }]),
-  );
-}
-
-export { batchFetchRobotInMatch, batchFetchRobotScores, zipCountsAndScores };
-export type { BatchFetchFilter }
+export { batchFetchRobotInMatches, batchFetchRobotScores, fetchRobotScore };
+export type { BatchFetchFilter };

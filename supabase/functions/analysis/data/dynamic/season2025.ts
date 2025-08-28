@@ -114,10 +114,10 @@ export const dbcolumns = [
 
 export function fuseData(
   dbdata: { [key: string]: number },
-  teamnum: string,
+  robot: string,
   tbadata: MatchInfo,
 ): { [key: string]: number } {
-  const { alliance, index } = getRobotPosition(tbadata.alliances, teamnum);
+  const { alliance, index } = getRobotPosition(tbadata.alliances, robot);
   // deno-lint-ignore no-explicit-any
   const scoreBreak: { [key: string]: any } = tbadata.score_breakdown[alliance];
   
