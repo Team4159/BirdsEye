@@ -10,10 +10,10 @@ export function createSupaClient(authorization: string): DBClient {
   return createClient<Database>(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
-    // { // comment this out while in development
-    //   global: {
-    //     headers: { authorization: authorization },
-    //   },
-    // },
+    { // comment this out while in development
+      global: {
+        headers: { authorization: authorization },
+      },
+    },
   );
 }

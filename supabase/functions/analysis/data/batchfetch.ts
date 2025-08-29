@@ -28,7 +28,7 @@ async function fetchRobotInMatch(
   const matchdataquery = dynamicMap[identifier.season].dbcolumns
     .map((columnname) => `${columnname}:${columnname}.avg()`).join(", ");
   const { data: dbdata, error: error } = await supabase
-    .from(dynamicMap[identifier.season].dbtable as any)
+    .from(dynamicMap[identifier.season]!.dbtable as any)
     .select(
       matchdataquery + ", match_scouting!inner(season, event, match, team)",
     )
@@ -44,7 +44,7 @@ async function fetchRobotInMatch(
   }
 
   const entry = dbdata as any;
-  const tbadata: MatchInfo = (await tba.get(identifier))[0];
+  const tbadata: MatchInfo = (await tba.get(identifier))[0]!;
 
   delete entry.match_scouting;
   return fuseData(
@@ -104,7 +104,7 @@ async function batchFetchRobotInMatches(
     throw error;
   }
 
-  let tbadataraw: MatchInfo[] = await tba.get(filter);
+  let tbadataraw: readonly MatchInfo[] = await tba.get(filter);
   if ("limit" in filter) {
     const dbmatches = new Set(
       dbdata.map((entry: any) =>
@@ -148,7 +148,7 @@ async function batchFetchRobotInMatches(
       fuseData(
         identifier.season,
         entry,
-        tbadata[matchKey],
+        tbadata[matchKey]!,
         identifier.robot,
       ),
     );
@@ -177,12 +177,12 @@ function scoreRobotInMatch(
 function scoreRobotInMatch(
   identifier: RobotInMatchIdentifier,
   data: RobotInMatch,
-  categorizer: (objective: string) => string | null,
+  categorizer: (objective: string) => string | undefined,
 ): { [key: string]: number };
 function scoreRobotInMatch(
   identifier: RobotInMatchIdentifier,
   data: RobotInMatch,
-  categorizer?: (objective: string) => string | null,
+  categorizer?: (objective: string) => string | undefined,
 ): { [key: string]: number } {
   const scores: { [key: string]: number } = {};
 
@@ -190,9 +190,9 @@ function scoreRobotInMatch(
   for (const [objective, scorecount] of Object.entries(data)) {
     if (!(objective in scoringpoints)) continue; // if this objective (e.g. comments_agility) isn't worth points, ignore
     const category = categorizer ? categorizer(objective) : objective; // if there is no categorizer, dont categorize
-    if (category === null) continue; // If the categorizer returns null, ignore this objective
+    if (category === undefined) continue; // If the categorizer returns null, ignore this objective
 
-    const score = scoringpoints[objective] * scorecount;
+    const score = scoringpoints[objective as keyof typeof scoringpoints] * scorecount;
     scores[category] ??= 0;
     scores[category] += score;
   }
@@ -203,7 +203,7 @@ function scoreRobotInMatch(
 async function fetchRobotScore(
   supabase: DBClient,
   identifier: RobotInMatchIdentifier,
-  categorizer?: (objective: string) => string | null,
+  categorizer?: (objective: string) => string | undefined,
 ): Promise<{ [key: string]: number } | undefined> {
   const match = await fetchRobotInMatch(supabase, identifier);
   if (match === undefined) return;
@@ -233,12 +233,12 @@ function batchFetchRobotScores(
 function batchFetchRobotScores(
   supabase: DBClient,
   filter: BatchFetchFilter,
-  categorizer: (objective: string) => string | null,
+  categorizer: (objective: string) => string | undefined,
 ): Promise<Map<string, number[]>>;
 async function batchFetchRobotScores(
   supabase: DBClient,
   filter: BatchFetchFilter,
-  categorizer?: (objective: string) => string | null,
+  categorizer?: (objective: string) => string | undefined,
 ): Promise<Map<string, number[]>> {
   const scores: Map<string, number[]> = new Map();
 

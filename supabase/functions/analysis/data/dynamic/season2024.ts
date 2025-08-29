@@ -82,7 +82,7 @@ export function fuseData(
   // deno-lint-ignore no-explicit-any
   const scoreBreak: { [key: string]: any } = tbamatch.score_breakdown[alliance];
 
-  dbdata["endgame_trap"] = dbdata["teleop_trap"];
+  dbdata["endgame_trap"] = dbdata["teleop_trap"] ?? 0;
   delete dbdata["teleop_trap"];
 
   dbdata["auto_leave"] = scoreBreak[`autoLineRobot${index}`] === "Yes" ? 1 : 0;
@@ -94,14 +94,14 @@ export function fuseData(
     case "Parked":
       dbdata["endgame_parked"] = 1;
       break;
-    // deno-lint-ignore no-case-declarations
-    default:
+    default: {
       const highNotes = Object.entries(scoreBreak)
         .filter(([k, v]) => k.startsWith("mic") && v)
         .map(([k, _]) => k.slice(3));
       if (highNotes.includes(parkstatus)) dbdata["endgame_spotlit"] = 1;
       else dbdata["endgame_onstage"] = 1;
       break;
+    }
   }
 
   return dbdata;

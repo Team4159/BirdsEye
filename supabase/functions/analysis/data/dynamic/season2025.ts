@@ -170,12 +170,13 @@ export const rankingpoints: {[key: string]: (robotinmatch: typeof scoringpoints)
   coral(robotinmatch) {
     const coop = Math.min((robotinmatch.auto_algae_processor + robotinmatch.teleop_algae_processor) / 4, 0.5); // This robot's contribution to coop
 
+    // The scaled completion of each level
     const levelcompletion = [
       robotinmatch.auto_coral_l1 + robotinmatch.teleop_coral_l1,
       robotinmatch.auto_coral_l2 + robotinmatch.teleop_coral_l2,
       robotinmatch.auto_coral_l3 + robotinmatch.teleop_coral_l3,
       robotinmatch.auto_coral_l4 + robotinmatch.teleop_coral_l4,
-    ].map((level) => Math.min(level / 5, 1)) // The scaled completion of each level
+    ].map((level) => Math.min(level / 5, 1)) as [number, number, number, number]
     levelcompletion.sort()
     levelcompletion[3] = 1 - ((1 - levelcompletion[3]) * (1 - coop)) // The least-filled level gets scaled down based on how close to achieving coop we are
 

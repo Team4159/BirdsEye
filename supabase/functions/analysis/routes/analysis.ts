@@ -1,51 +1,53 @@
+// deno-lint-ignore-file ban-types
 import * as oak from "@oak/oak";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { BatchFetchFilter, fetchRobotScore } from "../data/batchfetch.ts";
+import { fetchRobotScore } from "../data/batchfetch.ts";
 import dynamicMap from "../data/dynamic/dynamic.ts";
 import {
   aggRobot,
   categorizers,
   epaMatch,
 } from "../data/epa.ts";
-import { createSupaClient } from "../supabase/supabase.ts";
+import { createSupaClient, DBClient } from "../supabase/supabase.ts";
+import { Normal } from "../util.ts";
 
 const router = new oak.Router({ prefix: "/analysis" });
 
-router.get("/season/:season/event/:event/match/:match/robot/:robot/", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
-router.get("/season/:season/event/:event/match/:match/", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
-router.get("/season/:season/event/:event/robot/:robot/", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
-router.get("/season/:season/event/:event/", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
-router.get("/season/:season/robot/:robot/", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
-router.get("/season/:season/", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
+router.get("/season/:season/event/:event/match/:match/robot/:robot", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
+router.get("/season/:season/event/:event/match/:match", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
+router.get("/season/:season/event/:event/robot/:robot", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
+router.get("/season/:season/event/:event", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
+router.get("/season/:season/robot/:robot", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
+router.get("/season/:season", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
 
 /**
  * Selection Types
  * string = x (Specific Item)
  * string[] = [x] (List of Items)
+ * asterisk = [x*] (List of All Items)
  * undefined = f(x) (Aggregate of Items)
  */
 async function handler(
   params: { season: string; event?: string; match?: string; robot?: string },
   request: oak.Request,
-): Promise<{ [key: string]: { [key: string]: object | undefined } }> {
-  const filter = ParameterParser.parse(params, request);
+): Promise<{ [key: string]: { [key: string]: {[key: string]: {}} | undefined } }> {
   const client = createSupaClient(request.headers.get("Authorization")!);
+  const filter = await expandGlobs(client, ParameterParser.parse(params, request));
+  
+  if (filter === undefined) {
+    throw oak.createHttpError(oak.Status.NotFound, "No Relevant Data");
+  }
 
-  const { match, robot } = filter;
-  const matchArray = Array.isArray(match) ? match : [match];
-  const robotArray = Array.isArray(robot) ? robot : [robot];
-
-  return Object.fromEntries<{ [key: string]: object | undefined }>(
+  return Object.fromEntries<{ [key: string]: {[key: string]: {}} | undefined }>(
     await Promise.all(
-      matchArray.map(async (
+      (filter.match ?? [undefined]).map(async (
         m,
-      ): Promise<[string, { [key: string]: object | undefined }]> => [
+      ): Promise<[string, { [key: string]: {[key: string]: {}} | undefined }]> => [
         m ?? "",
-        Object.fromEntries<object | undefined>(
+        Object.fromEntries<{[key: string]: {}} | undefined>(
           await Promise.all(
-            robotArray.map(async (
+            (filter.robot ?? [undefined]).map(async (
               r,
-            ): Promise<[string, object | undefined]> => [
+            ): Promise<[string, {[key: string]: {}} | undefined]> => [
               r ?? "",
               await getSingle(client, {
                 ...filter,
@@ -60,21 +62,65 @@ async function handler(
   );
 }
 
-function getSingle(client: SupabaseClient, filter: {
-  season: number;
+const globbable: ["match", "robot"] = ["match", "robot"];
+/**
+ * Expands all globs (`*`, gets converted to `[]`) to their real values
+ * @param filter A filter, possibly including globs
+ * @returns The filter, with all globs replaced with a list of values
+ */
+async function expandGlobs(client: DBClient, filter: Filter): Promise<Filter | undefined> {
+  // Identify fields to glob
+  const globs = globbable.filter((g) => filter[g]?.length === 0);
+  // Return original filter if no expansion needed
+  if (globs.length === 0) return filter;
+  
+  // Build query to database (rename "team" to "robot")
+  let query = client.from("match_scouting").select("match, robot:team").eq("season", filter.season);
+  if (filter.event !== undefined) query = query.eq("event", filter.event);
+  if (filter.match !== undefined && filter.match.length !== 0) query = query.in("match", filter.match);
+  if (filter.robot !== undefined && filter.robot.length !== 0) query = query.in("robot", filter.robot);
+  if (filter.limit !== undefined) query = query.order("match").limit(filter.limit);
+
+  // Execute query
+  const { data } = await query;
+  if (data === null || data.length === 0) return undefined;
+
+  const out = Object.fromEntries<Set<string>>(globs.map((k) => [k, new Set<string>()]))
+  for (const entry of data) {
+    for (const [k, v] of Object.entries(entry)) {
+      if (k in out) out[k]!.add(v);
+    }
+  }
+  for (const [k, v] of Object.entries(out)) {
+    filter[k as "match" | "robot"] = [...v];
+  }
+
+  return filter;
+}
+
+/**
+ * Return Types
+ * category = @type {string} (return value of categorizer | score objective if no categorizer)
+ * score = @type {number} (number of points earned)
+ * performance = @type {Normal} (distribution of points earned) | @type {number} (heuristic score)
+ */
+function getSingle(client: DBClient, filter: {
+  season: keyof typeof dynamicMap;
   event?: string;
   match?: string;
   robot?: string;
   limit?: number;
   categorizer?: keyof typeof categorizers | "dhr";
-}): Promise<object | undefined> {
-  const { event, match, robot, categorizer } = filter;
+}): Promise<{[key: string]: (object | boolean) | Normal | number} | undefined> {
+  const { event, match, robot, categorizer } = filter; // for type checking
 
   if (event !== undefined) {
     if (match !== undefined) {
       if (robot !== undefined) {
         // event, match, robot <categorizer>
         // Robot Scores of match played at event by robot
+        // => { category: score }
+
         const typecheckedIdentifier = { ...filter, event, match, robot };
 
         return categorizer === undefined || categorizer === "dhr"
@@ -87,6 +133,8 @@ function getSingle(client: SupabaseClient, filter: {
       } else {
         // event, match, f(robot) <limit>
         // Insights for match played at event
+        // => see epaMatchup's return type
+
         const typecheckedIdentifier = { ...filter, event, match };
 
         return epaMatch(client, typecheckedIdentifier, filter.limit ?? 7);
@@ -95,6 +143,7 @@ function getSingle(client: SupabaseClient, filter: {
       if (robot !== undefined) {
         // event, f(match), robot <limit, categorizer>
         // EPA of robot at event
+        // => { category: performance }
 
         filter.limit ??= 7; // impose a limit to save the database
         return categorizer === "dhr"
@@ -111,6 +160,7 @@ function getSingle(client: SupabaseClient, filter: {
     if (robot !== undefined) {
       // f(event, match), robot <limit, categorizer>
       // EPA of robot in season
+      // => { category: performance }
 
       filter.limit ??= 14; // impose a limit to save the database
       return categorizer === "dhr"
@@ -127,124 +177,18 @@ function getSingle(client: SupabaseClient, filter: {
   throw oak.createHttpError(oak.Status.BadRequest, "Bad Request");
 }
 
-// TODO == deprecated ==
-
-/**
- * Finds the categorizer that would produce this category.
- */
-function categorizerSupertype(
-  season: keyof typeof dynamicMap,
-  category: string,
-): Exclude<keyof typeof categorizers, "total"> | undefined {
-  if (dynamicMap[season].scoringelements.includes(category)) {
-    return "gameelements";
-  }
-  if (
-    Object.keys(dynamicMap[season].scoringpoints).map(
-      categorizers.gameperiod(season),
-    ).includes(category)
-  ) return "gameperiod";
-  return;
-}
-
-router.get("/season/:season/event/:event/rankings", async (ctx) => {
-  const { season, event, limit } = ParameterParser.parse(
-    ctx.params,
-    ctx.request,
-  );
-  function filter(robot: string): BatchFetchFilter {
-    return {
-      season,
-      event: event === "*" ? undefined : event,
-      robot,
-      limit,
-    };
-  }
-
-  const percentile = ParameterParser.percentile(ctx.request);
-  const teams = ctx.request.url.searchParams.get("teams")?.split(",").map((t) =>
-    t.trim()
-  ).filter((t) => t.length !== 0);
-  if (!teams) {
-    throw oak.createHttpError(
-      oak.Status.BadRequest,
-      "Illegal Arguments: must provide teams",
-    );
-  }
-
-  const client = createSupaClient(ctx.request.headers.get("Authorization")!);
-
-  const method = ctx.request.url.searchParams.get("categorize") || "total";
-  let rankingFunction: (robot: string) => Promise<number | null>;
-  switch (method) {
-    case "dhr":
-      rankingFunction = (robot) =>
-        aggRobot(
-          client,
-          filter(robot),
-          method,
-        ).then((norm) => norm === undefined ? null : norm["dhr"]);
-
-      break;
-    case "total":
-      rankingFunction = (robot) =>
-        aggRobot(
-          client,
-          filter(robot),
-          method,
-        ).then((norm) =>
-          norm === undefined
-            ? null
-            : percentile === null
-            ? norm[""].mean
-            : norm[""].quantile(percentile / 100)
-        );
-      break;
-    default: {
-      const methodFormal = categorizerSupertype(season, method);
-      if (!methodFormal) {
-        throw oak.createHttpError(
-          oak.Status.BadRequest,
-          "Illegal Arguments: categorizer must be one of ().",
-        );
-      }
-      rankingFunction = (robot) =>
-        aggRobot(
-          client,
-          filter(robot),
-          methodFormal,
-        ).then((norms) =>
-          norms === undefined
-            ? null
-            : percentile === null
-            ? norms[method].mean
-            : norms[method].quantile(percentile / 100)
-        );
-      break;
-    }
-  }
-
-  ctx.response.body = Object.fromEntries(
-    await Promise.all(
-      new Set(teams).keys().map(async (
-        t,
-      ): Promise<[string, number | null]> => [t, await rankingFunction(t)]),
-    ),
-  );
-});
-
-// == end deprecated ==
+type Filter = { season: keyof typeof dynamicMap, event?: string; match?: readonly string[], robot?: readonly string[], limit?: number, categorizer?: keyof typeof categorizers | "dhr"};
 
 class ParameterParser {
   public static parse(
     params: { event?: string; match?: string; robot?: string },
     request: oak.Request,
-  ) {
+  ): Filter {
     return {
       season: this.season(params),
       event: params["event"],
-      match: params["match"]?.split(","),
-      robot: params["robot"]?.split(","),
+      match: params["match"] === "*" ? [] : params["match"]?.split(","),
+      robot: params["robot"] === "*" ? [] : params["robot"]?.split(","),
       limit: this.limit(request),
       categorizer: this.categorizer(request),
     };
@@ -294,36 +238,22 @@ class ParameterParser {
 
   private static categorizer(
     request: oak.Request,
-  ): keyof typeof categorizers | undefined {
+  ): keyof typeof categorizers | "dhr" | undefined {
     const categorizer = request.url.searchParams.get("categorizer");
+    if (categorizer === "dhr") return categorizer;
     if (!this.validateCategorizer(categorizer)) {
       throw oak.createHttpError(
         oak.Status.BadRequest,
         `Illegal Arguments: categorizer must be one of ${
           Object.keys(categorizers).join(", ")
-        }.`,
+        }, dhr.`,
       );
     }
     return categorizer;
   }
 
-  public static percentile(request: oak.Request): number | null {
-    const percentile = this.parseNatural(
-      request.url.searchParams.get("percentile"),
-    );
-    if (percentile === null) return null;
-    if (Number.isNaN(percentile) || percentile >= 100) {
-      throw oak.createHttpError(
-        oak.Status.BadRequest,
-        "Illegal Arguments: percentile must be ℤ ∈ (0, 100).",
-      );
-    }
-    return percentile;
-  }
-
-  // deno-lint-ignore no-explicit-any
-  private static parseNatural(x: any): number | null {
-    if (x === null) return null;
+  private static parseNatural(x: string | null | undefined): number | null {
+    if (!x) return null;
     const i = parseInt(x, 10);
     if (i <= 0) return null;
     return i;
