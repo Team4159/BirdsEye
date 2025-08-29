@@ -98,14 +98,14 @@ async function dhrRobot(
   const dhrs: number[] = [];
 
   type DHRValidRIM = {
-    comments_agility: number;
-    comments_fouls: number;
-    comments_defense: number;
+    comments_agility: number; // [0, 1]
+    comments_fouls: number; // [0, infinity)
+    comments_defense: number; // [0, 1]
   };
   function isDHRValid(rim: { [key: string]: number }): rim is DHRValidRIM {
     return Number.isFinite(rim["comments_agility"]) &&
-      Number.isInteger(rim["comments_fouls"]) &&
-      (rim["comments_defense"] === 0 || rim["comments_defense"] === 1);
+      Number.isFinite(rim["comments_fouls"]) &&
+      Number.isFinite(rim["comments_defense"]);
   }
 
   for (
@@ -113,14 +113,11 @@ async function dhrRobot(
       .values()
   ) {
     if (!isDHRValid(rim)) {
-      return Promise.reject(
-        "Unsupported Schema: RobotInMatch not processable by DHR.",
-      );
+      throw new Error("Unsupported Schema: RobotInMatch not processable by DHR.",);
     }
     dhrs.push(
-      rim.comments_agility /
-        ((5 * rim.comments_fouls + 1) *
-          (rim.comments_defense ? 0.7 : 1)),
+      (rim.comments_defense / 2 + 1) *
+      (rim.comments_agility / (5 * rim.comments_fouls + 1))
     );
   }
 

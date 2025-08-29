@@ -78,8 +78,8 @@ async function expandGlobs(client: DBClient, filter: Filter): Promise<Filter | u
   let query = client.from("match_scouting").select("match, robot:team").eq("season", filter.season);
   if (filter.event !== undefined) query = query.eq("event", filter.event);
   if (filter.match !== undefined && filter.match.length !== 0) query = query.in("match", filter.match);
-  if (filter.robot !== undefined && filter.robot.length !== 0) query = query.in("robot", filter.robot);
-  if (filter.limit !== undefined) query = query.order("match").limit(filter.limit);
+  if (filter.robot !== undefined && filter.robot.length !== 0) query = query.in("team" , filter.robot);
+  if (filter.limit !== undefined) query = query.order("match_code", {ascending: false}).limit(filter.limit);
 
   // Execute query
   const { data } = await query;
@@ -145,7 +145,6 @@ function getSingle(client: DBClient, filter: {
         // EPA of robot at event
         // => { category: performance }
 
-        filter.limit ??= 7; // impose a limit to save the database
         return categorizer === "dhr"
           ? aggRobot(client, filter, categorizer)
           : aggRobot(client, filter, categorizer ?? "total");
@@ -162,7 +161,6 @@ function getSingle(client: DBClient, filter: {
       // EPA of robot in season
       // => { category: performance }
 
-      filter.limit ??= 14; // impose a limit to save the database
       return categorizer === "dhr"
         ? aggRobot(client, filter, categorizer)
         : aggRobot(client, filter, categorizer ?? "total");

@@ -68,8 +68,8 @@ export const dbcolumns = [
   "teleop_speaker_missed",
   "teleop_trap",
   "comments_fouls",
-  "comments_defense",
   "comments_agility",
+  "comments_defense",
   "comments_contribution",
 ]
 

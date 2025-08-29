@@ -37,11 +37,11 @@ async function fetchRobotInMatch(
     .eq("match_scouting.team", identifier.robot)
     .maybeSingle();
 
-  if (dbdata === null) return;
   if (error) {
     console.error(error);
     throw error;
   }
+  if (dbdata === null) return;
 
   const entry = dbdata as any;
   const tbadata: MatchInfo = (await tba.get(identifier))[0]!;
@@ -96,12 +96,12 @@ async function batchFetchRobotInMatches(
 
   const { data: dbdata, error: error } = await query;
 
-  if (dbdata?.length == 0) { // If dbdata is null or empty
-    return new Map();
-  }
   if (error) {
     console.error(error);
     throw error;
+  }
+  if (dbdata?.length == 0) { // If dbdata is null or empty
+    return new Map();
   }
 
   let tbadataraw: readonly MatchInfo[] = await tba.get(filter);
@@ -247,12 +247,12 @@ async function batchFetchRobotScores(
     for (
       const [category, score] of Object.entries(
         categorizer === undefined
-          ? scoreRobotInMatch(key, match, undefined)
+          ? scoreRobotInMatch(key, match, categorizer)
           : scoreRobotInMatch(key, match, categorizer),
       )
     ) {
       if (!scores.has(category)) scores.set(category, []);
-      (scores.get(category)! as number[]).push(score);
+      scores.get(category)!.push(score);
     }
   }
 
