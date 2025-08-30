@@ -9,7 +9,6 @@
   ],
   "settings": {
     "javascript.validate.enable": false,
-    "eslint.enable": false,
     "javascript.format.enable": false,
     "deno.enable": true,
     "deno.lint": true,
@@ -17,6 +16,6 @@
     "[typescript]": {
       "editor.defaultFormatter": "denoland.vscode-deno"
     },
-    "java.configuration.updateBuildConfiguration": "interactive",
+    "deno.config": "deno.json",
   }
 }

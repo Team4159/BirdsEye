@@ -21,7 +21,7 @@ enum MatchLevel {
 
 class MatchInfo implements Comparable {
   static final _qualificationPattern = RegExp(r'^(?<level>qm)(?<index>\d+)$');
-  static final _finalsPattern = RegExp(r'^(?<level>qf|sf|f)(?<setnum>\d{1,2})m(?<index>\d+)$');
+  static final _finalsPattern = RegExp(r'^(?<level>qf|sf|f)(?<setnum>\d{1,2})m(?<index>\d)$');
   static final highestSemi = 12;
 
   final MatchLevel level;

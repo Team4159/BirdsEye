@@ -1,9 +1,6 @@
+import { average } from "simple-statistics";
 import { DBClient } from "../supabase/supabase.ts";
-import {
-avg,
-  Normal,
-  sigmoid
-} from "../util.ts";
+import { Normal, sigmoid } from "../util.ts";
 import {
   BatchFetchFilter,
   batchFetchRobotInMatches,
@@ -113,15 +110,17 @@ async function dhrRobot(
       .values()
   ) {
     if (!isDHRValid(rim)) {
-      throw new Error("Unsupported Schema: RobotInMatch not processable by DHR.",);
+      throw new Error(
+        "Unsupported Schema: RobotInMatch not processable by DHR.",
+      );
     }
     dhrs.push(
       (rim.comments_defense / 2 + 1) *
-      (rim.comments_agility / (5 * rim.comments_fouls + 1))
+        (rim.comments_agility / (5 * rim.comments_fouls + 1)),
     );
   }
 
-  return avg(dhrs);
+  return average(dhrs);
 }
 
 function aggRobot(
@@ -171,7 +170,7 @@ async function epaMatchup(
   } | {
     blue: AlliancePrediction;
     red: AlliancePrediction;
-    isMisssingData: false;
+    isMissingData: false;
   }
 > {
   let isMissingData: boolean = false;
@@ -182,7 +181,7 @@ async function epaMatchup(
       ),
     )).map((epa) => epa === undefined ? undefined : epa[""]).filter(
       (n): n is NonNullable<typeof n> => {
-        if (n !== null) return true;
+        if (n !== undefined) return true;
         isMissingData = true;
         return false;
       },
@@ -225,22 +224,37 @@ async function epaMatchup(
     : Normal.difference(blueDist, redDist); // advantage of blue over red
   const redProb = diff?.cdf(0); // probability that the advantage is <= 0
 
-  return {
-    blue: {
-      winChance: redProb === undefined ? undefined : 1 - redProb,
-      points: blueDist?.mean,
-      rp: blueRPDist,
-      teams: blue,
-    },
-    red: {
-      winChance: redProb,
-      points: redDist?.mean,
-      rp: redRPDist,
-      teams: red,
-    },
-    // deno-lint-ignore no-explicit-any
-    isMissingData: isMissingData as any,
-  };
+  return isMissingData
+    ? {
+      blue: {
+        winChance: redProb === undefined ? undefined : 1 - redProb,
+        points: blueDist?.mean,
+        rp: blueRPDist,
+        teams: blue,
+      },
+      red: {
+        winChance: redProb,
+        points: redDist?.mean,
+        rp: redRPDist,
+        teams: red,
+      },
+      isMissingData: isMissingData,
+    }
+    : {
+      blue: {
+        winChance: 1 - redProb!,
+        points: blueDist!.mean,
+        rp: blueRPDist!,
+        teams: blue,
+      },
+      red: {
+        winChance: redProb!,
+        points: redDist!.mean,
+        rp: redRPDist!,
+        teams: red,
+      },
+      isMissingData: isMissingData,
+    };
 }
 
 async function epaMatch(

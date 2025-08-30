@@ -1,8 +1,8 @@
 {
   "imports": {
     "@oak/oak": "jsr:@oak/oak@^17.1.4",
-    "@stdlib/stats-base-stdev": "npm:@stdlib/stats-base-stdev@^0.2.2",
-    "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.49.4"
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.49.4",
+    "simple-statistics": "npm:simple-statistics@^7.8.8"
   },
   "compilerOptions": {
     "noImplicitReturns": true,

@@ -51,6 +51,7 @@ async function handler(
               r ?? "",
               await getSingle(client, {
                 ...filter,
+                limit: filter.calclimit,
                 match: m,
                 robot: r,
               }),
@@ -73,14 +74,16 @@ async function expandGlobs(client: DBClient, filter: Filter): Promise<Filter | u
   const globs = globbable.filter((g) => filter[g]?.length === 0);
   // Return original filter if no expansion needed
   if (globs.length === 0) return filter;
+
+  if (filter.selectlimit === undefined) throw new Error("Endpoint requires selectlimit");
   
   // Build query to database (rename "team" to "robot")
   let query = client.from("match_scouting").select("match, robot:team").eq("season", filter.season);
   if (filter.event !== undefined) query = query.eq("event", filter.event);
   if (filter.match !== undefined && filter.match.length !== 0) query = query.in("match", filter.match);
   if (filter.robot !== undefined && filter.robot.length !== 0) query = query.in("team" , filter.robot);
-  if (filter.limit !== undefined) query = query.order("match_code", {ascending: false}).limit(filter.limit);
-
+  query = query.order("match_code", {ascending: false}).limit(filter.selectlimit);
+  
   // Execute query
   const { data } = await query;
   if (data === null || data.length === 0) return undefined;
@@ -121,11 +124,13 @@ function getSingle(client: DBClient, filter: {
         // Robot Scores of match played at event by robot
         // => { category: score }
 
+        if ( categorizer === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires categorizer")
+        if ( categorizer === "dhr" ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint doesn't support dhr categorizer")
+        if ( filter.limit !== undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint doesn't support calclimit")
+
         const typecheckedIdentifier = { ...filter, event, match, robot };
 
-        return categorizer === undefined || categorizer === "dhr"
-          ? fetchRobotScore(client, typecheckedIdentifier)
-          : fetchRobotScore(
+        return fetchRobotScore(
             client,
             typecheckedIdentifier,
             categorizers[categorizer](filter.season),
@@ -135,9 +140,12 @@ function getSingle(client: DBClient, filter: {
         // Insights for match played at event
         // => see epaMatchup's return type
 
+        if ( categorizer !== undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint doesn't support categorizer")
+        if ( filter.limit === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires calclimit")
+
         const typecheckedIdentifier = { ...filter, event, match };
 
-        return epaMatch(client, typecheckedIdentifier, filter.limit ?? 7);
+        return epaMatch(client, typecheckedIdentifier, filter.limit!);
       }
     } else {
       if (robot !== undefined) {
@@ -145,9 +153,12 @@ function getSingle(client: DBClient, filter: {
         // EPA of robot at event
         // => { category: performance }
 
+        if ( categorizer === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires categorizer")
+        if ( filter.limit === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires calclimit")
+
         return categorizer === "dhr"
-          ? aggRobot(client, filter, categorizer)
-          : aggRobot(client, filter, categorizer ?? "total");
+        ? aggRobot(client, filter, categorizer)
+        : aggRobot(client, filter, categorizer);
       } else {
         // event, f(match, robot)
         // Insights for event
@@ -161,9 +172,12 @@ function getSingle(client: DBClient, filter: {
       // EPA of robot in season
       // => { category: performance }
 
+      if ( categorizer === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires categorizer")
+      if ( filter.limit === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires calclimit")
+      
       return categorizer === "dhr"
         ? aggRobot(client, filter, categorizer)
-        : aggRobot(client, filter, categorizer ?? "total");
+        : aggRobot(client, filter, categorizer);
     } else {
       // f(event, match, robot)
       // Statistics of season
@@ -172,10 +186,10 @@ function getSingle(client: DBClient, filter: {
     }
   }
 
-  throw oak.createHttpError(oak.Status.BadRequest, "Bad Request");
+  throw oak.createHttpError(oak.Status.BadRequest, "Invalid Endpoint");
 }
 
-type Filter = { season: keyof typeof dynamicMap, event?: string; match?: readonly string[], robot?: readonly string[], limit?: number, categorizer?: keyof typeof categorizers | "dhr"};
+type Filter = { season: keyof typeof dynamicMap, event?: string; match?: readonly string[], robot?: readonly string[], selectlimit?: number, calclimit?: number, categorizer?: keyof typeof categorizers | "dhr"};
 
 class ParameterParser {
   public static parse(
@@ -187,7 +201,8 @@ class ParameterParser {
       event: params["event"],
       match: params["match"] === "*" ? [] : params["match"]?.split(","),
       robot: params["robot"] === "*" ? [] : params["robot"]?.split(","),
-      limit: this.limit(request),
+      selectlimit: this.selectLimit(request),
+      calclimit: this.calcLimit(request),
       categorizer: this.categorizer(request),
     };
   }
@@ -213,16 +228,25 @@ class ParameterParser {
     return season;
   }
 
-  private static limit(request: oak.Request): number | undefined {
-    const limit = this.parseNatural(
-      request.url.searchParams.get("last") ||
-        request.url.searchParams.get("limit"),
-    );
+  private static selectLimit(request: oak.Request): number | undefined {
+    const limit = this.parseNatural(request.url.searchParams.get("selectlimit"));
+    if (limit === null) return;
+    if (Number.isNaN(limit) || limit < 1) {
+      throw oak.createHttpError(
+        oak.Status.BadRequest,
+        "Illegal Arguments: selectlimit must be a positive integer >= 1.",
+      );
+    }
+    return limit;
+  }
+
+  private static calcLimit(request: oak.Request): number | undefined {
+    const limit = this.parseNatural(request.url.searchParams.get("calclimit"));
     if (limit === null) return;
     if (Number.isNaN(limit) || limit < 3) {
       throw oak.createHttpError(
         oak.Status.BadRequest,
-        "Illegal Arguments: limit must be a number >= 3.",
+        "Illegal Arguments: calclimit must be a positive integer >= 3.",
       );
     }
     return limit;
@@ -238,6 +262,7 @@ class ParameterParser {
     request: oak.Request,
   ): keyof typeof categorizers | "dhr" | undefined {
     const categorizer = request.url.searchParams.get("categorizer");
+    if (categorizer === null) return; // omission is legal
     if (categorizer === "dhr") return categorizer;
     if (!this.validateCategorizer(categorizer)) {
       throw oak.createHttpError(

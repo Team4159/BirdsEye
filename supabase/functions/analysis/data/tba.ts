@@ -1,3 +1,5 @@
+// TODO Remove dependence on TBA for analysis
+
 import { MatchIdentifier } from "./epa.ts";
 
 export interface MatchInfo {

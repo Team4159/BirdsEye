@@ -1,22 +1,22 @@
-import stdev from "@stdlib/stats-base-stdev";
+import * as ss from "simple-statistics";
 
 // TODO switch to skewed normal distribution
 export class Normal {
   readonly mean: number;
-  readonly stdev: number;
+  readonly variance: number;
 
-  constructor(params: { mean: number; stdev: number } | readonly number[]) {
+  constructor(params: { mean: number; variance: number } | readonly number[]) {
     if ("mean" in params) {
-      if (params.stdev < 0) throw Error("stdev this.meanst be >0");
+      if (params.variance < 0) throw Error("variance must be >0");
       this.mean = params.mean;
-      this.stdev = params.stdev;
+      this.variance = params.variance;
     } else {
       if (params.length === 1) {
         this.mean = params[0]!;
-        this.stdev = 0;
+        this.variance = 0;
       } else {
-        this.mean = avg(params);
-        this.stdev = Normal.std(params);
+        this.mean = ss.meanSimple(params as number[]);
+        this.variance = ss.variance(params as number[]);
       }
     }
   }
@@ -24,22 +24,17 @@ export class Normal {
   public cdf(x: number): number {
     if (Number.isNaN(x)) return NaN;
 
-    if (this.stdev === 0) {
+    if (this.variance === 0)
       return (x < this.mean) ? 0.0 : 1.0;
-    }
 
-    const denom = this.stdev * Math.sqrt(2.0);
-
-    const xc = x - this.mean;
-
-    return 0.5 * (1 - Normal.erf(-xc / denom));
+    return 0.5 * (1 + ss.erf((x - this.mean) / (Math.sqrt(this.variance) * Math.SQRT2)));
   }
 
   public static sum(...terms: readonly Normal[]) {
     return new Normal(
       {
         mean: terms.reduce((t, a) => t + a.mean, 0),
-        stdev: Math.sqrt(terms.reduce((t, a) => t + a.stdev * a.stdev, 0)),
+        variance: terms.reduce((t, a) => t + a.variance, 0),
       },
     );
   }
@@ -51,30 +46,10 @@ export class Normal {
     return new Normal(
       {
         mean: minuend.mean - subtrahend.mean,
-        stdev: Math.sqrt(
-          minuend.stdev * minuend.stdev + subtrahend.stdev * subtrahend.stdev,
-        ),
+        variance: minuend.variance + subtrahend.variance,
       },
     );
   }
-
-  private static std(x: readonly number[]) {
-    return stdev(x.length, 1, x, 1);
-  }
-
-  private static erfccoefficients = [0.0705230784, 0.0422820123, 0.0092705272, 0.0001520143, 0.0002765672, 0.0000430638];
-
-  /**
-   * Abramowitz and Stegun 7.1.27
-   */
-  private static erf(x: number): number {
-    if (x < 0) return -this.erf(-x);
-    return 1 - 1 / Math.pow(1 + this.erfccoefficients.reduce((prev, a, i) => prev+a*Math.pow(x, i+1), 0), 16)
-  }
-}
-
-export function avg(x: readonly number[]) {
-  return x.length === 0 ? 0 : x.reduce((a, b) => a + b, 0) / x.length;
 }
 
 /**
