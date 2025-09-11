@@ -4,11 +4,8 @@ import * as oak from "@oak/oak";
 import { oakCors } from "https://deno.land/x/cors/mod.ts";
 import analysisRouter from "./routes/analysis.ts";
 
-const router = new oak.Router();
-router.use(analysisRouter.routes());
-
 const app = new oak.Application();
-app.use(oakCors()); // Enable CORS for All Routes
+app.use(oakCors({"origin": [ "https://scouting.team4159.org", "http://localhost" ]})); // Enable CORS for All Routes
 app.use(async (ctx, next) => {
   const start = Date.now();
   await next();
@@ -38,8 +35,8 @@ app.use(async (ctx, next) => {
     }
   }
 })
-app.use(router.routes());
-app.use(router.allowedMethods());
+app.use(analysisRouter.routes());
+app.use(analysisRouter.allowedMethods());
 // TODO Needs an outward caching layer (using http headers probably) using etag and cache-control or whatever
 
 app.listen();

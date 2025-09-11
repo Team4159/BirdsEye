@@ -2,6 +2,10 @@
   "imports": {
     "@oak/oak": "jsr:@oak/oak@^17.1.4",
     "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.49.4",
+    "axios": "npm:axios@^1.11.0",
+    "axios-cache-interceptor": "npm:axios-cache-interceptor@^1.8.2",
+    "axios-deduplicator": "npm:axios-deduplicator@^1.0.1",
+    "axios-retry": "npm:axios-retry@^4.5.0",
     "simple-statistics": "npm:simple-statistics@^7.8.8"
   },
   "compilerOptions": {

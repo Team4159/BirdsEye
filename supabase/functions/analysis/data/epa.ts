@@ -1,6 +1,6 @@
 import { average } from "simple-statistics";
 import { DBClient } from "../supabase/supabase.ts";
-import { Normal, sigmoid } from "../util.ts";
+import { Normal, sigmoid } from "../math.ts";
 import {
   BatchFetchFilter,
   batchFetchRobotInMatches,

@@ -8,7 +8,7 @@ import {
   epaMatch,
 } from "../data/epa.ts";
 import { createSupaClient, DBClient } from "../supabase/supabase.ts";
-import { Normal } from "../util.ts";
+import { Normal } from "../math.ts";
 
 const router = new oak.Router({ prefix: "/analysis" });
 
