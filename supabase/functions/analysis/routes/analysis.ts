@@ -52,6 +52,7 @@ async function handler(
               await getSingle(client, {
                 ...filter,
                 limit: filter.calclimit,
+                event: filter.event ? filter.event[0] : undefined, // TODO decide how to implement event globbing
                 match: m,
                 robot: r,
               }),
@@ -63,7 +64,7 @@ async function handler(
   );
 }
 
-const globbable: ["match", "robot"] = ["match", "robot"];
+const globbable: ["event", "match", "robot"] = ["event", "match", "robot"];
 /**
  * Expands all globs (`*`, gets converted to `[]`) to their real values
  * @param filter A filter, possibly including globs
@@ -79,7 +80,7 @@ async function expandGlobs(client: DBClient, filter: Filter): Promise<Filter | u
   
   // Build query to database (rename "team" to "robot")
   let query = client.from("match_scouting").select("match, robot:team").eq("season", filter.season);
-  if (filter.event !== undefined) query = query.eq("event", filter.event);
+  if (filter.event !== undefined && filter.event.length !== 0) query = query.in("event", filter.event);
   if (filter.match !== undefined && filter.match.length !== 0) query = query.in("match", filter.match);
   if (filter.robot !== undefined && filter.robot.length !== 0) query = query.in("team" , filter.robot);
   query = query.order("match_code", {ascending: false}).limit(filter.selectlimit);
@@ -95,7 +96,7 @@ async function expandGlobs(client: DBClient, filter: Filter): Promise<Filter | u
     }
   }
   for (const [k, v] of Object.entries(out)) {
-    filter[k as "match" | "robot"] = [...v];
+    filter[k as (typeof globbable)[number]] = [...v];
   }
 
   return filter;
@@ -163,7 +164,7 @@ function getSingle(client: DBClient, filter: {
         // event, f(match, robot)
         // Insights for event
 
-        // TODO unimplemented, fall through
+        // unimplemented, fall through
       }
     }
   } else if (match === undefined) { // makes no sense to define a match without an event
@@ -182,14 +183,14 @@ function getSingle(client: DBClient, filter: {
       // f(event, match, robot)
       // Statistics of season
 
-      // TODO unimplemented, fall through
+      // unimplemented, fall through
     }
   }
 
   throw oak.createHttpError(oak.Status.BadRequest, "Invalid Endpoint");
 }
 
-type Filter = { season: keyof typeof dynamicMap, event?: string; match?: readonly string[], robot?: readonly string[], selectlimit?: number, calclimit?: number, categorizer?: keyof typeof categorizers | "dhr"};
+type Filter = { season: keyof typeof dynamicMap, event?: readonly string[]; match?: readonly string[], robot?: readonly string[], selectlimit?: number, calclimit?: number, categorizer?: keyof typeof categorizers | "dhr"};
 
 class ParameterParser {
   public static parse(
@@ -198,7 +199,7 @@ class ParameterParser {
   ): Filter {
     return {
       season: this.season(params),
-      event: params["event"],
+      event: params["event"] === "*" ? [] : params["event"]?.split(","),
       match: params["match"] === "*" ? [] : params["match"]?.split(","),
       robot: params["robot"] === "*" ? [] : params["robot"]?.split(","),
       selectlimit: this.selectLimit(request),

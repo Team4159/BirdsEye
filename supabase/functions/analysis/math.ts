@@ -53,11 +53,11 @@ export class Normal {
 }
 
 /**
- * Sigmoid/Logistic Interpolation
- * @param x The variable to scale (-∞, ∞) centered at 0.5
- * @param a The "compression factor". Higher = sharper slope
- * @returns The scaled variable (0, 1)
+ * Teamwork Sum - How likely a team is to succeed given individual members' chances to succeed.
+ * @param x The variable (raw sum) to scale [0, ∞)
+ * @returns The scaled variable [0, 1)
  */
-export function sigmoid(x: number, a: number = 5): number {
-  return 1 / (1 + Math.exp(a * (0.5 - x)));
+export function teamworkSum(x: number): number {
+  const intermediate = Math.exp(x) * x;
+  return intermediate / (intermediate + 1);
 }

@@ -1,6 +1,6 @@
 import { average } from "simple-statistics";
 import { DBClient } from "../supabase/supabase.ts";
-import { Normal, sigmoid } from "../math.ts";
+import { Normal, teamworkSum } from "../math.ts";
 import {
   BatchFetchFilter,
   batchFetchRobotInMatches,
@@ -156,6 +156,7 @@ type AlliancePrediction = {
   rp: { [key: string]: number };
   teams: string[];
 };
+// TODO cache the result of this function
 async function epaMatchup(
   supabase: DBClient,
   season: keyof typeof dynamicMap,
@@ -209,7 +210,7 @@ async function epaMatchup(
     return Object.fromEntries(
       ents.map((
         [rpname, rptotal],
-      ) => [rpname, sigmoid(rptotal)]),
+      ) => [rpname, teamworkSum(rptotal)]),
     );
   }
 
@@ -271,4 +272,4 @@ async function epaMatch(
   return epaMatchup(supabase, match.season, blue, red, limit);
 }
 
-export { aggRobot, epaMatch, erpaRobot };
+export { aggRobot, epaMatch, epaMatchup, erpaRobot };

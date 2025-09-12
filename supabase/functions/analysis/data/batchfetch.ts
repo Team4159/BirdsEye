@@ -44,7 +44,7 @@ async function fetchRobotInMatch(
   if (dbdata === null) return;
 
   const entry = dbdata as any;
-  const tbadata: MatchInfo = (await tba.get(identifier))[0]!;
+  const tbadata: MatchInfo = (await tba.getMatches(identifier))[0]!;
 
   delete entry.match_scouting;
   return fuseData(
@@ -104,7 +104,7 @@ async function batchFetchRobotInMatches(
     return new Map();
   }
 
-  let tbadataraw: readonly MatchInfo[] = await tba.get(filter);
+  let tbadataraw: readonly MatchInfo[] = await tba.getMatches(filter);
   if ("limit" in filter) {
     const dbmatches = new Set(
       dbdata.map((entry: any) =>

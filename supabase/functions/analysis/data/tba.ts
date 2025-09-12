@@ -1,4 +1,3 @@
-// TODO Remove dependence on TBA for analysis
 import { createFetcher } from "../fetcher.ts";
 import { MatchIdentifier } from "./epa.ts";
 
@@ -52,7 +51,7 @@ type FetchParams = {
 class TBAInterface {
   private readonly axios = createFetcher();
 
-  get(identifier: FetchParams) {
+  getMatches(identifier: FetchParams) {
     return this.axios.get(TBAInterface.buildUrl(identifier)).then((r) =>
       r.data as MatchInfo[]
     );
@@ -63,7 +62,7 @@ class TBAInterface {
       `${identifier.season}${identifier.event}_${identifier.match}`;
     const params = { season: identifier.season, event: identifier.event };
 
-    const data = await this.get(params);
+    const data = await this.getMatches(params);
     return data.find((match) => match.key === matchKey)!;
   }
   // Constructs API URL based on parameters

@@ -183,10 +183,10 @@ export const rankingpoints: {[key: string]: (robotinmatch: typeof scoringpoints)
     return levelcompletion.reduce((a, b) => a + b, 0) / 4; // Sum together each level's completion and normalize
   },
   endgame(robotinmatch) {
-    return Math.min((
+    return (
       (robotinmatch.endgame_parked ?? 0) * scoringpoints.endgame_parked +
       (robotinmatch.endgame_shallow ?? 0) * scoringpoints.endgame_shallow +
       (robotinmatch.endgame_deep ?? 0) * scoringpoints.endgame_deep
-    ) / 14, 1);
+    ) / 14;
   }
 }
