@@ -4,7 +4,7 @@ import 'package:birdseye/interfaces/localstore.dart' show LocalSourceOfTruth;
 import 'package:birdseye/interfaces/sharedprefs.dart';
 
 import 'package:flutter/material.dart' show Color;
-import 'package:http/http.dart' show Client, ClientException, Response;
+import 'package:http/http.dart' show Client, ClientException;
 import 'package:stock/stock.dart';
 
 enum MatchLevel {
@@ -208,17 +208,13 @@ class BlueAlliance {
         },
       )
       .then((resp) => resp.statusCode < 400 ? json.decode(resp.body) : throw resp)
-      .onError<Response>((resp, _) {
-        print("Error ${resp.statusCode}: ${resp.body}");
-        return null;
+      .onError<ClientException>((e, _) {
+        dirtyConnected = false;
+        throw e;
       })
       .then((n) {
         dirtyConnected = true;
         return n;
-      })
-      .onError<ClientException>((e, _) {
-        dirtyConnected = false;
-        throw ClientException("Offline");
       });
 
   static final Set<String> _keyCache = {};
@@ -237,7 +233,6 @@ class BlueAlliance {
 
   static final stockSoT = LocalSourceOfTruth<TBAInfo>("tba");
   static final stock = Stock<TBAInfo, Map<String, String>>(
-    // TODO add handling for 404s
     sourceOfTruth: stockSoT.mapTo<Map<String, String>>(
       (p) => p.map((k, v) => MapEntry(k, v.toString())),
       (p) => p,

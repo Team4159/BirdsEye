@@ -25,65 +25,79 @@ class PitScoutPage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => NestedScrollView(
-    controller: _scrollController,
-    headerSliverBuilder: (context, _) => [
-      const SliverAppBar(primary: true, floating: true, snap: true, title: Text("Pit Scouting")),
-      SliverToBoxAdapter(
-        child: Align(
-          alignment: Alignment.topRight,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 150),
-            // FIXME stop this widget from rebuilding (and thus refetching) every time it goes off screen
-            child: _PitScoutConfig(
-              season: season,
-              event: event,
-              submit: (team) {
-                if (_team.value == team) return;
-                SupabaseInterface.setSession((
-                  season: season,
-                  event: event,
-                  match: null,
-                  team: team.toString(),
-                ));
-                _team.value = team;
-              },
-              textFieldKey: _configKey,
+  Widget build(BuildContext context) => SensibleFetcher<List<Object>>(
+    getFuture: () => Future.wait(<Future<Object>>[
+      BlueAlliance.stock
+          .get(TBAInfo(season: season, event: event, match: "*"))
+          .then((data) => data.keys.toSet()),
+      PitInterface.getPitScoutedTeams(
+        season,
+        event,
+        // ignore: use_build_context_synchronously
+      ).then((scouted) => scouted..add(UserMetadata.read(context)!.team!)),
+    ]),
+    loadingIndicator: null,
+    builtInRefresh: false,
+    child: NestedScrollView(
+      controller: _scrollController,
+      headerSliverBuilder: (context, _) => [
+        const SliverAppBar(primary: true, floating: true, snap: true, title: Text("Pit Scouting")),
+        SliverToBoxAdapter(
+          child: Align(
+            alignment: Alignment.topRight,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 150),
+              child: _PitScoutConfig(
+                season: season,
+                event: event,
+                submit: (team) {
+                  if (_team.value == team) return;
+                  SupabaseInterface.setSession((
+                    season: season,
+                    event: event,
+                    match: null,
+                    team: team.toString(),
+                  ));
+                  _team.value = team;
+                },
+                textFieldKey: _configKey,
+              ),
             ),
           ),
         ),
-      ),
-    ],
-    body: ValueListenableBuilder(
-      valueListenable: _team,
-      builder: (context, team, _) => AnimatedSwitcher(
-        duration: Durations.extralong4,
-        child: team == null
-            ? const Center(child: Text("Enter a team number."))
-            : SafeArea(
-                child: _PitScoutForm(
-                  season,
-                  initial:
-                      PitInterface.pitResponseFetch((
-                            season: season,
-                            event: event,
-                            team: team,
-                          ), UserMetadata.of(context).id!)
-                          .then<Map<String, String>?>((prevResp) => prevResp.singleOrNull)
-                          .onError((_, _) => null),
-                  submit: (fields) async {
-                    final info = (season: season, event: event, team: team);
-                    await PitInterface.pitResponseSubmit(info, fields).reportError(context);
-                    reset();
-                  },
-                  reset: reset,
+      ],
+      body: ValueListenableBuilder(
+        valueListenable: _team,
+        builder: (context, team, _) => AnimatedSwitcher(
+          duration: Durations.extralong4,
+          child: team == null
+              ? const Center(child: Text("Enter a team number."))
+              : SafeArea(
+                  child: _PitScoutForm(
+                    season,
+                    initial:
+                        PitInterface.pitResponseFetch((
+                              season: season,
+                              event: event,
+                              team: team,
+                            ), UserMetadata.of(context).id!)
+                            .then<Map<String, String>?>((prevResp) => prevResp.singleOrNull)
+                            .onError((_, _) => null),
+                    submit: (fields) async {
+                      final info = (season: season, event: event, team: team);
+                      await PitInterface.pitResponseSubmit(info, fields).reportError(context);
+                      reset();
+                    },
+                    reset: reset,
+                  ),
                 ),
-              ),
+        ),
       ),
     ),
   );
 }
 
+/// Depends on a `SensibleFetcher<List<Object>>` in the hierarchy
 class _PitScoutConfig extends StatelessWidget {
   final Key? textFieldKey;
 
@@ -121,21 +135,7 @@ class _PitScoutConfig extends StatelessWidget {
       const Spacer(),
       Flexible(
         flex: 3,
-        child: SensibleFetcher<List<Object>>(
-          getFuture: () => Future.wait(<Future<Object>>[
-            BlueAlliance.stock
-                .get(TBAInfo(season: season, event: event, match: "*"))
-                .then((data) => data.keys.toSet()),
-            PitInterface.getPitScoutedTeams(
-              season,
-              event,
-              // ignore: use_build_context_synchronously
-            ).then((scouted) => scouted..add(UserMetadata.read(context)!.team!)),
-          ]),
-          loadingIndicator: null,
-          builtInRefresh: false,
-          child: _PitScoutConfigTeamField(textFieldKey: textFieldKey, submit: submit),
-        ),
+        child: _PitScoutConfigTeamField(textFieldKey: textFieldKey, submit: submit),
       ),
     ],
   );

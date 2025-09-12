@@ -1,5 +1,6 @@
 import 'dart:async' show FutureOr;
 
+import 'package:birdseye/pages/achievementqueue.dart';
 import 'package:birdseye/usermetadata.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -22,7 +23,7 @@ final appRouter = GoRouter(routes: $appRoutes, initialLocation: '/');
 
 @TypedGoRoute<LandingRoute>(path: '/')
 @immutable
-class LandingRoute extends GoRouteData with _$LandingRoute {
+class LandingRoute extends GoRouteData with $LandingRoute {
   const LandingRoute();
 
   @override
@@ -52,26 +53,26 @@ class LegalShellRoute extends ShellRouteData {
 }
 
 @immutable
-class LegalPrivacyRoute extends GoRouteData with _$LegalPrivacyRoute {
+class LegalPrivacyRoute extends GoRouteData with $LegalPrivacyRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) => const MarkdownPage("privacy");
 }
 
 @immutable
-class LegalTermsRoute extends GoRouteData with _$LegalTermsRoute {
+class LegalTermsRoute extends GoRouteData with $LegalTermsRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) => const MarkdownPage("tos");
 }
 
 @immutable
-class LegalCookiesRoute extends GoRouteData with _$LegalCookiesRoute {
+class LegalCookiesRoute extends GoRouteData with $LegalCookiesRoute {
   @override
   Widget build(BuildContext context, GoRouterState state) => const MarkdownPage("cookies");
 }
 
 @TypedGoRoute<MetadataRoute>(path: '/metadata', caseSensitive: false)
 @immutable
-class MetadataRoute extends GoRouteData with _$MetadataRoute implements Navigable {
+class MetadataRoute extends GoRouteData with $MetadataRoute implements Navigable {
   /// whether or not to check if metadata is already available, and skip the metadata page if so
   final bool redir;
   const MetadataRoute({this.redir = false});
@@ -132,7 +133,7 @@ class ScoutingShellRoute extends ShellRouteData {
 }
 
 @immutable
-class ConfigurationRoute extends GoRouteData with _$ConfigurationRoute implements Navigable {
+class ConfigurationRoute extends GoRouteData with $ConfigurationRoute implements Navigable {
   const ConfigurationRoute();
 
   @override
@@ -146,7 +147,7 @@ class ConfigurationRoute extends GoRouteData with _$ConfigurationRoute implement
 }
 
 @immutable
-class PitScoutRoute extends GoRouteData with _$PitScoutRoute implements Navigable {
+class PitScoutRoute extends GoRouteData with $PitScoutRoute implements Navigable {
   final int? season;
   final String? event;
   PitScoutRoute({this.season, this.event});
@@ -175,7 +176,7 @@ final _matchCodeParamPattern = RegExp(
 );
 
 @immutable
-class MatchScoutRoute extends GoRouteData with _$MatchScoutRoute implements Navigable {
+class MatchScoutRoute extends GoRouteData with $MatchScoutRoute implements Navigable {
   final String? matchCode;
   const MatchScoutRoute({this.matchCode});
 
@@ -219,7 +220,7 @@ class MatchScoutRoute extends GoRouteData with _$MatchScoutRoute implements Navi
 }
 
 @immutable
-class SavedResponsesRoute extends GoRouteData with _$SavedResponsesRoute implements Navigable {
+class SavedResponsesRoute extends GoRouteData with $SavedResponsesRoute implements Navigable {
   const SavedResponsesRoute();
 
   @override
@@ -233,7 +234,7 @@ class SavedResponsesRoute extends GoRouteData with _$SavedResponsesRoute impleme
 }
 
 @immutable
-class AchievementsRoute extends GoRouteData with _$AchievementsRoute implements Navigable {
+class AchievementsRoute extends GoRouteData with $AchievementsRoute implements Navigable {
   final int season;
   final String? event;
   AchievementsRoute()
@@ -259,4 +260,29 @@ class AchievementsRoute extends GoRouteData with _$AchievementsRoute implements 
 
 abstract class Navigable extends GoRouteData {
   NavigationDrawerDestination get destination;
+}
+
+@TypedGoRoute<AchievementQueueRoute>(path: "/achievementqueue", caseSensitive: false)
+@immutable
+class AchievementQueueRoute extends GoRouteData with $AchievementQueueRoute implements Navigable {
+  @override
+  get destination => const NavigationDrawerDestination(
+    icon: Icon(Icons.checklist_rounded),
+    label: Text("Achievement Queue"),
+  );
+
+  @override
+  FutureOr<String?> redirect(BuildContext context, GoRouterState state) {
+    var userMeta = UserMetadata.of(context);
+    if (!userMeta.isSignedIn) {
+      return const LandingRoute().location;
+    }
+    if (!userMeta.hasMeta) {
+      return const MetadataRoute(redir: false).location;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) => const AchievementQueuePage();
 }

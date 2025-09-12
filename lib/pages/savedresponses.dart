@@ -21,7 +21,7 @@ class SavedResponsesPage extends StatelessWidget {
           final snapshot = SensibleFetcher.of<List<String>>(context);
 
           if (snapshot.data!.isEmpty) {
-            return CustomScrollView(
+            return const CustomScrollView(
               slivers: [
                 SliverFillRemaining(
                   hasScrollBody: false,

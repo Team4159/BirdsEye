@@ -11,12 +11,13 @@ List<RouteBase> get $appRoutes => [
   $legalShellRoute,
   $metadataRoute,
   $scoutingShellRoute,
+  $achievementQueueRoute,
 ];
 
 RouteBase get $landingRoute =>
-    GoRouteData.$route(path: '/', factory: _$LandingRoute._fromState);
+    GoRouteData.$route(path: '/', factory: $LandingRoute._fromState);
 
-mixin _$LandingRoute on GoRouteData {
+mixin $LandingRoute on GoRouteData {
   static LandingRoute _fromState(GoRouterState state) => const LandingRoute();
 
   @override
@@ -41,18 +42,15 @@ RouteBase get $legalShellRoute => ShellRouteData.$route(
   routes: [
     GoRouteData.$route(
       path: '/legal/privacy',
-
-      factory: _$LegalPrivacyRoute._fromState,
+      factory: $LegalPrivacyRoute._fromState,
     ),
     GoRouteData.$route(
       path: '/legal/terms',
-
-      factory: _$LegalTermsRoute._fromState,
+      factory: $LegalTermsRoute._fromState,
     ),
     GoRouteData.$route(
       path: '/legal/cookies',
-
-      factory: _$LegalCookiesRoute._fromState,
+      factory: $LegalCookiesRoute._fromState,
     ),
   ],
 );
@@ -61,7 +59,7 @@ extension $LegalShellRouteExtension on LegalShellRoute {
   static LegalShellRoute _fromState(GoRouterState state) => LegalShellRoute();
 }
 
-mixin _$LegalPrivacyRoute on GoRouteData {
+mixin $LegalPrivacyRoute on GoRouteData {
   static LegalPrivacyRoute _fromState(GoRouterState state) =>
       LegalPrivacyRoute();
 
@@ -82,7 +80,7 @@ mixin _$LegalPrivacyRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
-mixin _$LegalTermsRoute on GoRouteData {
+mixin $LegalTermsRoute on GoRouteData {
   static LegalTermsRoute _fromState(GoRouterState state) => LegalTermsRoute();
 
   @override
@@ -102,7 +100,7 @@ mixin _$LegalTermsRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
-mixin _$LegalCookiesRoute on GoRouteData {
+mixin $LegalCookiesRoute on GoRouteData {
   static LegalCookiesRoute _fromState(GoRouterState state) =>
       LegalCookiesRoute();
 
@@ -125,13 +123,11 @@ mixin _$LegalCookiesRoute on GoRouteData {
 
 RouteBase get $metadataRoute => GoRouteData.$route(
   path: '/metadata',
-
   caseSensitive: false,
-
-  factory: _$MetadataRoute._fromState,
+  factory: $MetadataRoute._fromState,
 );
 
-mixin _$MetadataRoute on GoRouteData {
+mixin $MetadataRoute on GoRouteData {
   static MetadataRoute _fromState(GoRouterState state) => MetadataRoute(
     redir:
         _$convertMapValue(
@@ -190,38 +186,28 @@ RouteBase get $scoutingShellRoute => ShellRouteData.$route(
   routes: [
     GoRouteData.$route(
       path: '/configuration',
-
       caseSensitive: false,
-
-      factory: _$ConfigurationRoute._fromState,
+      factory: $ConfigurationRoute._fromState,
     ),
     GoRouteData.$route(
       path: '/pitscout',
-
       caseSensitive: false,
-
-      factory: _$PitScoutRoute._fromState,
+      factory: $PitScoutRoute._fromState,
     ),
     GoRouteData.$route(
       path: '/matchscout',
-
       caseSensitive: false,
-
-      factory: _$MatchScoutRoute._fromState,
+      factory: $MatchScoutRoute._fromState,
     ),
     GoRouteData.$route(
       path: '/savedresponses',
-
       caseSensitive: false,
-
-      factory: _$SavedResponsesRoute._fromState,
+      factory: $SavedResponsesRoute._fromState,
     ),
     GoRouteData.$route(
       path: '/achievements',
-
       caseSensitive: false,
-
-      factory: _$AchievementsRoute._fromState,
+      factory: $AchievementsRoute._fromState,
     ),
   ],
 );
@@ -231,7 +217,7 @@ extension $ScoutingShellRouteExtension on ScoutingShellRoute {
       ScoutingShellRoute();
 }
 
-mixin _$ConfigurationRoute on GoRouteData {
+mixin $ConfigurationRoute on GoRouteData {
   static ConfigurationRoute _fromState(GoRouterState state) =>
       const ConfigurationRoute();
 
@@ -252,7 +238,7 @@ mixin _$ConfigurationRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
-mixin _$PitScoutRoute on GoRouteData {
+mixin $PitScoutRoute on GoRouteData {
   static PitScoutRoute _fromState(GoRouterState state) => PitScoutRoute(
     season: _$convertMapValue(
       'season',
@@ -268,7 +254,7 @@ mixin _$PitScoutRoute on GoRouteData {
   String get location => GoRouteData.$location(
     '/pitscout',
     queryParams: {
-      if (_self.season != null) 'season': _self.season.toString(),
+      if (_self.season != null) 'season': _self.season!.toString(),
       if (_self.event != null) 'event': _self.event,
     },
   );
@@ -287,7 +273,7 @@ mixin _$PitScoutRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
-mixin _$MatchScoutRoute on GoRouteData {
+mixin $MatchScoutRoute on GoRouteData {
   static MatchScoutRoute _fromState(GoRouterState state) =>
       MatchScoutRoute(matchCode: state.uri.queryParameters['match-code']);
 
@@ -313,7 +299,7 @@ mixin _$MatchScoutRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
-mixin _$SavedResponsesRoute on GoRouteData {
+mixin $SavedResponsesRoute on GoRouteData {
   static SavedResponsesRoute _fromState(GoRouterState state) =>
       const SavedResponsesRoute();
 
@@ -334,12 +320,39 @@ mixin _$SavedResponsesRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
-mixin _$AchievementsRoute on GoRouteData {
+mixin $AchievementsRoute on GoRouteData {
   static AchievementsRoute _fromState(GoRouterState state) =>
       AchievementsRoute();
 
   @override
   String get location => GoRouteData.$location('/achievements');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $achievementQueueRoute => GoRouteData.$route(
+  path: '/achievementqueue',
+  caseSensitive: false,
+  factory: $AchievementQueueRoute._fromState,
+);
+
+mixin $AchievementQueueRoute on GoRouteData {
+  static AchievementQueueRoute _fromState(GoRouterState state) =>
+      AchievementQueueRoute();
+
+  @override
+  String get location => GoRouteData.$location('/achievementqueue');
 
   @override
   void go(BuildContext context) => context.go(location);
