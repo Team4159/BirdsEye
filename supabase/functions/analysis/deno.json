@@ -1,7 +1,9 @@
 {
   "imports": {
     "@oak/oak": "jsr:@oak/oak@^17.1.4",
+    "@std/crypto": "jsr:@std/crypto@^1.0.5",
     "@supabase/supabase-js": "jsr:@supabase/supabase-js@^2.49.4",
+    "@zaubrik/djwt": "jsr:@zaubrik/djwt@^3.0.2",
     "axios": "npm:axios@^1.11.0",
     "axios-cache-interceptor": "npm:axios-cache-interceptor@^1.8.2",
     "axios-deduplicator": "npm:axios-deduplicator@^1.0.1",

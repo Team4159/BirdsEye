@@ -2,22 +2,49 @@
 import * as oak from "@oak/oak";
 import { fetchRobotScore } from "../data/batchfetch.ts";
 import dynamicMap from "../data/dynamic/dynamic.ts";
-import {
-  aggRobot,
-  categorizers,
-  epaMatch,
-} from "../data/epa.ts";
-import { createSupaClient, DBClient } from "../supabase/supabase.ts";
+import { aggRobot, categorizers, epaMatch } from "../data/epa.ts";
+import { DBClient } from "../supabase/supabase.ts";
 import { Normal } from "../math.ts";
+import { maxAgeMiddleware } from "../cacher.ts";
 
-const router = new oak.Router({ prefix: "/analysis" });
+const router = new oak.Router<DBClient>({ prefix: "/analysis" });
 
-router.get("/season/:season/event/:event/match/:match/robot/:robot", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
-router.get("/season/:season/event/:event/match/:match", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
-router.get("/season/:season/event/:event/robot/:robot", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
-router.get("/season/:season/event/:event", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
-router.get("/season/:season/robot/:robot", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
-router.get("/season/:season", async (ctx) => ctx.response.body = await handler(ctx.params, ctx.request));
+router.get(
+  "/season/:season/event/:event/match/:match/robot/:robot",
+  maxAgeMiddleware(60),
+  async (ctx) =>
+    ctx.response.body = await handler(ctx.state as DBClient, ctx.params, ctx.request),
+);
+router.get(
+  "/season/:season/event/:event/match/:match",
+  maxAgeMiddleware(60),
+  async (ctx) =>
+    ctx.response.body = await handler(ctx.state as DBClient, ctx.params, ctx.request),
+);
+router.get(
+  "/season/:season/event/:event/robot/:robot",
+  maxAgeMiddleware(60),
+  async (ctx) =>
+    ctx.response.body = await handler(ctx.state as DBClient, ctx.params, ctx.request),
+);
+router.get(
+  "/season/:season/event/:event",
+  maxAgeMiddleware(3600),
+  async (ctx) =>
+    ctx.response.body = await handler(ctx.state as DBClient, ctx.params, ctx.request),
+);
+router.get(
+  "/season/:season/robot/:robot",
+  maxAgeMiddleware(60),
+  async (ctx) =>
+    ctx.response.body = await handler(ctx.state as DBClient, ctx.params, ctx.request),
+);
+router.get(
+  "/season/:season",
+  maxAgeMiddleware(3600),
+  async (ctx) =>
+    ctx.response.body = await handler(ctx.state as DBClient, ctx.params, ctx.request),
+);
 
 /**
  * Selection Types
@@ -27,35 +54,62 @@ router.get("/season/:season", async (ctx) => ctx.response.body = await handler(c
  * undefined = f(x) (Aggregate of Items)
  */
 async function handler(
+  client: DBClient,
   params: { season: string; event?: string; match?: string; robot?: string },
   request: oak.Request,
-): Promise<{ [key: string]: { [key: string]: {[key: string]: {}} | undefined } }> {
-  const client = createSupaClient(request.headers.get("Authorization")!);
-  const filter = await expandGlobs(client, ParameterParser.parse(params, request));
-  
+): Promise<
+  {
+    [key: string]: {
+      [key: string]: { [key: string]: { [key: string]: {} } | undefined };
+    };
+  }
+> {
+  const filter = await expandGlobs(
+    client,
+    ParameterParser.parse(params, request),
+  );
+
   if (filter === undefined) {
+    /// Glob Failiure
     throw oak.createHttpError(oak.Status.NotFound, "No Relevant Data");
   }
 
-  return Object.fromEntries<{ [key: string]: {[key: string]: {}} | undefined }>(
+  return Object.fromEntries<
+    { [key: string]: { [key: string]: { [key: string]: {} } | undefined } }
+  >(
     await Promise.all(
-      (filter.match ?? [undefined]).map(async (
-        m,
-      ): Promise<[string, { [key: string]: {[key: string]: {}} | undefined }]> => [
-        m ?? "",
-        Object.fromEntries<{[key: string]: {}} | undefined>(
+      (filter.event ?? [undefined]).map(async (
+        e,
+      ): Promise<
+        [string, {[key: string]: { [key: string]: { [key: string]: {} } | undefined }}]
+      > => [
+        e ?? "",
+        Object.fromEntries<
+          { [key: string]: { [key: string]: {} } | undefined }
+        >(
           await Promise.all(
-            (filter.robot ?? [undefined]).map(async (
-              r,
-            ): Promise<[string, {[key: string]: {}} | undefined]> => [
-              r ?? "",
-              await getSingle(client, {
-                ...filter,
-                limit: filter.calclimit,
-                event: filter.event ? filter.event[0] : undefined, // TODO decide how to implement event globbing
-                match: m,
-                robot: r,
-              }),
+            (filter.match ?? [undefined]).map(async (
+              m,
+            ): Promise<
+              [string, { [key: string]: { [key: string]: {} } | undefined }]
+            > => [
+              m ?? "",
+              Object.fromEntries<{ [key: string]: {} } | undefined>(
+                await Promise.all(
+                  (filter.robot ?? [undefined]).map(async (
+                    r,
+                  ): Promise<[string, { [key: string]: {} } | undefined]> => [
+                    r ?? "",
+                    await getSingle(client, {
+                      ...filter,
+                      limit: filter.calclimit,
+                      event: e,
+                      match: m,
+                      robot: r,
+                    }),
+                  ]),
+                ),
+              ),
             ]),
           ),
         ),
@@ -70,26 +124,44 @@ const globbable: ["event", "match", "robot"] = ["event", "match", "robot"];
  * @param filter A filter, possibly including globs
  * @returns The filter, with all globs replaced with a list of values
  */
-async function expandGlobs(client: DBClient, filter: Filter): Promise<Filter | undefined> {
+async function expandGlobs(
+  client: DBClient,
+  filter: Filter,
+): Promise<Filter | undefined> {
   // Identify fields to glob
   const globs = globbable.filter((g) => filter[g]?.length === 0);
   // Return original filter if no expansion needed
   if (globs.length === 0) return filter;
 
-  if (filter.selectlimit === undefined) throw new Error("Endpoint requires selectlimit");
-  
+  if (filter.selectlimit === undefined) {
+    throw new Error("Endpoint requires selectlimit");
+  }
+
   // Build query to database (rename "team" to "robot")
-  let query = client.from("match_scouting").select("match, robot:team").eq("season", filter.season);
-  if (filter.event !== undefined && filter.event.length !== 0) query = query.in("event", filter.event);
-  if (filter.match !== undefined && filter.match.length !== 0) query = query.in("match", filter.match);
-  if (filter.robot !== undefined && filter.robot.length !== 0) query = query.in("team" , filter.robot);
-  query = query.order("match_code", {ascending: false}).limit(filter.selectlimit);
-  
+  let query = client.from("match_scouting").select("match, robot:team").eq(
+    "season",
+    filter.season,
+  );
+  if (filter.event !== undefined && filter.event.length !== 0) {
+    query = query.in("event", filter.event);
+  }
+  if (filter.match !== undefined && filter.match.length !== 0) {
+    query = query.in("match", filter.match);
+  }
+  if (filter.robot !== undefined && filter.robot.length !== 0) {
+    query = query.in("team", filter.robot);
+  }
+  query = query.order("match_code", { ascending: false }).limit(
+    filter.selectlimit,
+  );
+
   // Execute query
   const { data } = await query;
   if (data === null || data.length === 0) return undefined;
 
-  const out = Object.fromEntries<Set<string>>(globs.map((k) => [k, new Set<string>()]))
+  const out = Object.fromEntries<Set<string>>(
+    globs.map((k) => [k, new Set<string>()]),
+  );
   for (const entry of data) {
     for (const [k, v] of Object.entries(entry)) {
       if (k in out) out[k]!.add(v);
@@ -115,7 +187,9 @@ function getSingle(client: DBClient, filter: {
   robot?: string;
   limit?: number;
   categorizer?: keyof typeof categorizers | "dhr";
-}): Promise<{[key: string]: (object | boolean) | Normal | number} | undefined> {
+}): Promise<
+  { [key: string]: (object | boolean) | Normal | number } | undefined
+> {
   const { event, match, robot, categorizer } = filter; // for type checking
 
   if (event !== undefined) {
@@ -125,24 +199,49 @@ function getSingle(client: DBClient, filter: {
         // Robot Scores of match played at event by robot
         // => { category: score }
 
-        if ( categorizer === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires categorizer")
-        if ( categorizer === "dhr" ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint doesn't support dhr categorizer")
-        if ( filter.limit !== undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint doesn't support calclimit")
+        if (categorizer === undefined) {
+          throw oak.createHttpError(
+            oak.Status.BadRequest,
+            "Endpoint requires categorizer",
+          );
+        }
+        if (categorizer === "dhr") {
+          throw oak.createHttpError(
+            oak.Status.BadRequest,
+            "Endpoint doesn't support dhr categorizer",
+          );
+        }
+        if (filter.limit !== undefined) {
+          throw oak.createHttpError(
+            oak.Status.BadRequest,
+            "Endpoint doesn't support calclimit",
+          );
+        }
 
         const typecheckedIdentifier = { ...filter, event, match, robot };
 
         return fetchRobotScore(
-            client,
-            typecheckedIdentifier,
-            categorizers[categorizer](filter.season),
-          );
+          client,
+          typecheckedIdentifier,
+          categorizers[categorizer](filter.season),
+        );
       } else {
         // event, match, f(robot) <limit>
         // Insights for match played at event
         // => see epaMatchup's return type
 
-        if ( categorizer !== undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint doesn't support categorizer")
-        if ( filter.limit === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires calclimit")
+        if (categorizer !== undefined) {
+          throw oak.createHttpError(
+            oak.Status.BadRequest,
+            "Endpoint doesn't support categorizer",
+          );
+        }
+        if (filter.limit === undefined) {
+          throw oak.createHttpError(
+            oak.Status.BadRequest,
+            "Endpoint requires calclimit",
+          );
+        }
 
         const typecheckedIdentifier = { ...filter, event, match };
 
@@ -154,12 +253,22 @@ function getSingle(client: DBClient, filter: {
         // EPA of robot at event
         // => { category: performance }
 
-        if ( categorizer === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires categorizer")
-        if ( filter.limit === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires calclimit")
+        if (categorizer === undefined) {
+          throw oak.createHttpError(
+            oak.Status.BadRequest,
+            "Endpoint requires categorizer",
+          );
+        }
+        if (filter.limit === undefined) {
+          throw oak.createHttpError(
+            oak.Status.BadRequest,
+            "Endpoint requires calclimit",
+          );
+        }
 
         return categorizer === "dhr"
-        ? aggRobot(client, filter, categorizer)
-        : aggRobot(client, filter, categorizer);
+          ? aggRobot(client, filter, categorizer)
+          : aggRobot(client, filter, categorizer);
       } else {
         // event, f(match, robot)
         // Insights for event
@@ -173,9 +282,19 @@ function getSingle(client: DBClient, filter: {
       // EPA of robot in season
       // => { category: performance }
 
-      if ( categorizer === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires categorizer")
-      if ( filter.limit === undefined ) throw oak.createHttpError(oak.Status.BadRequest, "Endpoint requires calclimit")
-      
+      if (categorizer === undefined) {
+        throw oak.createHttpError(
+          oak.Status.BadRequest,
+          "Endpoint requires categorizer",
+        );
+      }
+      if (filter.limit === undefined) {
+        throw oak.createHttpError(
+          oak.Status.BadRequest,
+          "Endpoint requires calclimit",
+        );
+      }
+
       return categorizer === "dhr"
         ? aggRobot(client, filter, categorizer)
         : aggRobot(client, filter, categorizer);
@@ -190,7 +309,15 @@ function getSingle(client: DBClient, filter: {
   throw oak.createHttpError(oak.Status.BadRequest, "Invalid Endpoint");
 }
 
-type Filter = { season: keyof typeof dynamicMap, event?: readonly string[]; match?: readonly string[], robot?: readonly string[], selectlimit?: number, calclimit?: number, categorizer?: keyof typeof categorizers | "dhr"};
+type Filter = {
+  season: keyof typeof dynamicMap;
+  event?: readonly string[];
+  match?: readonly string[];
+  robot?: readonly string[];
+  selectlimit?: number;
+  calclimit?: number;
+  categorizer?: keyof typeof categorizers | "dhr";
+};
 
 class ParameterParser {
   public static parse(
@@ -230,7 +357,9 @@ class ParameterParser {
   }
 
   private static selectLimit(request: oak.Request): number | undefined {
-    const limit = this.parseNatural(request.url.searchParams.get("selectlimit"));
+    const limit = this.parseNatural(
+      request.url.searchParams.get("selectlimit"),
+    );
     if (limit === null) return;
     if (Number.isNaN(limit) || limit < 1) {
       throw oak.createHttpError(

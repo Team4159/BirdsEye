@@ -156,24 +156,23 @@ type AlliancePrediction = {
   rp: { [key: string]: number };
   teams: string[];
 };
-// TODO cache the result of this function
+export type EPAMatchupResult = 
+{
+  blue: Partial<AlliancePrediction>;
+  red: Partial<AlliancePrediction>;
+  isMissingData: true;
+} | {
+  blue: AlliancePrediction;
+  red: AlliancePrediction;
+  isMissingData: false;
+};
 async function epaMatchup(
   supabase: DBClient,
   season: keyof typeof dynamicMap,
   blue: string[],
   red: string[],
   limit: number,
-): Promise<
-  {
-    blue: Partial<AlliancePrediction>;
-    red: Partial<AlliancePrediction>;
-    isMissingData: true;
-  } | {
-    blue: AlliancePrediction;
-    red: AlliancePrediction;
-    isMissingData: false;
-  }
-> {
+): Promise<EPAMatchupResult> {
   let isMissingData: boolean = false;
   async function epaAlliance(teams: string[]): Promise<Normal | undefined> {
     const epas = (await Promise.all(

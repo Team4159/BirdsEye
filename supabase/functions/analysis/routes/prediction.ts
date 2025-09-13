@@ -1,19 +1,27 @@
 import * as oak from "@oak/oak";
 import { predictEvent } from "../data/predict.ts";
 import dynamicMap from "../data/dynamic/dynamic.ts";
-import { createSupaClient } from "../supabase/supabase.ts";
+import { DBClient } from "../supabase/supabase.ts";
+import { maxAgeMiddleware } from "../cacher.ts";
 
-const router = new oak.Router({ prefix: "/prediction" });
+const router = new oak.Router<DBClient>({ prefix: "/prediction" });
 
-router.get("/season/:season/event/:event", async (ctx) => {
-  const season = ParameterParser.season(ctx.params);
-  const event = ctx.params["event"]!;
-  const limit = ParameterParser.calcLimit(ctx.request);
+router.get(
+  "/season/:season/event/:event",
+  maxAgeMiddleware(600),
+  async (ctx) => {
+    const season = ParameterParser.season(ctx.params);
+    const event = ctx.params["event"]!;
+    const limit = ParameterParser.calcLimit(ctx.request);
 
-  const client = createSupaClient(ctx.request.headers.get("Authorization")!);
-
-  ctx.response.body = await predictEvent(client, season, event, limit ?? 8);
-});
+    ctx.response.body = await predictEvent(
+      ctx.state as DBClient,
+      season,
+      event,
+      limit ?? 8,
+    );
+  },
+);
 
 class ParameterParser {
   private static validateSeason(

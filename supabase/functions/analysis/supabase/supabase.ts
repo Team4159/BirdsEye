@@ -7,14 +7,13 @@ import { createFetcher, fetchWrapper } from "../fetcher.ts";
  */
 export type DBClient = SupabaseClient<Database>;
 
-export function createSupaClient(authorization: string): DBClient {
+export function createSupaClient(authorization: string, apikey = Deno.env.get("SUPABASE_ANON_KEY")!): DBClient {
   return createClient<Database>(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
+    apikey,
     {
       global: {
-        // comment this out while in development
-        headers: { authorization: authorization },
+        headers: { Authorization: authorization },
         fetch: fetchWrapper(createFetcher())
       },
     },

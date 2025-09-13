@@ -1,31 +1,52 @@
 import { Normal } from "../math.ts";
 import { DBClient } from "../supabase/supabase.ts";
 import dynamicMap from "./dynamic/dynamic.ts";
-import { epaMatchup } from "./epa.ts";
-import { tba } from "./tba.ts";
+import { epaMatchup as epaMatchupCalculate, EPAMatchupResult } from "./epa.ts";
+import { MatchInfo, tba } from "./tba.ts";
 
-const NUM_SIMULATIONS = 10;
+const NUM_SIMULATIONS = 1000;
 // The radius of the band of probabilities considered a tie
-const TIE_MARGIN = 0.03;
+const TIE_MARGIN = 0.04; // 8%
+
+async function epaMatch(
+  supabase: DBClient,
+  season: keyof typeof dynamicMap,
+  match: MatchInfo,
+  limit: number,
+  cache: Record<string, EPAMatchupResult>,
+) {
+  if (match.key in cache) return cache[match.key]!;
+
+  const result = await epaMatchupCalculate(
+    supabase,
+    season,
+    match.alliances.blue.team_keys.map((t) => t.slice(3)),
+    match.alliances.red.team_keys.map((t) => t.slice(3)),
+    limit,
+  );
+
+  return cache[match.key] = result;
+}
 
 async function simulateEvent(
   supabase: DBClient,
   season: keyof typeof dynamicMap,
   event: string,
-  mostRecentN: number,
+  calclimit: number,
 ) {
   const matches = await tba.getMatches({ season, event });
+  const epaMatchCache: Record<string, EPAMatchupResult> = {};
 
-  const results: Promise<{ [key: string]: number }>[] = [];
+  const results: Promise<Record<string, number>>[] = [];
   for (let i = 0; i < NUM_SIMULATIONS; i++) {
     const sim = Promise.allSettled(
       matches.map((match): Promise<{ [key: string]: number } | null> =>
-        match.comp_level != "qm" ? Promise.resolve(null) : epaMatchup(
+        match.comp_level != "qm" ? Promise.resolve(null) : epaMatch(
           supabase,
           season,
-          match.alliances.blue.team_keys.map((t) => t.slice(3)),
-          match.alliances.red.team_keys.map((t) => t.slice(3)),
-          mostRecentN,
+          match,
+          calclimit,
+          epaMatchCache,
         ).then(
           // it is MISSION CRITICAL that the line lengths match up <3
           (
@@ -85,7 +106,7 @@ async function simulateEvent(
           teams[team].push(rp);
         }
       }
-      
+
       // { robot: average rp }
       return Object.fromEntries(
         Object.entries(teams).map((
@@ -93,6 +114,8 @@ async function simulateEvent(
         ) => [k, v.reduce((t, a) => t + a, 0) / v.length]),
       );
     });
+    // Run the first simulation before all the others to load the cache
+    if (results.length === 0) await sim;
     results.push(sim);
   }
 

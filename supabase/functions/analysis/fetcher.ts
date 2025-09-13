@@ -22,13 +22,11 @@ export function createFetcher(
 
   const axiosInstance = setupCache(
     axios.create({
-      headers: { "X-TBA-Auth-Key": Deno.env.get("TBA_KEY")! },
       responseType: "json",
     }),
     cacheOverride === undefined
-        ? { etag: true, interpretHeader: true }
-        : { interpretHeader: false, ttl: cacheOverride }
-,
+      ? { etag: true, interpretHeader: true }
+      : { interpretHeader: false, ttl: cacheOverride },
   );
   axiosInstance.interceptors.request.use(
     axiosDeduplicator.requestInterceptor,
@@ -86,15 +84,13 @@ export function fetchWrapper(axios: AxiosCacheInstance) {
         : init?.method) || "GET";
 
     // Convert headers to Axios format
-    const headers = new Headers(
-      typeof input !== "string" && "headers" in input
-        ? input.headers
-        : init?.headers,
-    ); // TODO optimize
+    const headers = typeof input !== "string" && "headers" in input
+      ? input.headers
+      : init === undefined
+        ? undefined
+        : new Headers(init.headers);
     const axiosHeaders: Record<string, string> = {};
-    headers.forEach((value, key) => {
-      axiosHeaders[key] = value;
-    });
+    headers?.forEach((value, key) => axiosHeaders[key] = value);
 
     // Prepare Axios config
     const config: CacheRequestConfig = {

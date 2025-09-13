@@ -1,6 +1,5 @@
 import * as ss from "simple-statistics";
 
-// TODO switch to skewed normal distribution
 export class Normal {
   readonly mean: number;
   readonly variance: number;

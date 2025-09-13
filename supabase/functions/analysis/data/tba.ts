@@ -52,9 +52,9 @@ class TBAInterface {
   private readonly axios = createFetcher();
 
   getMatches(identifier: FetchParams) {
-    return this.axios.get(TBAInterface.buildUrl(identifier)).then((r) =>
-      r.data as MatchInfo[]
-    );
+    return this.axios.get(TBAInterface.buildUrl(identifier), {
+      headers: { "X-TBA-Auth-Key": Deno.env.get("TBA_KEY")! },
+    }).then((r) => r.data as MatchInfo[]);
   }
 
   async getMatch(identifier: MatchIdentifier): Promise<MatchInfo> {
