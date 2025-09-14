@@ -3,3 +3,4 @@
 .temp
 **/*.env
 **/*.lock
+functions/analysis/test.vibecode.py

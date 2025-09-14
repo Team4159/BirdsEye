@@ -200,6 +200,12 @@ function scoreRobotInMatch(
   return scores;
 }
 
+/**
+ * @param supabase Database Client
+ * @param identifier RobotInMatch to fetch
+ * @param categorizer Function to sort scores into bins
+ * @returns Map of category to score for a given RobotInMatch, undefined when no data is found
+ */
 async function fetchRobotScore(
   supabase: DBClient,
   identifier: RobotInMatchIdentifier,

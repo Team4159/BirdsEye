@@ -54,7 +54,10 @@ class TBAInterface {
   getMatches(identifier: FetchParams) {
     return this.axios.get(TBAInterface.buildUrl(identifier), {
       headers: { "X-TBA-Auth-Key": Deno.env.get("TBA_KEY")! },
-    }).then((r) => r.data as MatchInfo[]);
+    }).then((r) => r.data as MatchInfo[]).catch((error) => {
+      console.error('Error fetching matches:', error);
+      throw error;
+    });;
   }
 
   async getMatch(identifier: MatchIdentifier): Promise<MatchInfo> {
