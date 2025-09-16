@@ -4,7 +4,7 @@ import dynamicMap from "./dynamic/dynamic.ts";
 import { epaMatchup as epaMatchupCalculate, EPAMatchupResult } from "./epa.ts";
 import { MatchInfo, tba } from "./tba.ts";
 
-const NUM_SIMULATIONS = 1000;
+const NUM_SIMULATIONS = 100;
 // The radius of the band of probabilities considered a tie
 const TIE_MARGIN = 0.04; // 8%
 

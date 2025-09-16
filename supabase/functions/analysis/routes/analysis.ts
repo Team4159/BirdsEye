@@ -154,7 +154,7 @@ async function expandGlobs(
     .select(
       "scouter.count(), " +
       (globs.includes("match") ? "match_code, " : "") +
-      globs.join(", ").replace("robot", "robot:team")
+      globbable.join(", ").replace("robot", "robot:team")
     )
     .eq("season", filter.season);
   
@@ -177,15 +177,17 @@ async function expandGlobs(
   }
 
   // Limit the request
-  query = query
-    .limit(filter.selectlimit);
+  query = query.limit(filter.selectlimit);
 
   // Execute query, typecast to known result (`, string>` only works because all globbables are type string)
   // Note: the entry objects do have more parameters (scouter.count(), match_code), but they are ignored.
   const data = (await query).data as unknown as Record<(typeof globbable)[number], string>[];
 
+  // Create an object that sets all undefined values to the entries
+  const mask = Object.fromEntries(Object.entries(filter).filter(([_, v]) => v === undefined))
+
   // Process Results
-  return data!.map(entry => ({...filter, ...entry}));
+  return data!.map(entry => ({...filter, ...entry, ...mask}));
 }
 
 /**
