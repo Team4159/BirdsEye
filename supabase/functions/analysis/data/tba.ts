@@ -56,8 +56,9 @@ class TBAInterface {
       headers: { "X-TBA-Auth-Key": Deno.env.get("TBA_KEY")! },
     }).then((r) => r.data as MatchInfo[]).catch((error) => {
       console.error('Error fetching matches:', error);
+      if (error.status === 404) return [];
       throw error;
-    });;
+    });
   }
 
   async getMatch(identifier: MatchIdentifier): Promise<MatchInfo> {
@@ -66,7 +67,12 @@ class TBAInterface {
     const params = { season: identifier.season, event: identifier.event };
 
     const data = await this.getMatches(params);
-    return data.find((match) => match.key === matchKey)!;
+
+    const res = data.find((match) => match.key === matchKey);
+    if (res === undefined) {
+      throw new Error(`Failed to fetch match ${matchKey}`)
+    }
+    return res;
   }
   // Constructs API URL based on parameters
   private static buildUrl(params: FetchParams): string {

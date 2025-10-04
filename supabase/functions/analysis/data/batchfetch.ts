@@ -44,7 +44,7 @@ async function fetchRobotInMatch(
   if (dbdata === null) return;
 
   const entry = dbdata as any;
-  const tbadata: MatchInfo = (await tba.getMatches(identifier))[0]!;
+  const tbadata: MatchInfo = await tba.getMatch(identifier);
 
   delete entry.match_scouting;
   return fuseData(
