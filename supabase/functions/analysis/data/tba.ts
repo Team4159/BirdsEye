@@ -5,7 +5,7 @@ export interface MatchInfo {
   "comp_level": "qm" | "ef" | "qf" | "sf" | "f";
   "event_key": string; //"2023cacc",
   "key": string; //"2023cacc_qm1",
-  "match_number": number;
+  "match_number": number; // 1
   "set_number": number;
   "time": number;
   "actual_time": number | null;
@@ -19,7 +19,7 @@ export interface MatchInfo {
   "score_breakdown": {
     red: object;
     blue: object;
-  };
+  } | null;
   "winning_alliance": "red" | "blue" | "";
 }
 

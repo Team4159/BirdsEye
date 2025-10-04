@@ -156,7 +156,7 @@ type AlliancePrediction = {
   rp: { [key: string]: number };
   teams: string[];
 };
-export type EPAMatchupResult = 
+type EPAMatchupResult = 
 {
   blue: Partial<AlliancePrediction>;
   red: Partial<AlliancePrediction>;

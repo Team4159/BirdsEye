@@ -13,12 +13,14 @@ router.get(
     const season = ParameterParser.season(ctx.params);
     const event = ctx.params["event"]!;
     const limit = ParameterParser.calcLimit(ctx.request);
+    const realmatches = ParameterParser.realMatches(ctx.request);
 
     ctx.response.body = await predictEvent(
       ctx.state as DBClient,
       season,
       event,
       limit ?? 8,
+      realmatches
     );
   },
 );
@@ -57,10 +59,22 @@ class ParameterParser {
     return limit;
   }
 
+  public static realMatches(request: oak.Request): number | undefined {
+    const realmatches = this.parseNatural(request.url.searchParams.get("realmatches"));
+    if (realmatches === null) return;
+    if (Number.isNaN(realmatches) || realmatches < 0) {
+      throw oak.createHttpError(
+        oak.Status.BadRequest,
+        "Illegal Arguments: realmatches must be a positive integer",
+      );
+    }
+    return realmatches;
+  }
+
   private static parseNatural(x: string | null | undefined): number | null {
-    if (!x) return null;
+    if (x === undefined || x === null) return null;
     const i = parseInt(x, 10);
-    if (i <= 0) return null;
+    if (i < 0) return null;
     return i;
   }
 }
